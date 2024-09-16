@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import Home from '../../screens/home';
@@ -12,41 +11,49 @@ const Tab = createBottomTabNavigator();
 
 export default function TabRoutes() {
     return (
-        <Tab.Navigator>
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                tabBarIcon: ({ color, size }) => {
+                    let iconName;
+
+                    if (route.name === 'Home') {
+                        iconName = 'home';
+                    } else if (route.name === 'Agenda') {
+                        iconName = 'calendar';
+                    } else if (route.name === 'Assistente') {
+                        iconName = 'headphones';
+                    } else if (route.name === 'Chat') {
+                        iconName = 'message-circle';
+                    } else if (route.name === 'Configurações') {
+                        iconName = 'settings';
+                    }
+
+                    // You can return any component that you like here!
+                    return <Feather name={iconName} color={color} size={size} />;
+                },
+                tabBarActiveTintColor: '#F07A26', // Cor do ícone ativo
+                tabBarInactiveTintColor: 'gray', // Cor do ícone inativo
+            })}
+        >
             <Tab.Screen
                 name="Home"
                 component={Home}
-                options={{
-                    tabBarIcon: ({ color, size }) => <Feather name="home" color={color} size={size} />
-                }}
             />
             <Tab.Screen
                 name="Agenda"
                 component={Agenda}
-                options={{
-                    tabBarIcon: ({ color, size }) => <Feather name="calendar" color={color} size={size} />
-                }}
             />
             <Tab.Screen
                 name="Assistente"
                 component={Assistente}
-                options={{
-                    tabBarIcon: ({ color, size }) => <Feather name="headphones" color={color} size={size} />
-                }}
             />
             <Tab.Screen
                 name="Chat"
                 component={Chat}
-                options={{
-                    tabBarIcon: ({ color, size }) => <Feather name="message-circle" color={color} size={size} />
-                }}
             />
             <Tab.Screen
                 name="Configurações"
                 component={Configuracoes}
-                options={{
-                    tabBarIcon: ({ color, size }) => <Feather name="settings" color={color} size={size} />
-                }}
             />
         </Tab.Navigator>
     );

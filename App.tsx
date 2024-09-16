@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, StatusBar, Button } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, StatusBar, Image } from 'react-native';
 import AppIntroSlider from 'react-native-app-intro-slider';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
-import animationData from './path/to/your/animation.json';
-
 import { createStackNavigator } from '@react-navigation/stack';
 import AuthStack from './src/routes/AuthStack';
 
@@ -23,7 +21,7 @@ const slides: Slide[] = [
     key: 1,
     title: 'Comunicação Direta',
     text: 'Conecte o RH diretamente aos candidatos, um app que facilita a comunicação rápida e eficaz durante o processo seletivo',
-    image : (
+    image: (
       <LottieView
         source={{ uri: 'https://lottie.host/5829f396-cd0d-435d-95b5-413243a789ca/NUZfAnTKj2.json' }}
         autoPlay
@@ -60,7 +58,7 @@ const slides: Slide[] = [
   },
 ];
 
-function renderSlides({ item, index }: { item: Slide, index: number }) {
+function renderSlides({ item, index, setShowAuth }: { item: Slide, index: number, setShowAuth: React.Dispatch<React.SetStateAction<boolean>> }) {
   const isLastSlide = index === slides.length - 1;
 
   return (
@@ -77,12 +75,18 @@ function renderSlides({ item, index }: { item: Slide, index: number }) {
           <TouchableOpacity
             style={styles.confirmButton}
             onPress={async () => {
-              await AsyncStorage.setItem('hasViewedOnboarding', 'true');
-              setShowAuth(true);
-
+              console.log('Botão "Vamos Lá!" pressionado'); // Log para botão pressionado
+              try {
+                // Remove o armazenamento local e define showAuth como verdadeiro
+                await AsyncStorage.setItem('hasViewedOnboarding', 'true');
+                console.log('Status de onboarding salvo no AsyncStorage');
+                setShowAuth(true); // Garante que a função está definida no escopo
+              } catch (error) {
+                console.error('Erro ao salvar status de onboarding:', error);
+              }
             }}
           >
-            <Text style={styles.confirmButtonText}>Vomos La!</Text>
+            <Text style={styles.confirmButtonText}>Vamos Lá!</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -99,22 +103,34 @@ function AppNavigation() {
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
-      const hasViewedOnboarding = await AsyncStorage.getItem('hasViewedOnboarding');
-      if (hasViewedOnboarding === 'true') {
-        setShowAuth(true);
+      console.log('Verificando status de onboarding...');
+      try {
+        // Comentado para sempre mostrar o onboarding
+        /*
+        const hasViewedOnboarding = await AsyncStorage.getItem('hasViewedOnboarding');
+        if (hasViewedOnboarding === 'true') {
+          setShowAuth(true);
+        }
+        */
+        // Sempre exibe a tela de introdução
+        setShowAuth(false);
+      } catch (error) {
+        console.error('Erro ao verificar status de onboarding:', error);
       }
     };
     checkOnboardingStatus();
   }, []);
 
   const goToNextSlide = () => {
+    console.log('Indo para o próximo slide'); // Log para mudança de slide
     if (sliderRef.current) {
       sliderRef.current.goToSlide(currentIndex + 1, true);
     }
   };
 
   if (showAuth) {
-    return <AuthStack />;
+    console.log('Redirecionando para AuthStack');
+    return <AuthStack />; // Navega para AuthStack para o login
   }
 
   return (
@@ -126,10 +142,16 @@ function AppNavigation() {
       />
       <AppIntroSlider
         ref={sliderRef}
-        renderItem={renderSlides}
+        renderItem={(props) => renderSlides({ ...props, setShowAuth })} // Passa setShowAuth como prop
         data={slides}
-        onDone={() => setShowAuth(true)}
-        onSlideChange={(index) => setCurrentIndex(index)}
+        onDone={() => {
+          console.log('Introdução concluída'); // Log quando a introdução é concluída
+          setShowAuth(true);
+        }}
+        onSlideChange={(index) => {
+          console.log(`Mudança de slide para o índice ${index}`); // Log quando o slide muda
+          setCurrentIndex(index);
+        }}
         dotStyle={styles.dotStyle}
         activeDotStyle={styles.activeDotStyle}
         showNextButton={false}
@@ -161,6 +183,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Intro" component={AppNavigation} />
+        <Stack.Screen name="Auth" component={AuthStack} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -175,7 +198,6 @@ const styles = StyleSheet.create({
   slide: {
     flex: 1,
     justifyContent: 'flex-start',
-
     alignItems: 'center',
   },
   image: {
@@ -183,7 +205,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    padding:20,
+    padding: 20,
     fontWeight: 'bold',
     marginTop: 20,
     textAlign: 'center',
@@ -229,5 +251,5 @@ const styles = StyleSheet.create({
   },
   activeDotStyle: {
     backgroundColor: 'transparent',
-  },
+  },
 });

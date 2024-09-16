@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, Button, Dimensions, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, Image, Button, Dimensions, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { TextInput as PaperTextInput, HelperText } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { styles } from './Styles/styles';
@@ -7,13 +7,15 @@ import { validateIdentifier } from './Dados/validationUtils';
 import CustomButton from './Styles/CustomButton';
 import { registerUser } from '../../services/Firebase';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { saveUserToSupabase } from '../../services/userService';
+import { sendNotificationNow } from '../../Notificacao/notifications';
 
-// Importando a imagem
 const logo = require('./../../../assets/logo.png');
 
-// Definindo a interface para erros
 interface FormErrors {
   email?: string;
+  error?: string;
+  Nome?: string;
   identificador?: string;
   senha?: string;
   confirmarSenha?: string;
@@ -21,11 +23,11 @@ interface FormErrors {
 
 const CadastroScreen = () => {
   const { width, height } = Dimensions.get('window');
-  const navigation = useNavigation(); // Hook para navegação
-  const isFocused = useIsFocused(); // Hook para verificar se a tela está focada
+  const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
-  // Estado para armazenar os valores dos campos e mensagens de erro
   const [email, setEmail] = useState<string>('');
+  const [Nome, setNome] = useState<string>('');
   const [identificador, setIdentificador] = useState<string>('');
   const [senha, setSenha] = useState<string>('');
   const [confirmarSenha, setConfirmarSenha] = useState<string>('');
@@ -33,17 +35,19 @@ const CadastroScreen = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false); // Estado para controle do carregamento
+  const [loading, setLoading] = useState<boolean>(false);
 
-  // Função para validar os campos
   const validateForm = () => {
     const newErrors: FormErrors = {};
-    
-    const trimmedEmail = email.trim(); // Remove espaços em branco
+
+    const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-        newErrors.email = 'O e-mail é obrigatório.';
+      newErrors.email = 'O e-mail é obrigatório.';
     } else if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
-        newErrors.email = 'O e-mail fornecido não é válido.';
+      newErrors.email = 'O e-mail fornecido não é válido.';
+    }
+    if (!Nome) {
+      newErrors.Nome = "O nome é obrigatório."
     }
     if (!identificador) {
       newErrors.identificador = 'O identificador (CPF ou CNPJ) é obrigatório.';
@@ -63,7 +67,6 @@ const CadastroScreen = () => {
     if (senha !== confirmarSenha) {
       newErrors.confirmarSenha = 'As senhas não coincidem.';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -72,14 +75,27 @@ const CadastroScreen = () => {
     console.log('Iniciando validação do formulário...');
     if (validateForm()) {
       console.log('Formulário válido! Enviando...');
-      setLoading(true); 
+      setLoading(true);
       try {
         const trimmedEmail = email.trim();
         await registerUser(trimmedEmail, senha);
+
+        await saveUserToSupabase({
+          nome: Nome,
+          email: trimmedEmail,
+          identificador: identificador,
+          tipo_identificador: determineIdentifierType(identificador),
+        });
+
+        await sendNotificationNow(
+          'Cadastro Completo',
+          'Seu cadastro foi realizado com sucesso!'
+        );
+
         navigation.navigate('Home');
       } catch (error) {
         console.error('Erro ao cadastrar usuário:', error.message);
-        // Adicione feedback para o usuário
+        setErrors({ error: 'Erro ao cadastrar usuário. Tente novamente.' });
       } finally {
         setLoading(false);
       }
@@ -88,7 +104,11 @@ const CadastroScreen = () => {
     }
   };
 
-  // Função para gerar pontos aleatórios
+  const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {
+    const digitsOnly = identificador.replace(/\D/g, '');
+    return digitsOnly.length === 11 ? 'CPF' : 'CNPJ';
+  };
+
   const generateRandomPoints = () => {
     const points = [];
     for (let i = 0; i < 100; i++) {
@@ -101,10 +121,10 @@ const CadastroScreen = () => {
 
   const randomPoints = generateRandomPoints();
 
-  // Limpar campos quando a tela não estiver mais focada
   useEffect(() => {
     if (!isFocused) {
       setEmail('');
+      setNome('');
       setIdentificador('');
       setSenha('');
       setConfirmarSenha('');
@@ -164,6 +184,21 @@ const CadastroScreen = () => {
 
         <View style={styles.transitionContainer}>
           <View style={styles.formContainer}>
+            <PaperTextInput
+              label="Digite o seu nome completo"
+              style={styles.textInput}
+              mode="outlined"
+              activeOutlineColor="#F07A26"
+              outlineColor="#CCCCCC"
+              left={<PaperTextInput.Icon icon="account" />}
+              value={Nome}
+              onChangeText={setNome}
+              error={!!errors.Nome}
+            />
+            <HelperText type="error" visible={!!errors.Nome}>
+              {errors.Nome}
+            </HelperText>
+
             <PaperTextInput
               label="Email"
               style={styles.textInput}
@@ -256,10 +291,10 @@ const CadastroScreen = () => {
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.footerButton} onPress={() => { /* handle login */ }}>
+            <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Login')}>
               <Text style={styles.footerButtonText}>Login</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.footerButton} onPress={() => { /* handle cadastro */ }}>
+            <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Cadastro')}>
               <Text style={styles.footerButtonText}>Cadastro</Text>
             </TouchableOpacity>
           </View>
@@ -276,7 +311,7 @@ const CadastroScreen = () => {
             <Text style={styles.modalTitle}>Termos e Condições</Text>
             <ScrollView style={styles.modalContent}>
               <Text style={styles.modalText}>
-                Mil vezes melhor do que o Java
+                Mil vezes melhor do que o Java, mas tem que mudar isso depois porem fds
               </Text>
             </ScrollView>
             <Button title="Fechar" onPress={() => setModalVisible(false)} />
