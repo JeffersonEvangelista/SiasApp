@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { styles } from './Styles/styles';
 import CustomButton from './Styles/CustomButton';
 import { useNavigation } from '@react-navigation/native'; // Importar useNavigation corretamente
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 const logo = require('./../../../assets/logo.png');
 
@@ -12,6 +13,7 @@ interface FormErrors {
   email?: string;
   Nome?: string;
   senha?: string;
+  error?: string;
 }
 
 export default function Login() {
@@ -21,7 +23,6 @@ export default function Login() {
   const [senha, setSenha] = useState<string>('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(false);
 
   const { width, height } = Dimensions.get('window');
@@ -39,8 +40,48 @@ export default function Login() {
 
   const randomPoints = generateRandomPoints();
 
+  // Função para validar o formulário
+  const validateForm = () => {
+    const newErrors: FormErrors = {}; // objeto vazio pra armazenar mensagens de erro
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      newErrors.email = 'O e-mail é obrigatório.';
+    } else if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
+      newErrors.email = 'O e-mail fornecido não é válido.';
+    }
+
+    if (!senha) {
+      newErrors.senha = 'A senha fornecida não é válida.';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Função para lidar com o login
+  const handleLogin = async () => {
+    if (validateForm()) {
+      setLoading(true);
+      try {
+        const auth = getAuth();
+        await signInWithEmailAndPassword(auth, email.trim(), senha);
+        console.log('Login bem-sucedido!');
+        navigation.navigate('Home'); // Navegar para a tela principal após o login
+      } catch (error) {
+        console.error('Erro ao fazer login:', error.message);
+        setErrors({
+          ...errors,
+          error: 'Credenciais inválidas. Verifique seu e-mail e senha.'
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const handleSubmit = () => {
-    // Implement form submission logic here
+    handleLogin(); // Chamar handleLogin ao submeter o formulário
   };
 
   return (
@@ -90,27 +131,12 @@ export default function Login() {
           </View>
         </View>
 
-        <Text style={styles.header}>Inscreva-se Agora</Text>
-        <Text style={styles.subHeader}>Crie sua conta e descubra tudo o que nosso aplicativo oferece</Text>
+        <Text style={styles.header}>Comece Agora</Text>
+        <Text style={styles.subHeader}>Acesse sua conta e descubra tudo o que nosso aplicativo oferece</Text>
 
         <View style={styles.transitionContainer}>
           <View style={styles.formContainer}>
-            <PaperTextInput
-              label="Nome"
-              style={styles.textInput}
-              mode="outlined"
-              activeOutlineColor="#F07A26"
-              outlineColor="#CCCCCC"
-              left={<PaperTextInput.Icon icon="account" />}
-              value={Nome}
-              onChangeText={setNome}
-              error={!!errors.Nome}
-            />
-            <HelperText type="error" visible={!!errors.Nome}>
-              {errors.Nome}
-            </HelperText>
-
-            <PaperTextInput
+                      <PaperTextInput
               label="Email"
               style={styles.textInput}
               mode="outlined"
@@ -176,15 +202,10 @@ export default function Login() {
               <View style={styles.linee} />
             </View>
 
-            <TouchableOpacity onPress={() => navigation.navigate('Cadastro')}>
-              <Text style={styles.createAccount}>Criar Conta</Text>
-            </TouchableOpacity>
+           
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.footerButtonText}>Login</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Cadastro')}>
               <Text style={styles.footerButtonText}>Cadastro</Text>
             </TouchableOpacity>

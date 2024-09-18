@@ -168,6 +168,7 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: 12,
+        
     },
     footerButtonText: {
         color: '#FFF',

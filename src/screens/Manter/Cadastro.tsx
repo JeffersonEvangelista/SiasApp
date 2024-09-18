@@ -315,9 +315,6 @@ const CadastroScreen = () => {
             <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Login')}>
               <Text style={styles.footerButtonText}>Login</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Cadastro')}>
-              <Text style={styles.footerButtonText}>Cadastro</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>

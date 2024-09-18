@@ -23,9 +23,11 @@
     "@supabase/supabase-js": "^2.45.4",
     "expo": "~51.0.28",
     "expo-auth-session": "~5.5.2",
+    "expo-av": "~14.0.7",
     "expo-dev-client": "~4.0.26",
+    "expo-image-picker": "~15.0.7",
     "expo-linear-gradient": "~13.0.2",
-    "expo-notifications": "^0.28.16",
+    "expo-notifications": "~0.28.17",
     "expo-random": "~14.0.1",
     "expo-status-bar": "~1.12.1",
     "firebase": "^10.13.1",
@@ -47,9 +49,7 @@
     "react-native-screens": "3.31.1",
     "react-native-svg": "15.2.0",
     "react-native-vector-icons": "^10.1.0",
-    "react-native-webview": "13.8.6",
-    "expo-image-picker": "~15.0.7",
-    "expo-av": "~14.0.7"
+    "react-native-webview": "13.8.6"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
