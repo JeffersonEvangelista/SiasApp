@@ -147,13 +147,13 @@ export const styles = StyleSheet.create({
     orText: {
         fontSize: 16,
         marginHorizontal: 10,
-        color: '#000', 
+        color: '#000',
         textAlign: 'center',
     },
     linee: {
         flex: 1,
         height: 1,
-        backgroundColor: '#000', 
+        backgroundColor: '#000',
     },
     footer: {
         flexDirection: 'row',
@@ -171,5 +171,24 @@ export const styles = StyleSheet.create({
     },
     footerButtonText: {
         color: '#FFF',
+    },
+    rowContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: -35,
+    },
+
+    checkboxContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    checkboxLabel: {
+        marginLeft: 8,
+    },
+
+    forgotPassword: {
+        color: '#F07A26',
+        textDecorationLine: 'underline',
     },
 });

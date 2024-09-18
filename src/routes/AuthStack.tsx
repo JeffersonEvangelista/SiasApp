@@ -2,7 +2,7 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import Login from '../screens/Manter/Login';
 import Cadastro from '../screens/Manter/Cadastro';
-import TabRoutes from './TiposDeNavegação/tab.routes';
+import TabRoutes from './TiposDeNavegacao/tab.routes';
 
 const Stack = createStackNavigator();
 
