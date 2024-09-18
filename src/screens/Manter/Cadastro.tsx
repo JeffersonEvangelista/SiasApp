@@ -78,8 +78,11 @@ const CadastroScreen = () => {
       setLoading(true);
       try {
         const trimmedEmail = email.trim();
+
+        // Tentativa de registro no Firebase
         await registerUser(trimmedEmail, senha);
 
+        // Salvamento no Supabase
         await saveUserToSupabase({
           nome: Nome,
           email: trimmedEmail,
@@ -87,15 +90,33 @@ const CadastroScreen = () => {
           tipo_identificador: determineIdentifierType(identificador),
         });
 
+        // Notificação de sucesso
         await sendNotificationNow(
           'Cadastro Completo',
           'Seu cadastro foi realizado com sucesso!'
         );
 
         navigation.navigate('Home');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao cadastrar usuário:', error.message);
-        setErrors({ error: 'Erro ao cadastrar usuário. Tente novamente.' });
+
+        // Verifica se o erro vem do Firebase ou do Supabase
+        if (error.message.includes('Firebase')) {
+          setErrors((prevErrors) => ({
+            ...prevErrors,
+            email: 'Esse email já se encontra no nosso banco de dados, utilize outro por favor',
+          }));
+        } else if (error.message.includes('Supabase')) {
+          setErrors((prevErrors) => ({
+            ...prevErrors,
+            identificador: 'Esse email já se encontra no nosso banco de dados, utilize outro por favo.',
+          }));
+        } else {
+          setErrors((prevErrors) => ({
+            ...prevErrors,
+            error: 'Erro ao cadastrar usuário. Tente novamente.',
+          }));
+        }
       } finally {
         setLoading(false);
       }
@@ -103,6 +124,7 @@ const CadastroScreen = () => {
       console.log('Formulário inválido. Verifique os erros:', errors);
     }
   };
+
 
   const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {
     const digitsOnly = identificador.replace(/\D/g, '');
@@ -201,7 +223,7 @@ const CadastroScreen = () => {
 
             <PaperTextInput
               label="Email"
-              style={styles.textInput}
+              style={[styles.textInput, errors.email && { borderColor: 'red', borderWidth: 1 }]}
               mode="outlined"
               activeOutlineColor="#F07A26"
               outlineColor="#CCCCCC"
@@ -216,7 +238,7 @@ const CadastroScreen = () => {
 
             <PaperTextInput
               label="Digite seu CPF ou CNPJ"
-              style={styles.textInput}
+              style={[styles.textInput, errors.identificador && { borderColor: 'red', borderWidth: 1 }]}
               mode="outlined"
               activeOutlineColor="#F07A26"
               outlineColor="#CCCCCC"
@@ -229,6 +251,7 @@ const CadastroScreen = () => {
             <HelperText type="error" visible={!!errors.identificador}>
               {errors.identificador}
             </HelperText>
+
 
             <PaperTextInput
               label="Senha"
