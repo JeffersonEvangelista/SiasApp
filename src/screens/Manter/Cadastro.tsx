@@ -109,7 +109,7 @@ const CadastroScreen = () => {
         } else if (error.message.includes('Supabase')) {
           setErrors((prevErrors) => ({
             ...prevErrors,
-            identificador: 'Esse email já se encontra no nosso banco de dados, utilize outro por favo.',
+            identificador: 'Esse email já se encontra no nosso banco de dados, utilize outro por favor.',
           }));
         } else {
           setErrors((prevErrors) => ({
@@ -124,7 +124,6 @@ const CadastroScreen = () => {
       console.log('Formulário inválido. Verifique os erros:', errors);
     }
   };
-
 
   const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {
     const digitsOnly = identificador.replace(/\D/g, '');
@@ -251,7 +250,6 @@ const CadastroScreen = () => {
             <HelperText type="error" visible={!!errors.identificador}>
               {errors.identificador}
             </HelperText>
-
 
             <PaperTextInput
               label="Senha"

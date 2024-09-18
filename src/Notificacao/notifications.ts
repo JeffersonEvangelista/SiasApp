@@ -33,14 +33,16 @@ export const scheduleNotification = async (title: string, body: string, seconds:
     });
 };
 
-// Função para enviar uma notificação agora
+
 export const sendNotificationNow = async (title: string, body: string) => {
     await requestPermissions();
 
-    await Notifications.presentNotificationAsync({
+    await Notifications.scheduleNotificationAsync({
         content: {
             title,
             body,
         },
+        trigger: null, // Trigger immediately
     });
 };
+
