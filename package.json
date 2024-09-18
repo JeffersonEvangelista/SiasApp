@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.8.12",
-    "@react-native-async-storage/async-storage": "^1.23.1",
+    "@react-native-async-storage/async-storage": "^2.0.0",
     "@react-native-community/checkbox": "^0.5.17",
     "@react-native-community/viewpager": "^5.0.11",
     "@react-native-firebase/app": "^20.5.0",

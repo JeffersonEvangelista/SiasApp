@@ -8,6 +8,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AuthStack from './src/routes/AuthStack';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface Slide {
   key: number;
@@ -63,11 +64,7 @@ function renderSlides({ item, index, setShowAuth }: { item: Slide, index: number
 
   return (
     <View style={styles.slide}>
-      {typeof item.image === 'number' ? (
-        <Image source={item.image} style={styles.image} />
-      ) : (
-        item.image
-      )}
+      {item.image}
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.text}>{item.text}</Text>
       {isLastSlide && (
@@ -75,12 +72,9 @@ function renderSlides({ item, index, setShowAuth }: { item: Slide, index: number
           <TouchableOpacity
             style={styles.confirmButton}
             onPress={async () => {
-              console.log('Botão "Vamos Lá!" pressionado'); // Log para botão pressionado
               try {
-                // Remove o armazenamento local e define showAuth como verdadeiro
                 await AsyncStorage.setItem('hasViewedOnboarding', 'true');
-                console.log('Status de onboarding salvo no AsyncStorage');
-                setShowAuth(true); // Garante que a função está definida no escopo
+                setShowAuth(true);
               } catch (error) {
                 console.error('Erro ao salvar status de onboarding:', error);
               }
@@ -103,17 +97,11 @@ function AppNavigation() {
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
-      console.log('Verificando status de onboarding...');
       try {
-        // Comentado para sempre mostrar o onboarding
-        /*
         const hasViewedOnboarding = await AsyncStorage.getItem('hasViewedOnboarding');
         if (hasViewedOnboarding === 'true') {
           setShowAuth(true);
         }
-        */
-        // Sempre exibe a tela de introdução
-        setShowAuth(false);
       } catch (error) {
         console.error('Erro ao verificar status de onboarding:', error);
       }
@@ -122,34 +110,26 @@ function AppNavigation() {
   }, []);
 
   const goToNextSlide = () => {
-    console.log('Indo para o próximo slide'); // Log para mudança de slide
     if (sliderRef.current) {
       sliderRef.current.goToSlide(currentIndex + 1, true);
     }
   };
 
   if (showAuth) {
-    console.log('Redirecionando para AuthStack');
-    return <AuthStack />; // Navega para AuthStack para o login
+    return <AuthStack />; 
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="transparent"
-        translucent
-      />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <AppIntroSlider
         ref={sliderRef}
-        renderItem={(props) => renderSlides({ ...props, setShowAuth })} // Passa setShowAuth como prop
+        renderItem={(props) => renderSlides({ ...props, setShowAuth })}
         data={slides}
         onDone={() => {
-          console.log('Introdução concluída'); // Log quando a introdução é concluída
           setShowAuth(true);
         }}
         onSlideChange={(index) => {
-          console.log(`Mudança de slide para o índice ${index}`); // Log quando o slide muda
           setCurrentIndex(index);
         }}
         dotStyle={styles.dotStyle}
