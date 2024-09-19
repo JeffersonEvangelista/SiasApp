@@ -1,0 +1,928 @@
+{
+	"info": {
+		"_postman_id": "d6e63414-51f8-49fd-9428-14a1ab1e4add",
+		"name": "Sias App",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "36849546"
+	},
+	"item": [
+		{
+			"name": "usuarios Candidados",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"nome\": \" Silva\",\r\n  \"email\": \"joao.silsava@example.com\",\r\n  \"identificador\": \"12385672901\",\r\n  \"tipo_identificador\": \"CNPJ\",\r\n  \"tipo_usuario\": \"RH\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/candidatos",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"candidatos"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "usuarios recrutadores",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"nome\": \" Silva\",\r\n  \"email\": \"joao.silsava@example.com\",\r\n  \"identificador\": \"12385672901\",\r\n  \"tipo_identificador\": \"CNPJ\",\r\n  \"tipo_usuario\": \"RH\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/candidatos",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"candidatos"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Listar candidatos",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"nome\": \" Silva\",\r\n  \"email\": \"joao.silsava@example.com\",\r\n  \"identificador\": \"12385672901\",\r\n  \"tipo_identificador\": \"CNPJ\",\r\n  \"tipo_usuario\": \"RH\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/candidatos",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"candidatos"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Listar recrutadores",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"nome\": \" Silva\",\r\n  \"email\": \"joao.silsava@example.com\",\r\n  \"identificador\": \"12385672901\",\r\n  \"tipo_identificador\": \"CNPJ\",\r\n  \"tipo_usuario\": \"RH\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/recrutadores",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"recrutadores"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete candidatos",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"nome\": \" Silva\",\r\n  \"email\": \"joao.silsava@example.com\",\r\n  \"identificador\": \"12385672901\",\r\n  \"tipo_identificador\": \"CNPJ\",\r\n  \"tipo_usuario\": \"RH\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/recrutadores",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"recrutadores"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete recrutadores",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"nome\": \" Silva\",\r\n  \"email\": \"joao.silsava@example.com\",\r\n  \"identificador\": \"12385672901\",\r\n  \"tipo_identificador\": \"CNPJ\",\r\n  \"tipo_usuario\": \"RH\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/recrutadores",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"recrutadores"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "solicitacoes_entrevista",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario_rh\": 6,\r\n  \"id_usuario_candidato\": 1,\r\n  \"data_entrevista\": \"2024-09-30\",\r\n  \"horario\": \"14:00:00\",\r\n  \"local\": \"Sala de Entrevista 3\",\r\n  \"status\": \"pendente\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/solicitacoes_entrevista",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"solicitacoes_entrevista"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List solicitacoes_entrevista",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario_rh\": 6,\r\n  \"id_usuario_candidato\": 1,\r\n  \"data_entrevista\": \"2024-09-30\",\r\n  \"horario\": \"14:00:00\",\r\n  \"local\": \"Sala de Entrevista 3\",\r\n  \"status\": \"pendente\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/solicitacoes_entrevista",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"solicitacoes_entrevista"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete solicitacoes_entrevista",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario_rh\": 6,\r\n  \"id_usuario_candidato\": 1,\r\n  \"data_entrevista\": \"2024-09-30\",\r\n  \"horario\": \"14:00:00\",\r\n  \"local\": \"Sala de Entrevista 3\",\r\n  \"status\": \"pendente\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/solicitacoes_entrevista",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"solicitacoes_entrevista"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "respostas_candidatos",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_solicitacao\": 2,\r\n  \"id_usuario_candidato\": 1,\r\n  \"resposta\": \"aceita\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/respostas_candidatos",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"respostas_candidatos"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List respostas_candidatos",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_solicitacao\": 2,\r\n  \"id_usuario_candidato\": 1,\r\n  \"resposta\": \"aceita\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/respostas_candidatos",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"respostas_candidatos"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete respostas_candidatos",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_solicitacao\": 2,\r\n  \"id_usuario_candidato\": 1,\r\n  \"resposta\": \"aceita\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/respostas_candidatos",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"respostas_candidatos"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "chatbot_interacoes",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario\": 1,\r\n  \"mensagem\": \"Quando será minha entrevista?\",\r\n  \"resposta_chatbot\": \"Sua entrevista está marcada para 2024-09-30 às 14:00.\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/chatbot_interacoes",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"chatbot_interacoes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List chatbot_interacoes",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario\": 1,\r\n  \"mensagem\": \"Quando será minha entrevista?\",\r\n  \"resposta_chatbot\": \"Sua entrevista está marcada para 2024-09-30 às 14:00.\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/chatbot_interacoes",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"chatbot_interacoes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete chatbot_interacoes",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario\": 1,\r\n  \"mensagem\": \"Quando será minha entrevista?\",\r\n  \"resposta_chatbot\": \"Sua entrevista está marcada para 2024-09-30 às 14:00.\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/chatbot_interacoes",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"chatbot_interacoes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "configuracoes_app",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario\": 1,\r\n  \"notificacoes\": true,\r\n  \"idioma\": \"pt-BR\",\r\n  \"tema\": \"escuro\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/configuracoes_app",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"configuracoes_app"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List configuracoes_app",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario\": 1,\r\n  \"notificacoes\": true,\r\n  \"idioma\": \"pt-BR\",\r\n  \"tema\": \"escuro\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/configuracoes_app",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"configuracoes_app"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete List configuracoes_app",
+			"request": {
+				"auth": {
+					"type": "inherit"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTQ0Njk3MSwiZXhwIjoyMDQxMDIyOTcxfQ.rd7Nn0mVprK27uzPwTn44rokRUJQbU2R-bTU2Rflb08",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"id_usuario\": 1,\r\n  \"notificacoes\": true,\r\n  \"idioma\": \"pt-BR\",\r\n  \"tema\": \"escuro\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://enpcrnmsdcjekxmkrlaf.supabase.co/rest/v1/configuracoes_app",
+					"protocol": "https",
+					"host": [
+						"enpcrnmsdcjekxmkrlaf",
+						"supabase",
+						"co"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"configuracoes_app"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
