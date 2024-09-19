@@ -238,7 +238,7 @@ const CadastroScreen = () => {
 
             <PaperTextInput
               label="Email"
-              style={[styles.textInput, errors.email && { borderColor: 'red', borderWidth: 1 }]}
+              style={[styles.textInput, errors.email ? { borderColor: 'red', borderWidth: 1 } : {}]}
               mode="outlined"
               activeOutlineColor="#F07A26"
               outlineColor="#CCCCCC"
@@ -253,7 +253,7 @@ const CadastroScreen = () => {
 
             <PaperTextInput
               label="Digite seu CPF ou CNPJ"
-              style={[styles.textInput, errors.identificador && { borderColor: 'red', borderWidth: 1 }]}
+              style={[styles.textInput, errors.identificador ? { borderColor: 'red', borderWidth: 1 } : {}]}
               mode="outlined"
               activeOutlineColor="#F07A26"
               outlineColor="#CCCCCC"
@@ -290,7 +290,7 @@ const CadastroScreen = () => {
 
             <PaperTextInput
               label="Confirmar Senha"
-              style={[styles.textInput, errors.confirmarSenha && { borderColor: 'red', borderWidth: 1 }]}
+              style={[styles.textInput, errors.confirmarSenha ? { borderColor: 'red', borderWidth: 1 } : {}]}
               mode="outlined"
               activeOutlineColor="#F07A26"
               outlineColor="#CCCCCC"

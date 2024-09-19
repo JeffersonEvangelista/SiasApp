@@ -9,12 +9,20 @@ import Agenda from '../../screens/Agenda';
 
 const Tab = createBottomTabNavigator();
 
+// Definindo os tipos válidos para Feather
+type FeatherIconName =
+    | 'home'
+    | 'calendar'
+    | 'headphones'
+    | 'message-circle'
+    | 'settings';
+
 export default function TabRoutes() {
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ color, size }) => {
-                    let iconName;
+                    let iconName: FeatherIconName;
 
                     if (route.name === 'Home') {
                         iconName = 'home';
@@ -26,34 +34,41 @@ export default function TabRoutes() {
                         iconName = 'message-circle';
                     } else if (route.name === 'Configurações') {
                         iconName = 'settings';
+                    } else {
+                        iconName = 'home'; // Valor padrão
                     }
 
-                    // You can return any component that you like here!
                     return <Feather name={iconName} color={color} size={size} />;
                 },
                 tabBarActiveTintColor: '#F07A26', // Cor do ícone ativo
                 tabBarInactiveTintColor: 'gray', // Cor do ícone inativo
+                headerShown: false, // Oculta o cabeçalho
             })}
         >
             <Tab.Screen
                 name="Home"
                 component={Home}
+                options={{ tabBarLabel: 'Home' }}
             />
             <Tab.Screen
                 name="Agenda"
                 component={Agenda}
+                options={{ tabBarLabel: 'Agenda' }}
             />
             <Tab.Screen
                 name="Assistente"
                 component={Assistente}
+                options={{ tabBarLabel: 'Assistente' }}
             />
             <Tab.Screen
                 name="Chat"
                 component={Chat}
+                options={{ tabBarLabel: 'Chat' }}
             />
             <Tab.Screen
                 name="Configurações"
                 component={Configuracoes}
+                options={{ tabBarLabel: 'Configurações' }}
             />
         </Tab.Navigator>
     );
