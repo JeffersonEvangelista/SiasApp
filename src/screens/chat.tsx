@@ -29,8 +29,8 @@ export default function Chat() {
             height:46,
             margin:10,
             paddingHorizontal:12,
-            borderRadius:5,
-            borderBlockColor: "#ccc",
+            borderRadius:10,
+            borderColor: "#ccc",
             borderWidth: 1
           }}>
             <Ionicons name="search-outline" size={24} color="black" />
