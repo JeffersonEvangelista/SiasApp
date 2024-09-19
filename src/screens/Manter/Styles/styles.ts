@@ -173,6 +173,14 @@ export const styles = StyleSheet.create({
     footerButtonText: {
         color: '#FFF',
     },
+    BtnCadastro:{
+        color: '#FFF',
+        fontSize: 14,
+        backgroundColor: '#F07A26',
+        padding: 20,
+        borderRadius: 16,
+
+    },
     rowContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',

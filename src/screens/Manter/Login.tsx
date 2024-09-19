@@ -201,13 +201,11 @@ export default function Login() {
               <Text style={styles.orText}>OU</Text>
               <View style={styles.linee} />
             </View>
-
-           
           </View>
 
           <View style={styles.footer}>
             <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Cadastro')}>
-              <Text style={styles.footerButtonText}>Cadastro</Text>
+              <Text style={styles.BtnCadastro}>Cadastro</Text>
             </TouchableOpacity>
           </View>
         </View>
