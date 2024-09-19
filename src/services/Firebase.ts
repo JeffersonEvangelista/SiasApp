@@ -3,12 +3,13 @@ import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 
 // Configuração do Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyCiv4Lg8YfG6ezUmV0t-1vsGYI0i6QgMe8",
-    authDomain: "siasmobile-72225.firebaseapp.com",
-    projectId: "siasmobile-72225",
-    storageBucket: "siasmobile-72225.appspot.com",
-    messagingSenderId: "871110692356",
-    appId: "1:871110692356:web:a8e3ec81c9afa4a58a2f51"
+    apiKey: "AIzaSyD7RZw8KrGGoiD_Pky4ho59tva_7nKY4Qo",
+    authDomain: "siasmobile-5a101.firebaseapp.com",
+    projectId: "siasmobile-5a101",
+    storageBucket: "siasmobile-5a101.appspot.com",
+    messagingSenderId: "18631145700",
+    appId: "1:18631145700:web:7c3d01d6c29f52804394f1",
+    measurementId: "G-J29RZYWT9D"
 };
 
 // Inicialize o Firebase

@@ -7,7 +7,7 @@ import { validateIdentifier } from './Dados/validationUtils';
 import CustomButton from './Styles/CustomButton';
 import { registerUser } from '../../services/Firebase';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { saveUserToSupabase } from '../../services/userService';
+import { saveRecrutadorToSupabase,saveCandidatoToSupabase  } from '../../services/userService';
 import { sendNotificationNow } from '../../Notificacao/notifications';
 
 const logo = require('./../../../assets/logo.png');
@@ -47,7 +47,7 @@ const CadastroScreen = () => {
       newErrors.email = 'O e-mail fornecido não é válido.';
     }
     if (!Nome) {
-      newErrors.Nome = "O nome é obrigatório."
+      newErrors.Nome = "O nome é obrigatório.";
     }
     if (!identificador) {
       newErrors.identificador = 'O identificador (CPF ou CNPJ) é obrigatório.';
@@ -78,38 +78,53 @@ const CadastroScreen = () => {
       setLoading(true);
       try {
         const trimmedEmail = email.trim();
-
+        const identifierLength = identificador.replace(/\D/g, '').length; 
+  
         // Tentativa de registro no Firebase
         await registerUser(trimmedEmail, senha);
-
-        // Salvamento no Supabase
-        await saveUserToSupabase({
+  
+        // Criação do objeto de usuário com base no tipo
+        const user = {
           nome: Nome,
           email: trimmedEmail,
-          identificador: identificador,
-          tipo_identificador: determineIdentifierType(identificador),
-        });
-
+          cpf: identificador,
+        };
+  
+        // Salvamento no Supabase com base no comprimento do identificador
+        if (identifierLength === 11) { // CPF
+          await saveCandidatoToSupabase(user);
+        } else if (identifierLength === 14) { // CNPJ
+          const recrutador = {
+            nome: Nome,
+            email: trimmedEmail,
+            cnpj: identificador,
+            empresa: nomeEmpresa || 'Nome da Empresa', 
+          };
+          await saveRecrutadorToSupabase(recrutador);
+        } else {
+          throw new Error('Identificador inválido. Deve ter 11 dígitos para CPF ou 14 dígitos para CNPJ.');
+        }
+  
         // Notificação de sucesso
         await sendNotificationNow(
           'Cadastro Completo',
           'Seu cadastro foi realizado com sucesso!'
         );
-
+  
         navigation.navigate('Home');
       } catch (error: any) {
         console.error('Erro ao cadastrar usuário:', error.message);
-
+  
         // Verifica se o erro vem do Firebase ou do Supabase
         if (error.message.includes('Firebase')) {
           setErrors((prevErrors) => ({
             ...prevErrors,
-            email: 'Esse email já se encontra no nosso banco de dados, utilize outro por favor',
+            email: 'Esse e-mail já se encontra no nosso banco de dados, utilize outro por favor.',
           }));
         } else if (error.message.includes('Supabase')) {
           setErrors((prevErrors) => ({
             ...prevErrors,
-            identificador: 'Esse email já se encontra no nosso banco de dados, utilize outro por favor.',
+            identificador: 'Esse identificador já se encontra no nosso banco de dados, utilize outro por favor.',
           }));
         } else {
           setErrors((prevErrors) => ({
@@ -124,6 +139,7 @@ const CadastroScreen = () => {
       console.log('Formulário inválido. Verifique os erros:', errors);
     }
   };
+  
 
   const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {
     const digitsOnly = identificador.replace(/\D/g, '');
