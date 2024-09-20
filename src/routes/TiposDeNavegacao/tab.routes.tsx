@@ -39,7 +39,8 @@ export default function TabRoutes() {
                     }
 
                     return <Feather name={iconName} color={color} size={size} />;
-                },
+                },                
+                tabBarHideOnKeyboard: true,
                 tabBarActiveTintColor: '#F07A26', // Cor do ícone ativo
                 tabBarInactiveTintColor: 'gray', // Cor do ícone inativo
                 headerShown: false, // Oculta o cabeçalho

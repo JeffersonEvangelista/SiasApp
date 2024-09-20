@@ -204,7 +204,7 @@ export default function Login() {
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Cadastro')}>
+            <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Home')}>
               <Text style={styles.BtnCadastro}>Cadastro</Text>
             </TouchableOpacity>
           </View>
