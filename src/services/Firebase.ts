@@ -22,13 +22,18 @@ export const registerUser = async (email: string, password: string) => {
         await createUserWithEmailAndPassword(auth, email, password);
         console.log('Usuário registrado com sucesso');
     } catch (error) {
-        // Verifique se o erro é do tipo FirebaseError
         if (error instanceof Error) {
             console.error('Erro ao registrar usuário:', error.message);
         } else {
-            // Caso o erro não seja do tipo esperado, logue uma mensagem genérica
             console.error('Erro desconhecido ao registrar usuário:', error);
         }
-        throw error; // Repassa o erro para que possa ser tratado no componente
+        throw error; 
     }
+};
+
+
+// Função para obter o e-mail do usuário logado atualmente
+export const getCurrentUserEmail = (): string | null => {
+    const user = auth.currentUser;
+    return user ? user.email : null;
 };

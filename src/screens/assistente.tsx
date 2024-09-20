@@ -4,6 +4,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import Lottie from 'lottie-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
+import { getCurrentUserEmail } from '../services/Firebase';
+import { getUserName, countChatbotInteractionsForUser, fetchCandidatoByEmail, fetchRecrutadorByEmail } from '../services/userService';
 
 // Defina o tipo da mensagem
 type Message = {
@@ -20,9 +22,15 @@ export default function Assistente() {
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [showAnimation, setShowAnimation] = useState<boolean>(true);
   const [reportingBug, setReportingBug] = useState<boolean>(false);
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [email, setEmail] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+  const [chatbotCount, setChatbotCount] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-
+  const [userId, setUserId] = useState<string>('');
+  const [isCandidato, setIsCandidato] = useState<boolean>(false);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -41,6 +49,63 @@ export default function Assistente() {
     getPermissions();
   }, []);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Obter o e-mail do usuário
+        const email = await getCurrentUserEmail();
+        if (email) {
+          setEmail(email);
+          console.log('Email do usuário:', email);
+
+          // Obter o nome do usuário
+          const name = await getUserName();
+          setUserName(name);
+          console.log('Nome do usuário:', name);
+
+          // Obter o ID do usuário e verificar se é candidato ou recrutador
+          const candidato = await fetchCandidatoByEmail(email);
+          if (candidato) {
+            setUserId(candidato.id);
+            setIsCandidato(true);
+            console.log(`Candidato encontrado: ${candidato.nome}`);
+          } else {
+            const recrutador = await fetchRecrutadorByEmail(email);
+            if (recrutador) {
+              setUserId(recrutador.id);
+              setIsCandidato(false);
+              console.log(`Recrutador encontrado: ${recrutador.nome}`);
+            } else {
+              throw new Error('Usuário não encontrado em nenhuma das tabelas');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao obter informações do usuário:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []); // Apenas busca dados do usuário na montagem do componente
+
+  useEffect(() => {
+    const fetchChatbotCount = async () => {
+      try {
+        if (userId && isCandidato !== null) { // Verifica se `userId` e `isCandidato` estão definidos
+          const count = await countChatbotInteractionsForUser(userId, isCandidato);
+          setChatbotCount(count > 0 ? count : 1);
+          console.log(`Quantidade de interações de chatbot: ${count}`);
+        }
+      } catch (error) {
+        console.error('Erro ao obter contagem de interações do chatbot:', error);
+      }
+    };
+
+    fetchChatbotCount();
+  }, [userId, isCandidato]); 
+
   const sendMessage = () => {
     if (input.trim()) {
       const userMessage: Message = { id: Date.now().toString(), text: input, sender: 'user' };
@@ -53,7 +118,7 @@ export default function Assistente() {
       setMessages(prevMessages => [...prevMessages, userMessage, botMessage]);
       setInput('');
       setShowIntro(false);
-      setReportingBug(false); // Após o envio, não está mais relatando um bug
+      setReportingBug(false);
     }
   };
 
@@ -131,7 +196,6 @@ export default function Assistente() {
   }, [messages]);
 
   const generateResponse = (input: string) => {
-    // Função fictícia para gerar uma resposta do bot
     const response = `Você disse: ${input}`;
     console.log('Resposta gerada:', response);
     return response;
@@ -166,9 +230,17 @@ export default function Assistente() {
         </View>
       )}
       <View style={styles.messagesContainer}>
-        <TouchableOpacity style={styles.resetButtonTop} onPress={resetChat}>
-          <Icon name="delete" size={24} color="#FF4D4D" />
-        </TouchableOpacity>
+        {messages.length > 0 && (
+          <View style={styles.headerContainer}>
+            {/* Exibe o número identificador do chat */}
+            <Text style={styles.chatIdText}>Chat #{chatbotCount}</Text>
+
+            {/* Botão de reset */}
+            <TouchableOpacity style={styles.resetButtonTop} onPress={resetChat}>
+              <Icon name="delete" size={24} color="#FF4D4D" />
+            </TouchableOpacity>
+          </View>
+        )}
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -187,10 +259,7 @@ export default function Assistente() {
               )}
               {item.videoUri && (
                 <TouchableOpacity onPress={() => handlePressMedia(item.videoUri)}>
-                  <Image
-                    source={{ uri: item.videoUri }}
-                    style={styles.image}
-                  />
+                  <Image source={{ uri: item.videoUri }} style={styles.image} />
                 </TouchableOpacity>
               )}
             </View>
@@ -199,7 +268,8 @@ export default function Assistente() {
           style={styles.messages}
         />
       </View>
-      <InputArea 
+
+      <InputArea
         input={input}
         setInput={setInput}
         sendMessage={sendMessage}
@@ -238,12 +308,12 @@ export default function Assistente() {
   );
 }
 
-const InputArea: React.FC<{ 
-  input: string; 
-  setInput: React.Dispatch<React.SetStateAction<string>>; 
-  sendMessage: () => void; 
-  handleSelectMedia: () => void; 
-  reportingBug: boolean; 
+const InputArea: React.FC<{
+  input: string;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
+  sendMessage: () => void;
+  handleSelectMedia: () => void;
+  reportingBug: boolean;
 }> = ({ input, setInput, sendMessage, handleSelectMedia, reportingBug }) => (
   <View style={styles.inputContainer}>
     {reportingBug ? (
@@ -282,6 +352,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+  },
+  chatIdText: {
+    fontSize: 16,
+    color: '#555',
+    fontWeight: 'bold',
+  },
+  resetButtonTop: {
+    padding: 10,
+  },
   introContainer: {
     flex: 1,
     marginTop: 100,
@@ -314,15 +398,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 20,
   },
-  resetButtonTop: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 50,
-    zIndex: 1,
-  },
+
   messages: {
     flex: 1,
   },
