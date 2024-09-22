@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, Image, Dimensions, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Switch } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, Image, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, Switch } from 'react-native';
 import { TextInput as PaperTextInput, HelperText } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomButton from '../Styles/CustomButton';
 import { styles } from '../Styles/styles';
-import { useNavigation } from '@react-navigation/native'; // Importar useNavigation corretamente
+import { useNavigation } from '@react-navigation/native'; 
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 const logo = require('./../../../assets/logo.png');
@@ -26,9 +27,10 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState<boolean>(false);
 
   const { width, height } = Dimensions.get('window');
-  const navigation = useNavigation(); // Inicializar o hook de navegação
+  const navigation = useNavigation(); 
 
-  const generateRandomPoints = () => {
+  // Gerar os pontos aleatórios uma única vez e memorizar o valor.
+  const randomPoints = useMemo(() => {
     const points = [];
     for (let i = 0; i < 100; i++) {
       const x = Math.random() * width;
@@ -36,13 +38,36 @@ export default function Login() {
       points.push({ x, y });
     }
     return points;
-  };
+  }, [width, height]);
 
-  const randomPoints = generateRandomPoints();
+  useEffect(() => {
+    // Carregar e-mail e senha armazenados se "Lembre-se de mim" estiver ativado
+    const loadCredentials = async () => {
+      try {
+        const storedEmail = await AsyncStorage.getItem('email');
+        const storedSenha = await AsyncStorage.getItem('senha');
+        const storedRememberMe = await AsyncStorage.getItem('rememberMe');
+
+        console.log('Stored Email:', storedEmail); // Verifica se o email foi carregado
+        console.log('Stored Senha:', storedSenha); // Verifica se a senha foi carregada
+        console.log('Stored RememberMe:', storedRememberMe); // Verifica se "Lembre-se de mim" foi ativado
+        
+        if (storedEmail && storedSenha && storedRememberMe === 'true') {
+          setEmail(storedEmail);
+          setSenha(storedSenha);
+          setRememberMe(true);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar credenciais:', error);
+      }
+    };
+
+    loadCredentials();
+  }, []);
 
   // Função para validar o formulário
   const validateForm = () => {
-    const newErrors: FormErrors = {}; // objeto vazio pra armazenar mensagens de erro
+    const newErrors: FormErrors = {}; 
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
@@ -67,7 +92,22 @@ export default function Login() {
         const auth = getAuth();
         await signInWithEmailAndPassword(auth, email.trim(), senha);
         console.log('Login bem-sucedido!');
-        navigation.navigate('Home'); // Navegar para a tela principal após o login
+        
+        if (rememberMe) {
+          // Salvar credenciais no AsyncStorage
+          await AsyncStorage.setItem('email', email.trim());
+          await AsyncStorage.setItem('senha', senha);
+          await AsyncStorage.setItem('rememberMe', 'true');
+          console.log('Credenciais salvas:', { email, senha, rememberMe }); // Verifica se as credenciais foram salvas
+        } else {
+          // Remover credenciais se "Lembre-se de mim" não estiver ativado
+          await AsyncStorage.removeItem('email');
+          await AsyncStorage.removeItem('senha');
+          await AsyncStorage.setItem('rememberMe', 'false');
+          console.log('Credenciais removidas, rememberMe:', rememberMe); // Verifica se as credenciais foram removidas
+        }
+
+        navigation.navigate('Home'); 
       } catch (error) {
         console.error('Erro ao fazer login:', error.message);
         setErrors({
@@ -81,7 +121,7 @@ export default function Login() {
   };
 
   const handleSubmit = () => {
-    handleLogin(); // Chamar handleLogin ao submeter o formulário
+    handleLogin(); 
   };
 
   return (
@@ -136,7 +176,7 @@ export default function Login() {
 
         <View style={styles.transitionContainer}>
           <View style={styles.formContainer}>
-                      <PaperTextInput
+            <PaperTextInput
               label="Email"
               style={styles.textInput}
               mode="outlined"
@@ -177,11 +217,10 @@ export default function Login() {
                 <Switch
                   value={rememberMe}
                   onValueChange={setRememberMe}
-                  trackColor={{ false: '#767577', true: '#0D0D1B' }} // Cor do trilho
-                  thumbColor={rememberMe ? '#F07A26' : '#f4f3f4'} // Cor do botão
+                  trackColor={{ false: '#767577', true: '#0D0D1B' }} 
+                  thumbColor={rememberMe ? '#F07A26' : '#f4f3f4'}
                   style={styles.switch}
                 />
-
                 <Text style={styles.checkboxLabel}>Lembre-se de mim</Text>
               </View>
 

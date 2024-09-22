@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, Image, Button, Dimensions, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { TextInput as PaperTextInput, HelperText } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -146,7 +146,8 @@ const CadastroScreen = () => {
     return digitsOnly.length === 11 ? 'CPF' : 'CNPJ';
   };
 
-  const generateRandomPoints = () => {
+  // Gerar os pontos aleatórios uma única vez e memorizar o valor.
+  const randomPoints = useMemo(() => {
     const points = [];
     for (let i = 0; i < 100; i++) {
       const x = Math.random() * width;
@@ -154,9 +155,7 @@ const CadastroScreen = () => {
       points.push({ x, y });
     }
     return points;
-  };
-
-  const randomPoints = generateRandomPoints();
+  }, [width, height]);
 
   useEffect(() => {
     if (!isFocused) {
