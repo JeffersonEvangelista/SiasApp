@@ -327,6 +327,41 @@ export const fetchCandidatoByEmail = async (email: string): Promise<any | null> 
         throw error;
     }
 };
+// Função para obter o nome e o ID do usuário logado
+export const getUserNameAndId = async (): Promise<{ nome: string; id: string }> => {
+    try {
+        const email = await getCurrentUserEmail();
+        if (!email) {
+            throw new Error('Email do usuário não encontrado');
+        }
+
+        console.log(`Email do usuário: ${email}`);
+
+        // Tente buscar o usuário como candidato
+        const candidato = await fetchCandidatoByEmail(email);
+        if (candidato) {
+            console.log(`Candidato encontrado: ${candidato.nome}`);
+            const chatbotCount = await countChatbotInteractionsForUser(candidato.id, true);
+            console.log(`Quantidade de interações de chatbot do candidato ${candidato.nome}: ${chatbotCount}`);
+            return { nome: candidato.nome, id: candidato.id }; // Retorna o nome e o ID
+        }
+
+        // Se não for candidato, tente buscar como recrutador
+        const recrutador = await fetchRecrutadorByEmail(email);
+        if (recrutador) {
+            console.log(`Recrutador encontrado: ${recrutador.nome}`);
+            const chatbotCount = await countChatbotInteractionsForUser(recrutador.id, false);
+            console.log(`Quantidade de interações de chatbot do recrutador ${recrutador.nome}: ${chatbotCount}`);
+            return { nome: recrutador.nome, id: recrutador.id }; // Retorna o nome e o ID
+        }
+
+        throw new Error('Usuário não encontrado em nenhuma das tabelas');
+
+    } catch (error) {
+        console.error('Erro ao obter nome do usuário:', error instanceof Error ? error.message : error);
+        throw error; // Re-lança o erro para tratamento adicional se necessário
+    }
+};
 
 // Função para buscar recrutador pelo email
 export const fetchRecrutadorByEmail = async (email: string): Promise<any | null> => {
@@ -352,7 +387,6 @@ export const fetchRecrutadorByEmail = async (email: string): Promise<any | null>
         throw error;
     }
 };
-
 // Função para contar interações de chatbot do usuário
 export const countChatbotInteractionsForUser = async (userId: string, isCandidato: boolean): Promise<number> => {
     try {
