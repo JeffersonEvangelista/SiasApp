@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, Image, Dimensions, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Switch } from 'react-native';
 import { TextInput as PaperTextInput, HelperText } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import { styles } from './Styles/styles';
-import CustomButton from './Styles/CustomButton';
+import CustomButton from '../Styles/CustomButton';
+import { styles } from '../Styles/styles';
 import { useNavigation } from '@react-navigation/native'; // Importar useNavigation corretamente
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
