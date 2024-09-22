@@ -2,9 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import { getCurrentUserEmail } from '../services/Firebase';
 
 // Configure seu Supabase
-const supabaseUrl = 'https://enpcrnmsdcjekxmkrlaf.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA';
-const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabaseUrl = 'https://enpcrnmsdcjekxmkrlaf.supabase.co';
+export const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucGNybm1zZGNqZWt4bWtybGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjU0NDY5NzEsImV4cCI6MjA0MTAyMjk3MX0.BInW3v-YBtlK1OrG9W0uR1qtLEOcEEP7G_I8NpYotyA';
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ========================================================  Definições de Interfaces ==================================================
 interface Candidato {
@@ -57,7 +57,7 @@ interface ConfiguracoesApp {
 }
 
 //==========================================================  Funções de Inserção ==========================================================
-// =============================== Candidatos 
+// =============================== Candidatos
 export const saveCandidatoToSupabase = async (candidato: Candidato) => {
     try {
         const { data, error } = await supabase
@@ -72,7 +72,7 @@ export const saveCandidatoToSupabase = async (candidato: Candidato) => {
     }
 };
 
-// =============================== Recrutadores  
+// =============================== Recrutadores
 export const saveRecrutadorToSupabase = async (recrutador: Recrutador) => {
     try {
         const { data, error } = await supabase
@@ -87,7 +87,7 @@ export const saveRecrutadorToSupabase = async (recrutador: Recrutador) => {
     }
 };
 
-// =============================== Vagas 
+// =============================== Vagas
 export const saveVagaToSupabase = async (vaga: Vaga) => {
     try {
         const { data, error } = await supabase
@@ -102,7 +102,7 @@ export const saveVagaToSupabase = async (vaga: Vaga) => {
     }
 };
 
-// =============================== Solicitacoes 
+// =============================== Solicitacoes
 export const saveSolicitacaoEntrevistaToSupabase = async (solicitacao: SolicitacaoEntrevista) => {
     try {
         const { data, error } = await supabase
@@ -117,7 +117,7 @@ export const saveSolicitacaoEntrevistaToSupabase = async (solicitacao: Solicitac
     }
 };
 
-// =============================== Respostas dos candidatos 
+// =============================== Respostas dos candidatos
 export const saveRespostaCandidatoToSupabase = async (resposta: RespostaCandidato) => {
     try {
         const { data, error } = await supabase
@@ -147,7 +147,7 @@ export const saveChatbotInteracaoToSupabase = async (interacao: ChatbotInteracao
     }
 };
 
-// =============================== Configuracoes  
+// =============================== Configuracoes
 export const saveConfiguracoesAppToSupabase = async (configuracoes: ConfiguracoesApp) => {
     try {
         const { data, error } = await supabase
@@ -183,7 +183,7 @@ export const fetchChatbotInteracao = async (id_candidato: string, id_recrutador:
     }
 };
 
-// =============================== Candidatos 
+// =============================== Candidatos
 export const fetchCandidato = async (id: string) => {
     try {
         const { data, error } = await supabase
@@ -200,7 +200,7 @@ export const fetchCandidato = async (id: string) => {
     }
 };
 
-// =============================== Recrutadores  
+// =============================== Recrutadores
 export const fetchRecrutador = async (id: string) => {
     try {
         const { data, error } = await supabase
@@ -217,7 +217,7 @@ export const fetchRecrutador = async (id: string) => {
     }
 };
 
-// =============================== Vagas  
+// =============================== Vagas
 export const fetchVaga = async (id: string) => {
     try {
         const { data, error } = await supabase
@@ -234,7 +234,7 @@ export const fetchVaga = async (id: string) => {
     }
 };
 
-// =============================== Solicitadoes   
+// =============================== Solicitadoes
 export const fetchSolicitacaoEntrevista = async (id: string) => {
     try {
         const { data, error } = await supabase
@@ -251,7 +251,7 @@ export const fetchSolicitacaoEntrevista = async (id: string) => {
     }
 };
 
-// =============================== Respostas 
+// =============================== Respostas
 export const fetchRespostaCandidato = async (id: string) => {
     try {
         const { data, error } = await supabase
@@ -284,7 +284,7 @@ export const getUserName = async (): Promise<string> => {
             const chatbotCount = await countChatbotInteractionsForUser(candidato.id, true);
             console.log(`Quantidade de interações de chatbot do candidato ${candidato.nome}: ${chatbotCount}`);
             return candidato.nome;
-        } 
+        }
 
         // Se não for candidato, tente buscar como recrutador
         const recrutador = await fetchRecrutadorByEmail(email);
