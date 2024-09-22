@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     position: 'absolute',
-    top: '50%', // Centraliza verticalmente
+    top: '55%', // Centraliza verticalmente
     left: '50%', // Centraliza horizontalmente
     transform: [{ translateX: -150 }, { translateY: -160 }],
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
   },
   option: {
-    fontSize: 16,
+    fontSize: 18,
     flex: 1,
   },
   iconButton: {

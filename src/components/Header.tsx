@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import EditProfileButton from './EditProfileButton';
@@ -8,6 +8,8 @@ import { supabase } from '../services/userService';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { getUserNameAndId } from '../services/userService';
+import { logOutUser } from '../services/Firebase';
+import { useNavigation } from '@react-navigation/native';
 
 const uploadToSupabase = async (base64Image, imageExtension = 'jpg', bucketName = 'avatars', userId) => {
   try {
@@ -49,7 +51,20 @@ const uploadToSupabase = async (base64Image, imageExtension = 'jpg', bucketName 
     }
 
     console.log('Imagem enviada com sucesso, caminho:', imagePath);
-    return true; // Retorna true para indicar sucesso
+
+    // Obtendo o URL público da imagem
+    const { data: publicUrlData, error: publicUrlError } = supabase
+      .storage
+      .from(bucketName)
+      .getPublicUrl(imagePath);
+
+    if (publicUrlError) {
+      console.error('[uploadToSupabase] Erro ao obter publicUrl:', publicUrlError);
+      return null;
+    }
+
+    console.log('URL público da imagem:', publicUrlData.publicUrl);
+    return publicUrlData.publicUrl; // Retorna o URL público da imagem
   } catch (err) {
     console.error(err);
     return null;
@@ -59,6 +74,47 @@ const uploadToSupabase = async (base64Image, imageExtension = 'jpg', bucketName 
 const Header: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  const navigation = useNavigation();
+
+  // LogOff
+  const handleLogoff = async () => {
+    const success = await logOutUser(); // Chama a função de logoff
+    if (success) {
+      Alert.alert("Deslogado com sucesso!");
+      navigation.navigate('Auth', { screen: 'Login' });
+    } else {
+      Alert.alert("Erro ao deslogar. Tente novamente.");
+    }
+  };
+
+  useEffect(() => {
+    const loadProfileImage = async () => {
+      try {
+        const { id: userId } = await getUserNameAndId(); // Obtém o ID do usuário
+        console.log('User ID:', userId);
+
+        const { data, error } = await supabase
+          .from('candidatos')
+          .select('foto_perfil')
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          console.error('Erro ao buscar foto do perfil:', error);
+        } else if (data && data.foto_perfil) {
+          setProfileImage(data.foto_perfil); // Define o URL da imagem no estado
+          console.log('Foto de perfil carregada:', data.foto_perfil);
+        } else {
+          console.log('Nenhuma foto de perfil encontrada para o usuário.');
+        }
+      } catch (err) {
+        console.error('Erro ao carregar a imagem de perfil:', err);
+      }
+    };
+
+    loadProfileImage(); // Isso aqui serve para carregar a imagem na inicialização do componente
+  }, []);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -108,14 +164,15 @@ const Header: React.FC = () => {
       console.log('User ID:', userId);
 
       // Define o nome da imagem
-      const imageName = `${userId}`; // Nome da imagem
-      const uploadSuccess = await uploadToSupabase(base64Image, 'png', 'avatars', imageName);
+      const publicUrl = await uploadToSupabase(base64Image, 'png', 'avatars', userId);
 
-      if (uploadSuccess) {
-        setProfileImage(`avatars/${imageName}`);
+      if (publicUrl) {
+        setProfileImage(publicUrl); // Atualiza a imagem de perfil com o URL público
+
+        // O URL público é muito importante, pois é através dele que obtemos a foto de perfil do usuário e o associamos a sua respectiva conta na tabela do banco de dados
 
         // Chama a função para buscar o elemento na tabela
-        const element = await fetchElementById(userId, `avatars/${imageName}`);
+        const element = await fetchElementById(userId, publicUrl);
         console.log('Elemento buscado:', element);
       } else {
         console.error('Erro no upload da imagem, não será possível atualizar a tabela.');
@@ -170,10 +227,10 @@ const Header: React.FC = () => {
       console.log('Candidato encontrado.');
       console.log('Atualizando candidato com caminho da imagem:', caminhoImagem);
       await updateCandidato(userId, caminhoImagem);
-      return candidatosData; 
+      return candidatosData;
     } catch (error) {
       console.error('Erro ao buscar elemento:', error);
-      return null; 
+      return null;
     }
   };
 
@@ -231,7 +288,7 @@ const Header: React.FC = () => {
           )}
         </TouchableOpacity>
         <EditProfileButton onPress={() => { /* Lógica para editar perfil */ }} />
-        <LogOffButton onPress={() => { /* Lógica para logoff */ }} />
+        <LogOffButton onPress={handleLogoff} />
         <DeleteAccountButton onPress={() => { /* Lógica para deletar conta */ }} />
       </View>
 
@@ -262,9 +319,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
+    top: 80
   },
   profileCircle: {
     width: 140,
@@ -291,6 +348,7 @@ const styles = StyleSheet.create({
   },
   button: {
     padding: 15,
+    top: -20
   },
 });
 

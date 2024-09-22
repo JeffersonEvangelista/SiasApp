@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 // Configuração do Firebase
 const firebaseConfig = {
@@ -27,7 +27,7 @@ export const registerUser = async (email: string, password: string) => {
         } else {
             console.error('Erro desconhecido ao registrar usuário:', error);
         }
-        throw error; 
+        throw error;
     }
 };
 
@@ -37,3 +37,16 @@ export const getCurrentUserEmail = (): string | null => {
     const user = auth.currentUser;
     return user ? user.email : null;
 };
+
+// Função para realizar o logoff
+export const logOutUser = async () => {
+    const auth = getAuth();
+    try {
+      await signOut(auth);
+      console.log('Usuário deslogado com sucesso');
+      return true; // Sucesso
+    } catch (error) {
+      console.error('Erro ao fazer logoff:', error);
+      return false; // Falha
+    }
+  };
