@@ -407,3 +407,67 @@ export const countChatbotInteractionsForUser = async (userId: string, isCandidat
         throw error;
     }
 };
+export const buscarEntrevistasPorUsuario = async (userId) => {
+    // Substitua a consulta pelo código necessário para buscar as entrevistas do usuário no banco de dados
+    const { data: aceitas, error: errorAceitas } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('*')
+        .eq('id_candidato', userId)
+        .eq('status', 'aceita');
+
+    const { data: pendentes, error: errorPendentes } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('*')
+        .eq('id_candidato', userId)
+        .eq('status', 'pendente');
+
+    if (errorAceitas || errorPendentes) {
+        throw new Error('Erro ao buscar entrevistas');
+    }
+
+    return { aceitas, pendentes };
+};
+
+export const buscarEntrevistasPorRecrutador = async (userId) => {
+    const { data: aceitas, error: errorAceitas } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('*')
+        .eq('id_recrutador', userId)
+        .eq('status', 'aceita');
+
+    const { data: pendentes, error: errorPendentes } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('*')
+        .eq('id_recrutador', userId)
+        .eq('status', 'pendente');
+
+    if (errorAceitas || errorPendentes) {
+        throw new Error('Erro ao buscar entrevistas');
+    }
+
+    return { aceitas, pendentes };
+};
+export const contarEntrevistasPorUsuario = async (userId) => {
+    // Primeiro, tenta contar pelo id_recrutador
+    let { data, error } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('id', { count: 'exact' })
+        .eq('id_recrutador', userId);
+
+    // Se não encontrou, tenta contar pelo id_candidato
+    if (error || (data && data.length === 0)) {
+        console.log(`Nenhuma entrevista encontrada com id_recrutador: ${userId}. Tentando com id_candidato...`);
+
+        ({ data, error } = await supabase
+            .from('solicitacoes_entrevista')
+            .select('id', { count: 'exact' })
+            .eq('id_candidato', userId));
+    }
+
+    if (error) {
+        console.error('Erro ao contar entrevistas:', error);
+        throw new Error('Erro ao contar entrevistas');
+    }
+
+    return data.length; // Retorna o total de registros
+};
