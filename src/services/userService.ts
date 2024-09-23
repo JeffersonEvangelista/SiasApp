@@ -471,3 +471,106 @@ export const contarEntrevistasPorUsuario = async (userId) => {
 
     return data.length; // Retorna o total de registros
 };
+export const buscarDataCriacaoUsuario = async (userId: string, userName: string) => {
+    // Primeiro, tenta buscar pelo id_recrutador
+    let { data, error } = await supabase
+        .from('recrutadores')
+        .select('data_criacao')
+        .eq('id', userId); 
+
+
+    if (error || (data && data.length === 0)) {
+        console.log(`Nenhuma data encontrada com id_recrutador: ${userId}. Tentando com id_candidato...`);
+
+        ({ data, error } = await supabase
+            .from('candidatos')
+            .select('data_criacao')
+            .eq('id', userId)); 
+    }
+
+    if (error) {
+        console.error('Erro ao buscar data de criação:', error);
+        throw new Error('Erro ao buscar data de criação');
+    }
+
+    if (data && data.length > 0) {
+        return new Date(data[0].data_criacao); // Retorna a data de criação
+    } else {
+        throw new Error('Usuário não encontrado');
+    }
+};
+
+export const processAndSaveBugReport = async (userId, userType, description, image) => {
+    try {
+        console.log('Iniciando o processamento do bug report...');
+        console.log('Descrição do bug:', description);
+        console.log('Tipo de usuário:', userType);
+        console.log('ID do usuário:', userId);
+
+        let imageFile;
+        let fileName;
+
+        if (image.uri) {
+            console.log('Imagem recebida como URL:', image.uri);
+            const response = await fetch(image.uri);
+            const blob = await response.blob();
+            console.log('Blob da imagem criado:', blob);
+
+            const mimeType = blob.type || 'image/png';
+            const extension = mimeType.split('/')[1];
+
+            imageFile = blob;
+            fileName = `bug_reports/${Date.now()}_${userId}.${extension}`;
+            console.log('Arquivo de imagem pronto para upload:', fileName, mimeType);
+        } else {
+            imageFile = image;
+            console.log('Imagem recebida diretamente:', imageFile);
+            const extension = imageFile.type ? imageFile.type.split('/')[1] : 'png';
+            fileName = `bug_reports/${Date.now()}_${userId}.${extension}`;
+        }
+
+        console.log('Fazendo upload da imagem:', fileName);
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('Bug')
+            .upload(fileName, imageFile, {
+                cacheControl: '3600',
+                upsert: true,
+                contentType: imageFile.type || 'image/png',
+            });
+
+        if (uploadError) {
+            console.error('Erro ao fazer upload da imagem:', uploadError.message);
+            throw new Error(`Erro ao fazer upload da imagem: ${uploadError.message}`);
+        }
+
+        console.log('Dados do upload:', uploadData); // Log adicional
+
+        // Verifique se uploadData.path está definido
+        const imageUrl = `https://enpcrnmsdcjekxmkrlaf.supabase.co/storage/v1/object/public/Bug/${uploadData.path}`;
+        console.log('Imagem carregada com sucesso. URL da imagem:', imageUrl);
+
+        const { data, error } = await supabase
+            .from('chatbot_interacoes')
+            .insert([
+                {
+                    id_candidato: userType === 'candidato' ? userId : null,
+                    id_recrutador: userType === 'recrutador' ? userId : null,
+                    mensagem: description,
+                    resposta_chatbot: 'Bug reportado com sucesso.',
+                    Img_bug: imageUrl,
+                },
+            ]);
+
+        if (error) {
+            console.error('Erro ao salvar no banco de dados:', error.message);
+            throw new Error(`Erro ao salvar no banco de dados: ${error.message}`);
+        }
+
+        console.log('Bug reportado com sucesso:', data);
+        return true; 
+    } catch (error) {
+        console.error('Erro ao processar e salvar o bug report:', error.message);
+        return false; 
+    }
+};
