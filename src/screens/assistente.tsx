@@ -52,6 +52,7 @@ export default function Assistente() {
   const [messageCount, setMessageCount] = useState(0);
   const [bugMedia, setBugMedia] = useState<string | null>(null);
   const [userType, setUserType] = useState(''); // Adicione esta linha
+  const [imageUri, setImageUri] = useState(null); // Estado para armazenar a URI da imagem
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--= Buscas automatizadas referente  a informacoes do usuario =-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=
   useEffect(() => {
@@ -121,85 +122,85 @@ export default function Assistente() {
   //=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Parte que controla o Salvamento do relato no banco de dados =-=-=-=
   const sendBugReport = (description: string) => {
     console.log('Descrição recebida:', description);
-    console.log('Imagem recebida:', setBugImage);
+    console.log('Imagem recebida:', imageUri); // Aqui você deve usar imageUri
 
     // Atualiza a descrição
     if (description.trim()) {
-      setBugReport(prev => ({ ...prev, description }));
-      const userMessageId = `user-${Date.now()}-${messageCount}`;
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { id: userMessageId, text: description, sender: 'user' },
-      ]);
-      setMessageCount(prev => prev + 1);
+        setBugReport(prev => ({ ...prev, description }));
+        const userMessageId = `user-${Date.now()}-${messageCount}`;
+        setMessages(prevMessages => [
+            ...prevMessages,
+            { id: userMessageId, text: description, sender: 'user' },
+        ]);
+        setMessageCount(prev => prev + 1);
     }
-    bugImage == setBugImage
-    // Atualiza a imagem
-    if (bugImage) {
-      setBugReport(prev => ({ ...prev, image: bugImage }));
-      const botImageMessageId = `bot-${Date.now()}-${messageCount}`;
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { id: botImageMessageId, text: 'Recebemos a imagem. Agora, por favor, descreva o erro que ocorreu.', sender: 'bot' },
-      ]);
-      setMessageCount(prev => prev + 1);
+
+    // Não precisa verificar bugImage, pois agora estamos usando imageUri diretamente
+    if (imageUri) {
+        setBugReport(prev => ({ ...prev, image: imageUri }));
+        const botImageMessageId = `bot-${Date.now()}-${messageCount}`;
+        setMessages(prevMessages => [
+            ...prevMessages,
+            { id: botImageMessageId, text: 'Recebemos a imagem. Agora, por favor, descreva o erro que ocorreu.', sender: 'bot' },
+        ]);
+        setMessageCount(prev => prev + 1);
     }
 
     // Chame a função para salvar o bug no banco de dados apenas quando ambas as informações estiverem disponíveis
-    if (description.trim() && bugImage) {
-      console.log('Enviando bug com descrição e imagem:', description, bugImage);
-      Salvamentodebug(userId, userType, description, bugImage); // Envia a imagem armazenada no estado
-      setBugReport({ description: '', image: null });
-    } else if (description.trim() && !bugImage) {
-      const botMessageId = `bot-${Date.now()}-${messageCount}`;
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { id: botMessageId, text: 'Agora, por favor, envie uma imagem.', sender: 'bot' },
-      ]);
-    } else if (!description.trim() && bugImage) {
-      const botMessageId = `bot-${Date.now()}-${messageCount}`;
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { id: botMessageId, text: 'Por favor, descreva o erro que ocorreu.', sender: 'bot' },
-      ]);
+    if (description.trim() && imageUri) {
+        console.log('Enviando bug com descrição e imagem:', description, imageUri);
+        Salvamentodebug(userId, userType, description, imageUri); // Passa imageUri para a função
+        setBugReport({ description: '', image: null });
+    } else if (description.trim() && !imageUri) {
+        const botMessageId = `bot-${Date.now()}-${messageCount}`;
+        setMessages(prevMessages => [
+            ...prevMessages,
+            { id: botMessageId, text: 'Agora, por favor, envie uma imagem.', sender: 'bot' },
+        ]);
+    } else if (!description.trim() && imageUri) {
+        const botMessageId = `bot-${Date.now()}-${messageCount}`;
+        setMessages(prevMessages => [
+            ...prevMessages,
+            { id: botMessageId, text: 'Por favor, descreva o erro que ocorreu.', sender: 'bot' },
+        ]);
     }
-  };
-
-  const Salvamentodebug = async (userId, userType, description, image) => {
-    const explanations = [
+};
+const Salvamentodebug = async (userId, userType, description, image) => {
+  const explanations = [
       { text: `Obrigado por relatar o que aconteceu` },
       { text: `Iremos arrumar esses erros o mais rápido possível....` },
       { text: `Espere um pouco enquanto salvamos essas informações no banco de dados.` },
-    ];
+  ];
 
-    setIsTyping(true);
+  setIsTyping(true);
 
-    const sendMessageRecursively = async (index) => {
+  const sendMessageRecursively = async (index) => {
       if (index < explanations.length) {
-        setMessages(prevMessages => [
-          ...prevMessages,
-          { id: Date.now().toString(), text: explanations[index].text, sender: 'bot' },
-        ]);
-        setTimeout(() => sendMessageRecursively(index + 1), 2000);
+          setMessages(prevMessages => [
+              ...prevMessages,
+              { id: Date.now().toString(), text: explanations[index].text, sender: 'bot' },
+          ]);
+          setTimeout(() => sendMessageRecursively(index + 1), 2000);
       } else {
-        const success = await processAndSaveBugReport(userId, userType, description, image);
-        setIsTyping(false);
-        if (success) {
-          setMessages(prevMessages => [
-            ...prevMessages,
-            { id: Date.now().toString(), text: 'Seu relatório foi salvo com sucesso!', sender: 'bot' },
-          ]);
-        } else {
-          setMessages(prevMessages => [
-            ...prevMessages,
-            { id: Date.now().toString(), text: 'Ocorreu um erro ao salvar seu relatório. Tente novamente.', sender: 'bot' },
-          ]);
-        }
+          const success = await processAndSaveBugReport(userId, userType, description, image);
+          setIsTyping(false);
+          if (success) {
+              setMessages(prevMessages => [
+                  ...prevMessages,
+                  { id: Date.now().toString(), text: 'Seu relatório foi salvo com sucesso!', sender: 'bot' },
+              ]);
+          } else {
+              setMessages(prevMessages => [
+                  ...prevMessages,
+                  { id: Date.now().toString(), text: 'Ocorreu um erro ao salvar seu relatório. Tente novamente.', sender: 'bot' },
+              ]);
+          }
       }
-    };
-
-    sendMessageRecursively(0); // Inicia o envio das mensagens
   };
+
+  sendMessageRecursively(0); // Inicia o envio das mensagens
+};
+
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=-==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
 
   // Função para enviar mensagens
@@ -446,7 +447,6 @@ export default function Assistente() {
 
     sendMessageRecursively(0);
   };
-
   const DuvidasdoSistema = (userName: string) => {
     const explanations = [
       { text: `🎉 Estou tão feliz que você, ${userName}, queira saber mais sobre mim!` },
@@ -476,7 +476,6 @@ export default function Assistente() {
 
     sendMessageRecursively(0);
   };
-
   const EntrevistasMarcadas = async (userId: string, userName: string) => {
     setIsTyping(true);
 
@@ -550,7 +549,6 @@ export default function Assistente() {
       console.log('Processo de busca de entrevistas finalizado.');
     }
   };
-
   const mostrarQuantidadeEntrevistas = async (userId: string, userName: string) => {
     try {
       console.log(`Contando entrevistas para o usuário: ${userName}`);
@@ -587,7 +585,6 @@ export default function Assistente() {
       ]);
     }
   };
-
   const TempoConosco = async (userId: string, userName: string) => {
     try {
       console.log(`Calculando tempo no sistema para o usuário: ${userName}`);
@@ -731,7 +728,6 @@ export default function Assistente() {
     };
     sendMessageRecursively(0);
   };
-
   const RelatosBug = (userId: string, userName: string, complemento: string) => {
       const explanations = [
         { text: `😔 Desculpe por qualquer inconveniente que você possa estar enfrentando!` },
@@ -859,8 +855,9 @@ export default function Assistente() {
 
       if (!result.canceled) {
         const uri = result.assets[0].uri; // URI da imagem selecionada
-        const message = { id: Date.now().toString(), sender: 'user', imageUri: uri };
+        setImageUri(uri); // Salva a URI da imagem no estado
 
+        const message = { id: Date.now().toString(), sender: 'user', imageUri: uri };
         console.log('Mídia selecionada:', message);
         setMessages(prevMessages => [...prevMessages, message]);
       }
