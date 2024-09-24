@@ -81,7 +81,7 @@ const CadastroScreen = () => {
         const identifierLength = identificador.replace(/\D/g, '').length; 
   
         // Tentativa de registro no Firebase
-        await registerUser(trimmedEmail, senha);
+        await registerUser(trimmedEmail, senha, Nome, identificador);
   
         // Criação do objeto de usuário com base no tipo
         const user = {

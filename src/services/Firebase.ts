@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { collection, initializeFirestore, getFirestore } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, initializeAuth } from 'firebase/auth';
+import { collection, doc, getDoc, setDoc, getFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuração do Firebase
 const firebaseConfig = {
@@ -15,18 +16,29 @@ const firebaseConfig = {
 
 // Inicialize o Firebase
 const app = initializeApp(firebaseConfig)
-const db = initializeFirestore(app, { experimentalForceLongPolling: true })
+const db = getFirestore(app);
 
-const auth = getAuth(app);
+export const auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+})
 
 export const usersRef = collection(db, 'users');
 export const roomRef = collection(db, 'rooms')
 
 // Função para registrar o usuário
-export const registerUser = async (email: string, password: string) => {
+export const registerUser = async (email: string, password: string, username:string, identificador:string) => {
     try {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const response = await createUserWithEmailAndPassword(auth, email, password);
+
+        await setDoc(doc(db, "users", response?.user?.uid),{
+            username,
+            email,
+            identificador,
+            userId: response?.user?.uid
+        });
+        return {success: true, data: response?.user}
         console.log('Usuário registrado com sucesso');
+
     } catch (error) {
         if (error instanceof Error) {
             console.error('Erro ao registrar usuário:', error.message);
@@ -36,7 +48,6 @@ export const registerUser = async (email: string, password: string) => {
         throw error;
     }
 };
-
 
 // Função para obter o e-mail do usuário logado atualmente
 export const getCurrentUserEmail = (): string | null => {
