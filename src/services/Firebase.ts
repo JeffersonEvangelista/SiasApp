@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { collection, initializeFirestore, getFirestore } from 'firebase/firestore';
 
 // Configuração do Firebase
 const firebaseConfig = {
@@ -9,12 +10,17 @@ const firebaseConfig = {
     storageBucket: "siasmobile-5a101.appspot.com",
     messagingSenderId: "18631145700",
     appId: "1:18631145700:web:7c3d01d6c29f52804394f1",
-    measurementId: "G-J29RZYWT9D"
+    measurementId: "G-J29RZYWT9D",
 };
 
 // Inicialize o Firebase
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig)
+const db = initializeFirestore(app, { experimentalForceLongPolling: true })
+
 const auth = getAuth(app);
+
+export const usersRef = collection(db, 'users');
+export const roomRef = collection(db, 'rooms')
 
 // Função para registrar o usuário
 export const registerUser = async (email: string, password: string) => {

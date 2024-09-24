@@ -1,10 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import PageContainer from '../components/PageContainer';
+import ChatList from '../components/ChatList';
 import { TextInput, TouchableOpacity } from 'react-native-gesture-handler';
+import { getCurrentUserEmail } from '../services/Firebase';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { StatusBar } from 'expo-status-bar';
+import { styles } from './Styles/styles';
+import { ActivityIndicator } from 'react-native-paper';
+import { query, where, getDocs } from 'firebase/firestore'
+import { usersRef } from '../services/Firebase'
 
 export default function Chat() {
+
+  const userEmail = getCurrentUserEmail();
+  
+  const [users, setUsers] = useState([]);
+  useEffect(()=>{
+    getUsers();
+  }, [])
+  
+  const getUsers = async ()=>{
+    const q =  query(usersRef, where('email', '!=', userEmail))
+
+    const querySnapshot = await getDocs(q);
+    let data = [];
+    querySnapshot.forEach((doc) => {
+      data.push({...doc.data()}); 
+    });
+
+    console.log("AAAAAAAA",data);
+    setUsers(data);
+
+  }
   
   return (
     <SafeAreaView style={{flex: 1}}>
@@ -41,9 +68,24 @@ export default function Chat() {
               fontSize: 18,
             }}
             placeholder='Pesquisar'
-            ></TextInput>
+            />
           </View>
-
+          <View style={{flex: 1}}>
+            <StatusBar style='light'/>
+            {
+              users.length>0? (
+                <ChatList users={users}/>
+              ):(
+                <View style={{
+                  flexDirection:"column",
+                  alignItems:"center",
+                  top: 30
+                }}>
+                  <ActivityIndicator size={'large'} color="#F07A26"/>
+                </View>
+              )
+            }
+          </View>
         </View>
     </SafeAreaView>
   );
