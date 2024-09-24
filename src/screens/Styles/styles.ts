@@ -1,5 +1,5 @@
 import { StyleSheet, Dimensions } from 'react-native';
-
+import colors from './colors';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
@@ -12,7 +12,7 @@ export const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        backgroundColor: '#0D0D1B',
+        backgroundColor: colors.backgroundManter,
     },
     background: {
         ...StyleSheet.absoluteFillObject,
@@ -33,7 +33,7 @@ export const styles = StyleSheet.create({
         position: 'absolute',
         width: 4,
         height: 4,
-        backgroundColor: '#F07A26',
+        backgroundColor: colors.orange,
         borderRadius: 2,
     },
     frameLayout: {
@@ -69,7 +69,7 @@ export const styles = StyleSheet.create({
         textAlign: 'center',
     },
     transitionContainer: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colors.background,
         marginHorizontal: 16,
         marginTop: 32,
         paddingBottom: 16,
@@ -97,7 +97,7 @@ export const styles = StyleSheet.create({
         marginTop: 16,
     },
     terms: {
-        color: '#1A0596',
+        color: colors.termos,
         textAlign: 'center',
         fontSize: 17,
         padding: 10,
@@ -136,7 +136,7 @@ export const styles = StyleSheet.create({
     lineContainer: {
         flex: 1,
         height: 1,
-        backgroundColor: '#CCCCCC',
+        backgroundColor: colors.borderColor,
     },
     containeer: {
         flexDirection: 'row',
@@ -176,7 +176,7 @@ export const styles = StyleSheet.create({
     BtnCadastro: {
         color: '#FFF',
         fontSize: 14,
-        backgroundColor: '#F07A26',
+        backgroundColor: colors.orange,
         padding: 20,
         borderRadius: 16,
 
@@ -197,17 +197,25 @@ export const styles = StyleSheet.create({
     },
 
     forgotPassword: {
-        color: '#F07A26',
+        color: colors.orange,
         textDecorationLine: 'underline',
     },
 
 });
 
 export const stylesAssistente = StyleSheet.create({
-
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.background,
+        justifyContent: 'flex-end',
+    },
+    scrollView: {
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1,
+        height: 50,
+        marginBottom: -710,
     },
     headerContainer: {
         flexDirection: 'row',
@@ -217,7 +225,7 @@ export const stylesAssistente = StyleSheet.create({
     },
     chatIdText: {
         fontSize: 16,
-        color: '#555',
+        color: colors.orange,
         fontWeight: 'bold',
     },
     resetButtonTop: {
@@ -234,18 +242,19 @@ export const stylesAssistente = StyleSheet.create({
     introButton: {
         marginBottom: 10,
         padding: 10,
-        backgroundColor: '#F07A26',
+        backgroundColor: colors.orange,
         borderRadius: 5,
         width: '100%',
         alignItems: 'center',
     },
     introButtonText: {
-        color: '#fff',
+        color: colors.background,
         fontSize: 16,
     },
     introText: {
         marginBottom: 20,
         fontSize: 16,
+        color: colors.textPrimary,
     },
     lottieAnimation: {
         width: 200,
@@ -255,7 +264,6 @@ export const stylesAssistente = StyleSheet.create({
         flex: 1,
         marginTop: 20,
     },
-
     messages: {
         flex: 1,
     },
@@ -266,31 +274,33 @@ export const stylesAssistente = StyleSheet.create({
     },
     userMessage: {
         marginRight: 8,
-        backgroundColor: '#e1ffc7',
+        backgroundColor: colors.userBackground,
         alignSelf: 'flex-end',
     },
     botMessage: {
         marginLeft: 8,
-        backgroundColor: '#f1f0f0',
+        backgroundColor: colors.botBackground,
         alignSelf: 'flex-start',
+        marginRight: 5,
+        marginEnd: 55,
     },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         borderTopWidth: 1,
-        borderTopColor: '#ccc',
-        backgroundColor: '#fff',
+        borderTopColor: colors.borderColor,
+        backgroundColor: colors.background,
     },
     input: {
         flex: 1,
-        borderColor: '#ccc',
+        borderColor: colors.borderColor,
         borderWidth: 1,
         borderRadius: 5,
         padding: 10,
         margin: 10,
     },
     sendButton: {
-        backgroundColor: '#F07A26',
+        backgroundColor: colors.orange,
         padding: 10,
         borderRadius: 50,
         marginRight: 10,
@@ -298,7 +308,7 @@ export const stylesAssistente = StyleSheet.create({
         alignItems: 'center',
     },
     attachButton: {
-        backgroundColor: '#F07A26',
+        backgroundColor: colors.orange,
         padding: 10,
         borderRadius: 5,
         margin: 10,
@@ -315,12 +325,12 @@ export const stylesAssistente = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: colors.modalBackground,
     },
     modalContainer: {
         width: '90%',
         height: '80%',
-        backgroundColor: '#fff',
+        backgroundColor: colors.background,
         borderRadius: 10,
         overflow: 'hidden',
         position: 'relative',
@@ -346,60 +356,66 @@ export const stylesAssistente = StyleSheet.create({
         justifyContent: 'space-around',
         marginVertical: 10,
         paddingHorizontal: 20,
+
     },
     responseButton: {
-        backgroundColor: '#007BFF', // ou a cor que preferir
+        backgroundColor: colors.orange,
         padding: 10,
         borderRadius: 5,
         flex: 1,
         marginHorizontal: 5,
     },
     buttonText: {
-        color: '#fff',
+        color: colors.background,
         fontWeight: 'bold',
         textAlign: 'center',
+    },
+    scrollContainer: {
+        height: 40,
+        paddingVertical: 5,
+        flexDirection: 'row',
     },
     optionsContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginVertical: 10,
+        justifyContent: 'flex-start',
         paddingHorizontal: 10,
+
     },
     optionButton: {
-        backgroundColor: '#007BFF', // Cor de fundo do botão
+        backgroundColor: colors.orange,
         borderRadius: 5,
-        padding: 10,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
         alignItems: 'center',
-        flex: 1,
         marginHorizontal: 5,
+        borderWidth: 0.5,
+        padding: 5,
+        borderColor: colors.textPrimary,
     },
+
     optionButtonText: {
-        color: '#FFFFFF', // Cor do texto
+        color: colors.background,
         fontWeight: 'bold',
         textAlign: 'center',
+        fontSize: 16,
     },
+
     messageContent: {
-        flexDirection: 'row', // Alinha o ícone e o texto em linha
-        alignItems: 'center', // Centraliza verticalmente
+        flexDirection: 'row',
+        alignItems: 'center',
+
     },
-    icon: {
-        marginRight: 8, // Espaçamento entre o ícone e o texto
-        alignSelf: 'flex-start',
-    },
+
+
     typingIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: 10,
-        alignItems: 'flex-start',
-        backgroundColor: '#f0f0f0', // Cor de fundo leve
-        borderRadius: 8,
-        margin: 10,
-        borderWidth: 1,
-        borderColor: '#ccc',
     },
 
     typingIndicatorText: {
-        fontSize: 14,
-        color: '#555', // Cor do texto
-        fontStyle: 'italic', // Estilo de texto itálico
+        fontSize: 16,
+        color: colors.textPrimary,
+        marginRight: 5, // Espaço entre a mensagem e os pontos
     },
-
 });

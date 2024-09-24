@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, TouchableOpacity, Image, Modal, Platform, Pressable, Alert } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, TouchableOpacity, Image, Modal, Platform, Pressable, Alert, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Lottie from 'lottie-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video } from 'expo-av';
 import { getCurrentUserEmail } from '../services/Firebase';
 import InputArea from '../components/InputArea';
+import TypingIndicator from '../components/TypingIndicator';
 import { stylesAssistente } from './Styles/styles';
 import { getUserName, countChatbotInteractionsForUser, fetchCandidatoByEmail, buscarDataCriacaoUsuario, fetchRecrutadorByEmail, contarEntrevistasPorUsuario, buscarEntrevistasPorUsuario, buscarEntrevistasPorRecrutador, processAndSaveBugReport } from '../services/userService';
 
@@ -116,6 +117,8 @@ export default function Assistente() {
 
 
   // ================================================================== Logiccas do chatbot, nao mexer nessa parte pois vai dar ruim ======================================== 
+
+  //=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Parte que controla o Salvamento do relato no banco de dados =-=-=-=
   const sendBugReport = (description: string) => {
     console.log('Descrição recebida:', description);
     console.log('Imagem recebida:', setBugImage);
@@ -197,7 +200,7 @@ export default function Assistente() {
 
     sendMessageRecursively(0); // Inicia o envio das mensagens
   };
-
+  // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=-==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
 
   // Função para enviar mensagens
   const sendMessage = () => {
@@ -266,6 +269,7 @@ export default function Assistente() {
     return responses;
   };
 
+  // Opcoes do chat
   const handleOptionSelect = (selectedOption: string) => {
     const trimmedOption = selectedOption.trim();
     console.log(`Opção selecionada: ${trimmedOption}`);
@@ -357,15 +361,17 @@ export default function Assistente() {
     setOptions([]);
   };
 
+  // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=- Principal COntrole de fluxo de conversas do chat ==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
+
   const explicacaodasopcoes = () => {
     const explanations = [
-      { text: `Claro, eu adoraria te ajudar!` },
-      { text: `Minhas principais funções podem ser definidas em 4 tópicos diferentes.` },
-      { text: `1. Dúvidas do Sistema: Você pode perguntar sobre como o sistema funciona e suas principais funcionalidades, e eu estarei aqui para explicar.` },
-      { text: `2. Relatar algum Bug: Apesar de fazermos o possível para que isso não aconteça, às vezes pequenos erros podem passar.` },
-      { text: `Se você encontrou um erro ou um problema no sistema, descreva o que aconteceu e vamos resolver juntos.` },
-      { text: `3. Dúvidas sobre sua conta: Se tiver questões sobre sua conta, como acesso ou se possui agendamento de entrevista e até mesmo configurações, estou pronto para ajudar.` },
-      { text: `4. Mais detalhes sobre as opções: E finalmente a opção que você está experimentando agora.` },
+      { text: `Olá! 😊 Estou aqui para ajudar você da melhor forma possível!` },
+      { text: `Aqui estão as principais maneiras de interagir comigo:` },
+      { text: `1️⃣ Dúvidas do Sistema: Tem perguntas sobre como o sistema funciona ou suas funcionalidades? Fique à vontade para perguntar! Estou aqui para te explicar tudo.` },
+      { text: `2️⃣ Relatar algum Bug: Embora trabalhemos duro para evitar erros, eles podem acontecer. Se você encontrou algum bug, por favor, descreva o que ocorreu e juntos vamos resolver isso!` },
+      { text: `3️⃣ Dúvidas sobre sua Conta: Se você tiver perguntas sobre o acesso à sua conta, agendamentos ou configurações, não hesite! Estou aqui para te ajudar.` },
+      { text: `4️⃣ Mais Detalhes sobre as Opções: Esta opção é para você saber mais sobre tudo isso. Se tiver dúvidas sobre alguma das opções, pergunte!` },
+      { text: `Qualquer que seja sua necessidade, estou aqui para ajudar! Vamos juntos encontrar a melhor solução para você. 🤝` },
     ];
 
 
@@ -388,13 +394,14 @@ export default function Assistente() {
   };
   const Duvidasdaconta = () => {
     const explanations = [
-      { text: `Claro, ficarei feliz em ajudar!` },
-      { text: `Infelizmente, ainda estou em "crescimento", então não posso ajudar com muitas questões.` },
-      { text: `Por enquanto, posso ajudar apenas com questões simples.` },
-      { text: `1. Você tem alguma entrevista marcada ou pendente?` },
-      { text: `2. Quantas solicitações de entrevista você já enviou ou recebeu?` },
-      { text: `3. Há quanto tempo você possui essa conta?` },
-      { text: `Por ora, isso é tudo que posso oferecer.` },
+      { text: `Olá! 😊 Estou aqui para ajudar e ficarei muito feliz em te apoiar!` },
+      { text: `Atualmente, estou em processo de "crescimento", então ainda não consigo responder a todas as suas perguntas.` },
+      { text: `Por enquanto, posso ajudar com algumas questões simples e diretas.` },
+      { text: `Aqui estão algumas perguntas que posso responder:` },
+      { text: `1️⃣ Você tem alguma entrevista marcada ou pendente?` },
+      { text: `2️⃣ Quantas solicitações de entrevista você já enviou ou recebeu?` },
+      { text: `3️⃣ Há quanto tempo você possui esta conta?` },
+      { text: `Essas são as opções que posso oferecer no momento. Estou aqui para ajudar no que for possível! 🤝` },
     ];
 
     // Ativar o indicador de digitação
@@ -416,9 +423,9 @@ export default function Assistente() {
   };
   const relatosdeBugs = () => {
     const explanations = [
-      { text: `😢 Lamentamos muito que você tenha encontrado um bug!` },
-      { text: `Saiba que estamos comprometidos em resolver isso o mais rápido possível.` },
-      { text: `Para nos ajudar, por favor, informe em qual tela você encontrou o bug:` },
+      { text: `😢 Sinto muito que você tenha encontrado um bug! Agradeço por nos informar.` },
+      { text: `Estamos totalmente comprometidos em resolver isso o mais rápido possível.` },
+      { text: `Para nos ajudar a entender melhor, poderia nos informar em qual tela você encontrou o problema?` },
     ];
 
     // Ativar o indicador de digitação
@@ -442,11 +449,12 @@ export default function Assistente() {
 
   const DuvidasdoSistema = (userName: string) => {
     const explanations = [
-      { text: `Estou feliz que você, ${userName}, queira saber mais sobre mim!` },
-      { text: `Posso compartilhar quatro curiosidades principais sobre o sistema:` },
-      { text: `1. Criadores do Sistema: Vou contar sobre as pessoas que me desenvolveram.` },
-      { text: `2. Propósito: Vou explicar por que eles decidiram me criar.` },
-      { text: `3. Funcionalidades: Falo sobre tudo o que posso fazer para te ajudar.` },
+      { text: `🎉 Estou tão feliz que você, ${userName}, queira saber mais sobre mim!` },
+      { text: `Aqui estão quatro curiosidades incríveis sobre o sistema:` },
+      { text: `1. Criadores do Sistema: Vou te contar sobre as mentes brilhantes que me desenvolveram.` },
+      { text: `2. Propósito: Vou explicar a motivação por trás da minha criação.` },
+      { text: `3. Funcionalidades: Falo sobre tudo o que posso fazer para te ajudar no dia a dia.` },
+      { text: `4. Futuro: Vamos falar sobre o que está por vir e como posso evoluir para atender melhor suas necessidades.` },
       { text: `Qual dessas opções você gostaria de explorar primeiro?` },
     ];
 
@@ -469,16 +477,15 @@ export default function Assistente() {
     sendMessageRecursively(0);
   };
 
-
   const EntrevistasMarcadas = async (userId: string, userName: string) => {
     setIsTyping(true);
 
     const explanations = [
-      { text: `Claro, vamos verificar as entrevistas!` },
-      { text: `Um momento, por favor...` },
-      { text: `Estou conferindo suas entrevistas...` },
+      { text: `🔍 Claro, vamos dar uma olhada nas suas entrevistas!` },
+      { text: `⏳ Um momento, por favor... Estou verificando tudo para você!` },
+      { text: `👀 Estou conferindo suas entrevistas agora... Só um instante!` },
     ];
-
+  
     sendMessagesRecursively(explanations, 0);
 
     try {
@@ -510,7 +517,7 @@ export default function Assistente() {
           { id: Date.now().toString(), text: `Aqui estão os detalhes das suas entrevistas aceitas:`, sender: 'bot' },
         ]);
         for (const entrevista of entrevistas.aceitas) {
-          const detalhes = `✅ Entrevista com ${entrevista.empresa} na data ${entrevista.data} às ${entrevista.hora}, local: ${entrevista.local}.`;
+          const detalhes = `✅ Entrevista na data ${entrevista.data} às ${entrevista.hora}, local: ${entrevista.local}.`;
           setMessages(prevMessages => [
             ...prevMessages,
             { id: Date.now().toString(), text: detalhes, sender: 'bot' },
@@ -525,7 +532,7 @@ export default function Assistente() {
           { id: Date.now().toString(), text: `Aqui estão os detalhes das suas entrevistas pendentes:`, sender: 'bot' },
         ]);
         for (const entrevista of entrevistas.pendentes) {
-          const detalhes = `⏳ Entrevista pendente com **${entrevista.empresa}** na data **${entrevista.data_entrevista}** às **${entrevista.horario}**, local: **${entrevista.local}**.`;
+          const detalhes = `⏳ Entrevista pendente  na data ${entrevista.data_entrevista} às ${entrevista.horario}, local: ${entrevista.local}.`;
           setMessages(prevMessages => [
             ...prevMessages,
             { id: Date.now().toString(), text: detalhes, sender: 'bot' },
@@ -565,12 +572,8 @@ export default function Assistente() {
       ]);
 
       // Oferecendo as opções com uma mensagem amigável
-      setOptions([
-        '1️⃣ Entrevistas Marcadas',
-        '2️⃣ Quantidade de Solicitações',
-        '3️⃣ Tempo Conosco',
-        '4️⃣ Suas Configurações'
-      ]);
+      setOptions(['1. Entrevistas Marcadas', '2. Quantidade de Solicitações', '3. Tempo Conosco']);
+
 
     } catch (error) {
       console.error('Erro ao contar entrevistas:', error);
@@ -637,17 +640,17 @@ export default function Assistente() {
   };
   const Criadores = (userId: string, userName: string) => {
     const explanations = [
-      { text: `Claro, ficarei feliz em falar dos meus criadores!` },
-      { text: `👤 DAVI DE BRITO JUNIOR: LÍDER -   DESENVOLVEDOR FULL` },
-      { text: `GitHub: https://github.com/DaveBrito` },
-      { text: `👤 ERIC PENERES CARNEIRO: DESENVOLVEDOR FULL` },
-      { text: `GitHub:https://github.com/EricW900` },
-      { text: `👤 JEFFERSON MOREIRA EVANGELISTA: DESENVOLVEDOR FULL` },
-      { text: `GitHub: https://github.com/JeffersonEvangelista` },
-      { text: `👤 PEDRO BORGES DE JESUS: DESENVOLVEDOR FULL` },
-      { text: `GitHub: https://github.com/B0rga` },
-      { text: `👤 Wesley Silva dos Santos :LÍDER -   DESENVOLVEDOR FULL` },
-      { text: `GitHub: https://github.com/WesleyS08` },
+      { text: `🎉 Claro, ficarei feliz em falar sobre meus criadores!` },
+      { text: `👤 Davi de Brito Junior - Líder | Desenvolvedor Full` },
+      { text: `GitHub: github.com/DaveBrito` },
+      { text: `👤 Eric Peneres Carneiro | Desenvolvedor Full` },
+      { text: `GitHub: github.com/EricW900` },
+      { text: `👤 Jefferson Moreira Evangelista | Desenvolvedor Full` },
+      { text: `GitHub: github.com/JeffersonEvangelista` },
+      { text: `👤 Pedro Borges de Jesus | Desenvolvedor Full` },
+      { text: `GitHub: github.com/B0rga` },
+      { text: `👤 Wesley Silva dos Santos - Líder | Desenvolvedor Full` },
+      { text: `GitHub: github.com/WesleyS08` },
     ];
     // Ativar o indicador de digitação
     setIsTyping(true);
@@ -667,19 +670,20 @@ export default function Assistente() {
   };
   const Proposito = (userId: string, userName: string) => {
     const explanations = [
-      { text: `Estou feliz em compartilhar o propósito do SIAS App!` },
-      { text: `💡 O SIAS é projetado para otimizar a gestão de entrevistas no setor de Recursos Humanos.` },
-      { text: `📋 **Objetivo Principal:** Facilitar a comunicação e o agendamento de entrevistas.` },
-      { text: `👥 **Para o RH:**` },
+      { text: `🎉 Estou empolgado em compartilhar o propósito do SIAS App!` },
+      { text: `💡 O SIAS foi desenvolvido para otimizar a gestão de entrevistas no setor de Recursos Humanos.` },
+      { text: `📋 Objetivo Principal: Facilitar a comunicação e o agendamento de entrevistas.` },
+      { text: `👥 Para o RH:` },
       { text: `- Envio de Solicitações: O RH pode enviar solicitações detalhadas para candidatos qualificados.` },
       { text: `- Detalhes das Solicitações: Inclui data, horário e local da entrevista.` },
-      { text: `🎓 **Para os Candidatos:**` },
-      { text: `- Gerenciamento de Solicitações: Visualização e gerenciamento das solicitações recebidas.` },
-      { text: `- Respostas: Aceitar ou recusar solicitações.` },
-      { text: `✅ **Benefícios:**` },
-      { text: `- Facilita o agendamento de entrevistas e melhora a comunicação.` },
-      { text: `Se tiver mais perguntas, estou aqui para ajudar! 😊` },
+      { text: `🎓 Para os Candidatos:` },
+      { text: `- Gerenciamento de Solicitações: Permite visualizar e gerenciar as solicitações recebidas.` },
+      { text: `- Respostas: Os candidatos podem aceitar ou recusar solicitações de forma simples.` },
+      { text: `✅ Benefícios:` },
+      { text: `- Melhora a comunicação e torna o agendamento de entrevistas mais eficiente.` },
+      { text: `Se tiver mais perguntas ou precisar de ajuda, estou aqui para você! 😊` },
     ];
+    
     // Ativar o indicador de digitação
     setIsTyping(true);
     const sendMessageRecursively = (index) => {
@@ -698,17 +702,18 @@ export default function Assistente() {
   };
   const Funcionalidades = (userId: string, userName: string) => {
     const explanations = [
-      { text: `Aqui estão as principais funcionalidades do SIAS App!` },
-      { text: `📋 **Funcionalidades para o RH:**` },
-      { text: `- **Envio de Solicitações:** Permite ao RH enviar solicitações detalhadas para candidatos qualificados.` },
-      { text: `- **Detalhes das Solicitações:** Inclui informações como data, horário e local da entrevista.` },
-      { text: `🎓 **Funcionalidades para os Candidatos:**` },
-      { text: `- **Gerenciamento de Solicitações:** Acesso à aba de gerenciamento para visualizar e gerenciar solicitações recebidas.` },
-      { text: `- **Respostas:** Possibilidade de aceitar ou recusar as solicitações recebidas de uma determinada empresa.` },
-      { text: `✅ **Benefícios:**` },
-      { text: `- Facilita o processo de agendamento de entrevistas e melhora a comunicação entre RH e candidatos.` },
-      { text: `Se precisar de mais informações, estou aqui para ajudar! 😊` },
+      { text: `🚀 Aqui estão as principais funcionalidades do SIAS App!` },
+      { text: `📋 Funcionalidades para o RH:` },
+      { text: `- Envio de Solicitações: Permite ao RH enviar solicitações detalhadas para candidatos qualificados.` },
+      { text: `- Detalhes das Solicitações: Inclui informações importantes como data, horário e local da entrevista.` },
+      { text: `🎓 Funcionalidades para os Candidatos:` },
+      { text: `- Gerenciamento de Solicitações: Acesso à aba de gerenciamento para visualizar e gerenciar as solicitações recebidas.` },
+      { text: `- Respostas: Possibilidade de aceitar ou recusar as solicitações de uma determinada empresa de forma simples.` },
+      { text: `✅ Benefícios:` },
+      { text: `- Facilita o processo de agendamento de entrevistas e melhora a comunicação entre o RH e os candidatos.` },
+      { text: `Se precisar de mais informações ou tiver dúvidas, estou aqui para ajudar! 😊` },
     ];
+    
 
     // Ativar o indicador de digitação
     setIsTyping(true);
@@ -728,12 +733,11 @@ export default function Assistente() {
   };
 
   const RelatosBug = (userId: string, userName: string, complemento: string) => {
-    const explanations = [
-      { text: `Desculpe por qualquer inconveniente` },
-      { text: `Você pode falar sobre o bug da tela: ${complemento}.` },
-      { text: `Selecione uma foto ou vídeo que mostra o bug:` },
-    ];
-
+      const explanations = [
+        { text: `😔 Desculpe por qualquer inconveniente que você possa estar enfrentando!` },
+        { text: `🔍 Você pode descrever o bug que encontrou na tela: ${complemento}.` },
+        { text: `📸 Para ajudar a resolver, selecione uma foto ou vídeo que mostre o problema:` },
+      ];
     // Ativar o indicador de digitação
     setIsTyping(true);
 
@@ -754,7 +758,9 @@ export default function Assistente() {
 
     sendMessageRecursively(0);
   };
+  // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=-==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
 
+  // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=-Mudanca de nome do usaario naquele momento ==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
   const sendMessagesRecursively = (messages, index) => {
     if (index < messages.length) {
       console.log(`Enviando mensagem: ${messages[index].text}`);
@@ -767,32 +773,6 @@ export default function Assistente() {
       console.log('Todas as mensagens foram enviadas.');
     }
   };
-  // Altere a função handleButtonClick para definir as opções
-  const handleButtonClick = (response: ResponseType) => {
-    setMessages(prevMessages => [
-      ...prevMessages,
-      { id: Date.now().toString(), text: response.data, sender: 'user' }
-    ]);
-
-    if (response.status === 'Sim') {
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { id: Date.now().toString(), text: 'Como você gostaria de ser chamado?', sender: 'bot' }
-      ]);
-      setWaitingForNameChange(false);
-      setWaitingForNewName(true);
-    } else {
-      setWaitingForNameChange(false);
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { id: Date.now().toString(), text: 'Como posso ajudar você hoje?', sender: 'bot' }
-      ]);
-    }
-
-    // Defina as opções a serem exibidas
-    setOptions(['1. Duvidas do Sistema', '2. Relatar algum Bug', '3. Duvidas sobre sua conta', '4. Mais detalhes sobre as opcoes']); // Customize as opções
-  };
-
   // UseEffect para solicitar o novo nome
   useEffect(() => {
     if (waitingForNewName) {
@@ -803,57 +783,91 @@ export default function Assistente() {
     }
   }, [waitingForNewName]);
 
+  // Função auxiliar para adicionar mensagens
+  const addMessage = (text, sender) => {
+    setMessages(prevMessages => [
+      ...prevMessages,
+      { id: Date.now().toString(), text, sender }
+    ]);
+  };
+
   // Função para enviar o novo nome do usuário
   const handleNewUserNameSubmit = () => {
     if (newUserName && newUserName.trim()) {
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { id: Date.now().toString(), text: newUserName.trim(), sender: 'user' }
-      ]);
-      setUserName(newUserName);
+      const trimmedName = newUserName.trim();
+
+      // Adiciona a mensagem do usuário
+      addMessage(trimmedName, 'user');
+
+      // Atualiza o nome do usuário
+      setUserName(trimmedName);
+
+      // Limpa o campo de entrada
       setNewUserName('');
       setWaitingForNewName(false);
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { id: Date.now().toString(), text: `Ótimo, agora te chamarei de ${newUserName}! Como posso ajudar você hoje?`, sender: 'bot' }
+
+      // Adiciona a mensagem do bot
+      addMessage(`Ótimo, agora te chamarei de ${trimmedName}! Como posso ajudar você hoje?`, 'bot');
+
+      // Atualiza as opções disponíveis
+      setOptions([
+        '1. Dúvidas do Sistema',
+        '2. Relatar algum Bug',
+        '3. Dúvidas sobre sua conta',
+        '4. Mais detalhes sobre as opções'
       ]);
     }
   };
 
-  //============================================ Funcoes que controlam o envio de midia para o bot===============================================
+  const handleButtonClick = (response: ResponseType) => {
+    // Adiciona a mensagem do usuário
+    addMessage(response.data, 'user');
+
+    // Verifica se a resposta é "Sim"
+    if (response.status === 'Sim') {
+      // Se for, pergunta como o usuário gostaria de ser chamado
+      addMessage('Como você gostaria de ser chamado?', 'bot');
+      setWaitingForNameChange(false);
+      setWaitingForNewName(true);
+    } else {
+      // Caso contrário, pergunta como pode ajudar
+      setWaitingForNameChange(false);
+      addMessage('Como posso ajudar você hoje?', 'bot');
+
+      // Atualiza as opções disponíveis
+      setOptions([
+        '1. Dúvidas do Sistema',
+        '2. Relatar algum Bug',
+        '3. Dúvidas sobre sua conta',
+        '4. Mais detalhes sobre as opções'
+      ]);
+    }
+  };
+
+  // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=-==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
+
+
+  //============================================ Funcoes que controlam o envio de midia para o bot ===============================================
   // Função para selecionar mídia
   const handleSelectMedia = async () => {
     try {
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Permite selecionar apenas imagens
         allowsEditing: true,
         quality: 1,
       });
 
       if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        const type = result.assets[0].type;
-
-        setBugImage(uri); // Armazena a mídia no estado `bugImage`
-
-        let message = { id: Date.now().toString(), sender: 'user' };
-
-        if (type.startsWith('image')) {
-          message = { ...message, imageUri: uri };
-        } else if (type.startsWith('video')) {
-          message = { ...message, videoUri: uri };
-        }
+        const uri = result.assets[0].uri; // URI da imagem selecionada
+        const message = { id: Date.now().toString(), sender: 'user', imageUri: uri };
 
         console.log('Mídia selecionada:', message);
         setMessages(prevMessages => [...prevMessages, message]);
-
       }
     } catch (error) {
       console.error('Erro ao selecionar mídia:', error);
     }
   };
-
-
   const handlePressMedia = (uri) => {
     console.log('Mídia pressionada:', uri);
     setSelectedMedia(uri);
@@ -865,6 +879,7 @@ export default function Assistente() {
     setIsModalVisible(false);
     setSelectedMedia(null);
   };
+  // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=-==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
 
 
   // ===================================================================== Reserta o chat ====================================================
@@ -880,7 +895,10 @@ export default function Assistente() {
   useEffect(() => {
     flatListRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
+  // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=-==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
 
+
+  // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=Principal aparecencia -=--==--=-=-=-=-=-=-==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
   return (
     <View style={stylesAssistente.container}>
       {showIntro && (
@@ -893,11 +911,11 @@ export default function Assistente() {
               style={stylesAssistente.lottieAnimation}
             />
           )}
-          <Text style={stylesAssistente.introText}>Olá! Sou o Assistente do Sias, me chamo  Botly</Text>
+          <Text style={stylesAssistente.introText}>Olá! Sou o Assistente do Sias, me chamo Botly</Text>
           <Text style={stylesAssistente.introText}>Use os botões para ser mais rápido</Text>
-
         </View>
       )}
+
       <View style={stylesAssistente.messagesContainer}>
         {messages.length > 0 && (
           <View style={stylesAssistente.headerContainer}>
@@ -907,6 +925,7 @@ export default function Assistente() {
             </TouchableOpacity>
           </View>
         )}
+
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -936,14 +955,10 @@ export default function Assistente() {
           style={stylesAssistente.messages}
         />
 
-        {isTyping && (
-          <View style={stylesAssistente.typingIndicator}>
-            <Text>Botly está digitando...</Text>
-          </View>
-        )}
+        {isTyping && <TypingIndicator isTyping={isTyping} />}
 
 
-        {/* Botões para mudar o nome */}
+        {/* Campo para entrada de novo nome ou botões */}
         {waitingForNameChange && (
           <View style={stylesAssistente.buttonContainer}>
             <TouchableOpacity
@@ -960,7 +975,7 @@ export default function Assistente() {
             </TouchableOpacity>
           </View>
         )}
-        {/* Campo de entrada para novo nome */}
+
         {waitingForNewName && (
           <View style={stylesAssistente.inputContainer}>
             <TextInput
@@ -973,7 +988,16 @@ export default function Assistente() {
             </TouchableOpacity>
           </View>
         )}
-        {options.length > 0 && (
+      </View>
+
+      {/* ScrollView fixo na parte inferior para as opções */}
+      {options.length > 0 && (
+        <ScrollView
+          horizontal={true}
+          contentContainerStyle={stylesAssistente.scrollContainer}
+          showsHorizontalScrollIndicator={false}
+          style={stylesAssistente.scrollView}
+        >
           <View style={stylesAssistente.optionsContainer}>
             {options.map((option, index) => (
               <TouchableOpacity
@@ -985,8 +1009,8 @@ export default function Assistente() {
               </TouchableOpacity>
             ))}
           </View>
-        )}
-      </View>
+        </ScrollView>
+      )}
 
       <InputArea
         input={input}
@@ -995,7 +1019,6 @@ export default function Assistente() {
         handleSelectMedia={handleSelectMedia}
         reportingBug={reportingBug}
         sendBugReport={sendBugReport} // Passa a função como prop
-
       />
 
       {selectedMedia && (
