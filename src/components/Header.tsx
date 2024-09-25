@@ -164,7 +164,10 @@ const Header: React.FC = () => {
       console.log('User ID:', userId);
 
       // Define o nome da imagem
-      const publicUrl = await uploadToSupabase(base64Image, 'png', 'avatars', userId);
+      const uniqueId = Date.now();
+      const publicUrl = await uploadToSupabase(base64Image, 'png', 'avatars', `${userId}_${uniqueId}.png`);
+
+      console.log(publicUrl);
 
       if (publicUrl) {
         setProfileImage(publicUrl); // Atualiza a imagem de perfil com o URL público
