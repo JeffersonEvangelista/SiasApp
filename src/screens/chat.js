@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import ChatList from '../components/ChatList';
 import { TextInput, TouchableOpacity } from 'react-native-gesture-handler';
-import { getCurrentUserEmail } from '../services/Firebase';
+import { getCurrentUserData, getCurrentUserEmail } from '../services/Firebase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
 import { styles } from './Styles/styles';
@@ -12,7 +12,7 @@ import { usersRef } from '../services/Firebase'
 
 export default function Chat() {
 
-  const userEmail = getCurrentUserEmail();
+  const user = getCurrentUserData();
   
   const [users, setUsers] = useState([]);
   useEffect(()=>{
@@ -20,7 +20,7 @@ export default function Chat() {
   }, [])
   
   const getUsers = async ()=>{
-    const q =  query(usersRef, where('email', '!=', userEmail))
+    const q =  query(usersRef, where('userId', '!=', user?.id))
 
     const querySnapshot = await getDocs(q);
     let data = [];
@@ -28,7 +28,6 @@ export default function Chat() {
       data.push({...doc.data()}); 
     });
 
-    console.log("AAAAAAAA",data);
     setUsers(data);
 
   }
@@ -40,9 +39,10 @@ export default function Chat() {
             flexDirection:"row",
             justifyContent:"space-between",
             alignItems:"center",
-            padding: 10,
-            marginTop:22,
-            backgroundColor:"#F07A26"
+            paddingTop: 28,
+            paddingBottom: 10,
+            paddingHorizontal: 12,
+            backgroundColor:"#ff8c00"
             }}>
               <Text style={{fontSize:24, color:"white", fontWeight:"bold"}}>Chat</Text>
               <TouchableOpacity onPress={()=>console.log("Add contact")} >
@@ -74,7 +74,7 @@ export default function Chat() {
             <StatusBar style='light'/>
             {
               users.length>0? (
-                <ChatList users={users}/>
+                <ChatList currentUser={user} users={users}/>
               ):(
                 <View style={{
                   flexDirection:"column",
