@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { getCurrentUserEmail } from '../services/Firebase';
+import { decode } from 'base64-arraybuffer';
 
 // Configure seu Supabase
 export const supabaseUrl = 'https://enpcrnmsdcjekxmkrlaf.supabase.co';
@@ -500,77 +501,115 @@ export const buscarDataCriacaoUsuario = async (userId: string, userName: string)
     }
 };
 
+// Função para converter o caminho da imagem em Base64
+const fetchImageAsBase64 = async (imagePath) => {
+    try {
+        const response = await fetch(imagePath);
+        if (!response.ok) {
+            throw new Error('Erro ao buscar a imagem');
+        }
+        const blob = await response.blob();
+        const reader = new FileReader();
+        return new Promise((resolve, reject) => {
+            reader.onloadend = () => {
+                const base64data = reader.result.split(',')[1]; // Retornar apenas a parte base64
+                resolve(base64data);
+            };
+            reader.onerror = () => {
+                reject(new Error('Erro ao converter a imagem para Base64'));
+            };
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error('Erro ao converter imagem:', error);
+        return null; // Retorna null em caso de erro
+    }
+};
+
+// Função para fazer o upload da imagem para o Supabase Storage
+const uploadImageToSupabase = async (base64Data, userId) => {
+    const fileName = `${userId}-${Date.now()}.jpeg`; 
+    const arrayBuffer = decode(base64Data); // Decodifica o Base64 para ArrayBuffer
+
+    const { data, error } = await supabase.storage
+        .from('BugReports') // Nome do bucket
+        .upload(fileName, arrayBuffer, {
+            contentType: 'image/jpeg', // Tipo de conteúdo
+            cacheControl: '3600',
+            upsert: false, // Não substituir se o arquivo já existir
+        });
+
+    if (error) {
+        console.error('Erro ao fazer upload da imagem:', error);
+        return null; // Retorna null em caso de erro
+    }
+
+    console.log('Imagem enviada com sucesso:', data);
+    return data.path; // Retorna o caminho da imagem carregada
+};
+
 export const processAndSaveBugReport = async (userId, userType, description, image) => {
     try {
         console.log('Iniciando o processamento do bug report...');
         console.log('Descrição do bug:', description);
         console.log('Tipo de usuário:', userType);
         console.log('ID do usuário:', userId);
+        
+        // Verificando se a imagem foi recebida
+        if (image) {
+            console.log('Imagem recebida:', image);
 
-        let imageFile;
-        let fileName;
+            // Verificando se a imagem é uma string (caminho do arquivo)
+            if (typeof image === 'string') {
+                console.log('Caminho da imagem:', image);
 
-        if (image.uri) {
-            console.log('Imagem recebida como URL:', image.uri);
-            const response = await fetch(image.uri);
-            const blob = await response.blob();
-            console.log('Blob da imagem criado:', blob);
+                // Convertendo a imagem em Base64
+                const base64Data = await fetchImageAsBase64(image);
+                if (base64Data) {
+                    console.log('Base64 da imagem criado com sucesso:', base64Data);
 
-            const mimeType = blob.type || 'image/png';
-            const extension = mimeType.split('/')[1];
+                    // Fazer upload do ArrayBuffer para o Supabase Storage
+                    const imageKey = await uploadImageToSupabase(base64Data, userId);
+                    if (imageKey) {
+                        console.log('Chave da imagem no Supabase:', imageKey);
+                        
+                        // Inserir os dados no banco de dados
+                        const { data, error } = await supabase
+                            .from('chatbot_interacoes')
+                            .insert([{
+                                id_candidato: userType === 'candidato' ? userId : null,
+                                id_recrutador: userType === 'recrutador' ? userId : null,
+                                mensagem: description,
+                                resposta_chatbot: 'Bug reportado com sucesso.',
+                                Img_bug: `https://enpcrnmsdcjekxmkrlaf.supabase.co/storage/v1/object/public/BugReports/${imageKey}`, // URL da imagem
+                            }]);
 
-            imageFile = blob;
-            fileName = `bug_reports/${Date.now()}_${userId}.${extension}`;
-            console.log('Arquivo de imagem pronto para upload:', fileName, mimeType);
+                        if (error) {
+                            console.error('Erro ao salvar no banco de dados:', error.message);
+                            return false; // Retornar false em caso de erro
+                        }
+
+                        console.log('Bug reportado com sucesso:', data);
+                        return true; // Retornar true em caso de sucesso
+                    } else {
+                        console.warn('Erro ao fazer upload da imagem no Supabase.');
+                        return false; // Retornar false em caso de erro
+                    }
+                } else {
+                    console.warn('Erro ao criar Base64 da imagem.');
+                    return false; // Retornar false em caso de erro
+                }
+            } else {
+                console.log('Formato de imagem não reconhecido.');
+                return false; // Retornar false se a imagem não for reconhecida
+            }
         } else {
-            imageFile = image;
-            console.log('Imagem recebida diretamente:', imageFile);
-            const extension = imageFile.type ? imageFile.type.split('/')[1] : 'png';
-            fileName = `bug_reports/${Date.now()}_${userId}.${extension}`;
+            console.warn('Nenhuma imagem foi recebida.');
+            return false; // Retornar false se não houver imagem
         }
 
-        console.log('Fazendo upload da imagem:', fileName);
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('Bug')
-            .upload(fileName, imageFile, {
-                cacheControl: '3600',
-                upsert: true,
-                contentType: imageFile.type || 'image/png',
-            });
-
-        if (uploadError) {
-            console.error('Erro ao fazer upload da imagem:', uploadError.message);
-            throw new Error(`Erro ao fazer upload da imagem: ${uploadError.message}`);
-        }
-
-        console.log('Dados do upload:', uploadData); // Log adicional
-
-        // Verifique se uploadData.path está definido
-        const imageUrl = `https://enpcrnmsdcjekxmkrlaf.supabase.co/storage/v1/object/public/Bug/${uploadData.path}`;
-        console.log('Imagem carregada com sucesso. URL da imagem:', imageUrl);
-
-        const { data, error } = await supabase
-            .from('chatbot_interacoes')
-            .insert([
-                {
-                    id_candidato: userType === 'candidato' ? userId : null,
-                    id_recrutador: userType === 'recrutador' ? userId : null,
-                    mensagem: description,
-                    resposta_chatbot: 'Bug reportado com sucesso.',
-                    Img_bug: imageUrl,
-                },
-            ]);
-
-        if (error) {
-            console.error('Erro ao salvar no banco de dados:', error.message);
-            throw new Error(`Erro ao salvar no banco de dados: ${error.message}`);
-        }
-
-        console.log('Bug reportado com sucesso:', data);
-        return true; 
     } catch (error) {
-        console.error('Erro ao processar e salvar o bug report:', error.message);
-        return false; 
+        console.error('Erro ao processar o bug report:', error);
+        return false; // Retornar false em caso de erro
     }
 };

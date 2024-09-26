@@ -274,7 +274,7 @@ export const stylesAssistente = StyleSheet.create({
     },
     userMessage: {
         marginRight: 8,
-        backgroundColor: colors.userBackground,
+        backgroundColor: colors.orange,
         alignSelf: 'flex-end',
     },
     botMessage: {
@@ -405,8 +405,6 @@ export const stylesAssistente = StyleSheet.create({
         alignItems: 'center',
 
     },
-
-
     typingIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -416,6 +414,12 @@ export const stylesAssistente = StyleSheet.create({
     typingIndicatorText: {
         fontSize: 16,
         color: colors.textPrimary,
-        marginRight: 5, // Espaço entre a mensagem e os pontos
+        marginRight: 5,
+    },
+    userText: {
+        color: '#FFFFFF',
+    },
+    botText: {
+        color: '#000000',
     },
 });

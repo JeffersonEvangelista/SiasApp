@@ -126,80 +126,80 @@ export default function Assistente() {
 
     // Atualiza a descrição
     if (description.trim()) {
-        setBugReport(prev => ({ ...prev, description }));
-        const userMessageId = `user-${Date.now()}-${messageCount}`;
-        setMessages(prevMessages => [
-            ...prevMessages,
-            { id: userMessageId, text: description, sender: 'user' },
-        ]);
-        setMessageCount(prev => prev + 1);
+      setBugReport(prev => ({ ...prev, description }));
+      const userMessageId = `user-${Date.now()}-${messageCount}`;
+      setMessages(prevMessages => [
+        ...prevMessages,
+        { id: userMessageId, text: description, sender: 'user' },
+      ]);
+      setMessageCount(prev => prev + 1);
     }
 
-    // Não precisa verificar bugImage, pois agora estamos usando imageUri diretamente
     if (imageUri) {
-        setBugReport(prev => ({ ...prev, image: imageUri }));
-        const botImageMessageId = `bot-${Date.now()}-${messageCount}`;
-        setMessages(prevMessages => [
-            ...prevMessages,
-            { id: botImageMessageId, text: 'Recebemos a imagem. Agora, por favor, descreva o erro que ocorreu.', sender: 'bot' },
-        ]);
-        setMessageCount(prev => prev + 1);
+      setBugReport(prev => ({ ...prev, image: imageUri }));
+      const botImageMessageId = `bot-${Date.now()}-${messageCount}`;
+      setMessageCount(prev => prev + 1);
     }
 
-    // Chame a função para salvar o bug no banco de dados apenas quando ambas as informações estiverem disponíveis
     if (description.trim() && imageUri) {
-        console.log('Enviando bug com descrição e imagem:', description, imageUri);
-        Salvamentodebug(userId, userType, description, imageUri); // Passa imageUri para a função
-        setBugReport({ description: '', image: null });
+      console.log('Enviando bug com descrição e imagem:', description, imageUri);
+      Salvamentodebug(userId, userType, description, imageUri);
+      setBugReport({ description: '', image: null });
     } else if (description.trim() && !imageUri) {
-        const botMessageId = `bot-${Date.now()}-${messageCount}`;
-        setMessages(prevMessages => [
-            ...prevMessages,
-            { id: botMessageId, text: 'Agora, por favor, envie uma imagem.', sender: 'bot' },
-        ]);
+      const botMessageId = `bot-${Date.now()}-${messageCount}`;
+      setMessages(prevMessages => [
+        ...prevMessages,
+        { id: botMessageId, text: 'Agora, por favor, envie uma imagem.', sender: 'bot' },
+      ]);
     } else if (!description.trim() && imageUri) {
-        const botMessageId = `bot-${Date.now()}-${messageCount}`;
-        setMessages(prevMessages => [
-            ...prevMessages,
-            { id: botMessageId, text: 'Por favor, descreva o erro que ocorreu.', sender: 'bot' },
-        ]);
+      const botMessageId = `bot-${Date.now()}-${messageCount}`;
+      setMessages(prevMessages => [
+        ...prevMessages,
+        { id: botMessageId, text: 'Por favor, descreva o erro que ocorreu.', sender: 'bot' },
+      ]);
     }
-};
-const Salvamentodebug = async (userId, userType, description, image) => {
-  const explanations = [
+  };
+  const Salvamentodebug = async (userId, userType, description, image) => {
+    const explanations = [
       { text: `Obrigado por relatar o que aconteceu` },
       { text: `Iremos arrumar esses erros o mais rápido possível....` },
       { text: `Espere um pouco enquanto salvamos essas informações no banco de dados.` },
-  ];
+    ];
 
-  setIsTyping(true);
+    setIsTyping(true);
 
-  const sendMessageRecursively = async (index) => {
+    const sendMessageRecursively = async (index) => {
       if (index < explanations.length) {
-          setMessages(prevMessages => [
-              ...prevMessages,
-              { id: Date.now().toString(), text: explanations[index].text, sender: 'bot' },
-          ]);
-          setTimeout(() => sendMessageRecursively(index + 1), 2000);
+        setMessages(prevMessages => [
+          ...prevMessages,
+          { id: Date.now().toString(), text: explanations[index].text, sender: 'bot' },
+        ]);
+        setTimeout(() => sendMessageRecursively(index + 1), 2000);
       } else {
-          const success = await processAndSaveBugReport(userId, userType, description, image);
-          setIsTyping(false);
-          if (success) {
-              setMessages(prevMessages => [
-                  ...prevMessages,
-                  { id: Date.now().toString(), text: 'Seu relatório foi salvo com sucesso!', sender: 'bot' },
-              ]);
-          } else {
-              setMessages(prevMessages => [
-                  ...prevMessages,
-                  { id: Date.now().toString(), text: 'Ocorreu um erro ao salvar seu relatório. Tente novamente.', sender: 'bot' },
-              ]);
-          }
-      }
-  };
+        const success = await processAndSaveBugReport(userId, userType, description, image);
+        setIsTyping(false);
+        if (success) {
+          setMessages(prevMessages => [
+            ...prevMessages,
+            { id: Date.now().toString(), text: 'Seu relatório foi salvo com sucesso!', sender: 'bot' },
+          ]);
 
-  sendMessageRecursively(0); // Inicia o envio das mensagens
-};
+          setMessages(prevMessages => [
+            ...prevMessages,
+            { id: Date.now().toString(), text: 'Se precisar de algo, aqui estão as opções:', sender: 'bot' },
+          ]);
+          setOptions(['1. Dúvidas do Sistema', '2. Relatar algum Bug', '3. Dúvidas sobre sua conta', '4. Mais detalhes sobre as opções']);
+        } else {
+          setMessages(prevMessages => [
+            ...prevMessages,
+            { id: Date.now().toString(), text: 'Ocorreu um erro ao salvar seu relatório. Tente novamente.', sender: 'bot' },
+          ]);
+        }
+      }
+    };
+
+    sendMessageRecursively(0); // Inicia o envio das mensagens
+  };
 
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=--==--=-=-=-=-=-=-==--=-==--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--=-=-=-==--=-=-==--=-=
 
@@ -484,7 +484,7 @@ const Salvamentodebug = async (userId, userType, description, image) => {
       { text: `⏳ Um momento, por favor... Estou verificando tudo para você!` },
       { text: `👀 Estou conferindo suas entrevistas agora... Só um instante!` },
     ];
-  
+
     sendMessagesRecursively(explanations, 0);
 
     try {
@@ -680,7 +680,7 @@ const Salvamentodebug = async (userId, userType, description, image) => {
       { text: `- Melhora a comunicação e torna o agendamento de entrevistas mais eficiente.` },
       { text: `Se tiver mais perguntas ou precisar de ajuda, estou aqui para você! 😊` },
     ];
-    
+
     // Ativar o indicador de digitação
     setIsTyping(true);
     const sendMessageRecursively = (index) => {
@@ -710,7 +710,7 @@ const Salvamentodebug = async (userId, userType, description, image) => {
       { text: `- Facilita o processo de agendamento de entrevistas e melhora a comunicação entre o RH e os candidatos.` },
       { text: `Se precisar de mais informações ou tiver dúvidas, estou aqui para ajudar! 😊` },
     ];
-    
+
 
     // Ativar o indicador de digitação
     setIsTyping(true);
@@ -729,11 +729,11 @@ const Salvamentodebug = async (userId, userType, description, image) => {
     sendMessageRecursively(0);
   };
   const RelatosBug = (userId: string, userName: string, complemento: string) => {
-      const explanations = [
-        { text: `😔 Desculpe por qualquer inconveniente que você possa estar enfrentando!` },
-        { text: `🔍 Você pode descrever o bug que encontrou na tela: ${complemento}.` },
-        { text: `📸 Para ajudar a resolver, selecione uma foto ou vídeo que mostre o problema:` },
-      ];
+    const explanations = [
+      { text: `😔 Desculpe por qualquer inconveniente que você possa estar enfrentando!` },
+      { text: `🔍 Você pode descrever o bug que encontrou na tela: ${complemento}.` },
+      { text: `📸 Para ajudar a resolver, selecione uma foto ou vídeo que mostre o problema:` },
+    ];
     // Ativar o indicador de digitação
     setIsTyping(true);
 
@@ -912,7 +912,7 @@ const Salvamentodebug = async (userId, userType, description, image) => {
           <Text style={stylesAssistente.introText}>Use os botões para ser mais rápido</Text>
         </View>
       )}
-
+  
       <View style={stylesAssistente.messagesContainer}>
         {messages.length > 0 && (
           <View style={stylesAssistente.headerContainer}>
@@ -922,7 +922,7 @@ const Salvamentodebug = async (userId, userType, description, image) => {
             </TouchableOpacity>
           </View>
         )}
-
+  
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -934,7 +934,11 @@ const Salvamentodebug = async (userId, userType, description, image) => {
               ]}
             >
               <View style={stylesAssistente.messageContent}>
-                {item.text && <Text>{item.text}</Text>}
+                {item.text && (
+                  <Text style={item.sender === 'user' ? stylesAssistente.userText : stylesAssistente.botText}>
+                    {item.text}
+                  </Text>
+                )}
               </View>
               {item.imageUri && (
                 <TouchableOpacity onPress={() => handlePressMedia(item.imageUri)}>
@@ -951,10 +955,9 @@ const Salvamentodebug = async (userId, userType, description, image) => {
           keyExtractor={item => item.id}
           style={stylesAssistente.messages}
         />
-
+  
         {isTyping && <TypingIndicator isTyping={isTyping} />}
-
-
+  
         {/* Campo para entrada de novo nome ou botões */}
         {waitingForNameChange && (
           <View style={stylesAssistente.buttonContainer}>
@@ -972,7 +975,7 @@ const Salvamentodebug = async (userId, userType, description, image) => {
             </TouchableOpacity>
           </View>
         )}
-
+  
         {waitingForNewName && (
           <View style={stylesAssistente.inputContainer}>
             <TextInput
@@ -986,7 +989,7 @@ const Salvamentodebug = async (userId, userType, description, image) => {
           </View>
         )}
       </View>
-
+  
       {/* ScrollView fixo na parte inferior para as opções */}
       {options.length > 0 && (
         <ScrollView
@@ -1008,16 +1011,16 @@ const Salvamentodebug = async (userId, userType, description, image) => {
           </View>
         </ScrollView>
       )}
-
+  
       <InputArea
         input={input}
         setInput={setInput}
         sendMessage={sendMessage}
         handleSelectMedia={handleSelectMedia}
         reportingBug={reportingBug}
-        sendBugReport={sendBugReport} // Passa a função como prop
+        sendBugReport={sendBugReport} 
       />
-
+  
       {selectedMedia && (
         <Modal
           transparent={true}
@@ -1045,5 +1048,5 @@ const Salvamentodebug = async (userId, userType, description, image) => {
         </Modal>
       )}
     </View>
-  );
+  );  
 };
