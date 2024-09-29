@@ -1,5 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, initializeAuth } from 'firebase/auth';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, sendEmailVerification, initializeAuth, updateEmail, reauthenticateWithCredential, EmailAuthProvider} from 'firebase/auth';
 import { collection, doc, getDoc, setDoc, getFirestore, Timestamp } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRoomId } from '../utils/common';
@@ -15,8 +15,13 @@ const firebaseConfig = {
     measurementId: "G-J29RZYWT9D",
 };
 
-// Inicialize o Firebase
-const app = initializeApp(firebaseConfig)
+// Inicialize o Firebase apenas se já não houver uma instância inicializada
+let app;
+if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+} else {
+    app = getApps()[0]; // Reutilize a instância já existente
+}
 
 export const auth = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage)
@@ -83,3 +88,36 @@ export const logOutUser = async () => {
       return false; // Falha
     }
   };
+
+// Função para atualizar o e-mail no Firebase Authentication
+export const updateUserEmail = async (newEmail: string, password: string) => {
+    const user = auth.currentUser;
+
+    if (!user) {
+        console.error('Nenhum usuário está autenticado.');
+        return false;
+    }
+
+    try {
+        // Reautenticar o usuário antes de mudar o e-mail
+        const credential = EmailAuthProvider.credential(user.email || '', password);
+        await reauthenticateWithCredential(user, credential);
+
+        // Verifica se o e-mail atual foi verificado
+        if (!user.emailVerified) {
+            // Se o e-mail atual não foi verificado, envia um e-mail de verificação
+            await sendEmailVerification(user);
+            console.error('O e-mail atual não foi verificado. Um e-mail de verificação foi enviado. Verifique seu e-mail antes de alterar.');
+            return false;
+        }
+
+        // Atualiza o e-mail no Firebase
+        await updateEmail(user, newEmail); // Atualiza o e-mail
+        await sendEmailVerification(user); // Envia e-mail de verificação para o novo e-mail
+        console.log('E-mail atualizado. Um e-mail de verificação foi enviado para o novo e-mail.');
+        return true;
+    } catch (error) {
+        console.error('Erro ao atualizar e-mail no Firebase:', error);
+        return false;
+    }
+};

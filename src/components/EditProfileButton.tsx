@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, TouchableWithoutFeedback, Text, StyleSheet } from 'react-native';
 
 interface EditProfileButtonProps {
   onPress: () => void;
@@ -7,8 +7,12 @@ interface EditProfileButtonProps {
 
 const EditProfileButton: React.FC<EditProfileButtonProps> = ({ onPress }) => {
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress}>
-      <Text style={styles.buttonText}>Editar Perfil</Text>
+    <TouchableOpacity
+      style={styles.button}
+      onPress={onPress}
+      activeOpacity={0} // Define opacidade ao clicar como 1 (sem efeito)
+      hitSlop={{ top: 10, bottom: 10, left: 150, right: 5 }}
+    >
     </TouchableOpacity>
   );
 };
@@ -18,11 +22,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000', // Cor de fundo do botão
     borderRadius: 10,
     paddingVertical: 10,
-    paddingHorizontal: 30,
+    paddingHorizontal: 10,
     marginTop: 20,
     alignItems: 'center',
     position: 'static',
-    top: 250,
+    top: 119,
+    opacity: 0,
+    right: -146,
   },
   buttonText: {
     color: '#ffffff', // Cor do texto
