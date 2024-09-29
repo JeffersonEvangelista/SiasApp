@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.20.0",
     "@lottiefiles/dotlottie-react": "^0.8.12",
     "@react-native-async-storage/async-storage": "^2.0.0",
     "@react-native-community/checkbox": "^0.5.17",
@@ -43,6 +44,7 @@
     "react-native-circular-progress": "^1.4.0",
     "react-native-elements": "^3.4.3",
     "react-native-gesture-handler": "~2.16.1",
+    "react-native-get-random-values": "^1.11.0",
     "react-native-image-picker": "^7.1.2",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-linear-gradient": "^2.8.3",
@@ -51,9 +53,14 @@
     "react-native-responsive-screen": "^1.4.2",
     "react-native-safe-area-context": "4.10.5",
     "react-native-screens": "3.31.1",
+<<<<<<< HEAD
     "react-native-svg": "^15.2.0",
     "react-native-vector-icons": "^10.1.0",
     "react-native-web": "~0.19.10",
+=======
+    "react-native-svg": "15.2.0",
+    "react-native-vector-icons": "^10.2.0",
+>>>>>>> 6d5a1c082f483fdbeba0dda0434c2b5d1a66602a
     "react-native-webview": "13.8.6"
   },
   "devDependencies": {
