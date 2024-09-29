@@ -408,6 +408,7 @@ export const countChatbotInteractionsForUser = async (userId: string, isCandidat
         throw error;
     }
 };
+
 export const buscarEntrevistasPorUsuario = async (userId) => {
     // Substitua a consulta pelo código necessário para buscar as entrevistas do usuário no banco de dados
     const { data: aceitas, error: errorAceitas } = await supabase
@@ -448,7 +449,9 @@ export const buscarEntrevistasPorRecrutador = async (userId) => {
 
     return { aceitas, pendentes };
 };
-export const contarEntrevistasPorUsuario = async (userId) => {
+
+// Função para contar entrevistas por usuário
+export const contarEntrevistasPorUsuario = async (userId: string) => {
     // Primeiro, tenta contar pelo id_recrutador
     let { data, error } = await supabase
         .from('solicitacoes_entrevista')
@@ -473,31 +476,37 @@ export const contarEntrevistasPorUsuario = async (userId) => {
     return data.length; // Retorna o total de registros
 };
 export const buscarDataCriacaoUsuario = async (userId: string, userName: string) => {
-    // Primeiro, tenta buscar pelo id_recrutador
-    let { data, error } = await supabase
-        .from('recrutadores')
-        .select('data_criacao')
-        .eq('id', userId); 
-
-
-    if (error || (data && data.length === 0)) {
-        console.log(`Nenhuma data encontrada com id_recrutador: ${userId}. Tentando com id_candidato...`);
-
-        ({ data, error } = await supabase
-            .from('candidatos')
+    try {
+        // Primeiro, tenta buscar pelo id_recrutador
+        let { data, error } = await supabase
+            .from('recrutadores')
             .select('data_criacao')
-            .eq('id', userId)); 
-    }
+            .eq('id', userId);
 
-    if (error) {
+        if (error || (data && data.length === 0)) {
+            console.log(`Nenhuma data encontrada com id_recrutador: ${userId}. Tentando com id_candidato...`);
+
+            ({ data, error } = await supabase
+                .from('candidatos')
+                .select('data_criacao')
+                .eq('id', userId));
+        }
+
+        if (error) {
+            console.error('Erro ao buscar data de criação:', error);
+            throw new Error('Erro ao buscar data de criação');
+        }
+
+        if (data && data.length > 0) {
+            const dataCriacao = new Date(data[0].data_criacao);
+            console.log(`Data de criação encontrada: ${dataCriacao}`);
+            return dataCriacao; // Retorna a data de criação
+        } else {
+            throw new Error('Usuário não encontrado');
+        }
+    } catch (error) {
         console.error('Erro ao buscar data de criação:', error);
         throw new Error('Erro ao buscar data de criação');
-    }
-
-    if (data && data.length > 0) {
-        return new Date(data[0].data_criacao); // Retorna a data de criação
-    } else {
-        throw new Error('Usuário não encontrado');
     }
 };
 
@@ -528,7 +537,7 @@ const fetchImageAsBase64 = async (imagePath) => {
 
 // Função para fazer o upload da imagem para o Supabase Storage
 const uploadImageToSupabase = async (base64Data, userId) => {
-    const fileName = `${userId}-${Date.now()}.jpeg`; 
+    const fileName = `${userId}-${Date.now()}.jpeg`;
     const arrayBuffer = decode(base64Data); // Decodifica o Base64 para ArrayBuffer
 
     const { data, error } = await supabase.storage
@@ -554,7 +563,7 @@ export const processAndSaveBugReport = async (userId, userType, description, ima
         console.log('Descrição do bug:', description);
         console.log('Tipo de usuário:', userType);
         console.log('ID do usuário:', userId);
-        
+
         // Verificando se a imagem foi recebida
         if (image) {
             console.log('Imagem recebida:', image);
@@ -572,7 +581,7 @@ export const processAndSaveBugReport = async (userId, userType, description, ima
                     const imageKey = await uploadImageToSupabase(base64Data, userId);
                     if (imageKey) {
                         console.log('Chave da imagem no Supabase:', imageKey);
-                        
+
                         // Inserir os dados no banco de dados
                         const { data, error } = await supabase
                             .from('chatbot_interacoes')
