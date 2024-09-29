@@ -421,5 +421,5 @@ export const stylesAssistente = StyleSheet.create({
     },
     botText: {
         color: '#000000',
-    },
+    }
 });
