@@ -163,22 +163,42 @@ export const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     footerButton: {
-        flex: 1,
-        backgroundColor: '#button_background',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 12,
-
+        backgroundColor: colors.orange, // A cor de fundo do botão
+        alignItems: 'center', // Centraliza o conteúdo horizontalmente
+        justifyContent: 'center', // Centraliza o conteúdo verticalmente
+        paddingVertical: 12, // Ajusta o espaço vertical dentro do botão
+        paddingHorizontal: 20, // Ajusta o espaço horizontal dentro do botão
+        borderRadius: 14, // Bordas arredondadas
+        marginVertical: 5, // Espaçamento vertical entre botões, se necessário
     },
     footerButtonText: {
-        color: '#FFF',
+        color: '#FFF', // Cor do texto
+        fontSize: 16, // Tamanho da fonte
+        alignItems: 'center', // Centraliza o conteúdo horizontalmente
+        justifyContent: 'center', // Centraliza o conteúdo verticalmente
+        paddingVertical: 5, // Aumenta um pouco o espaço vertical para maior conforto
+        paddingHorizontal: 100, // Ajusta o espaço horizontal para melhorar a aparência
+        borderRadius: 14, // Bordas arredondadas
+        maxWidth: '100%', // Define uma largura máxima relativa à largura do pai
+        minWidth: 290, // Aumentado para permitir mais largura
+        marginVertical: 3, // Espaçamento vertical entre botões
+        textAlign: 'center', // Alinha o texto ao centro
+        fontWeight: 'bold',
     },
     BtnCadastro: {
         color: '#FFF',
         fontSize: 14,
         backgroundColor: colors.orange,
-        padding: 20,
-        borderRadius: 16,
+        alignItems: 'center', // Centraliza o conteúdo horizontalmente
+        justifyContent: 'center', // Centraliza o conteúdo verticalmente
+        paddingVertical: 5, // Aumenta um pouco o espaço vertical para maior conforto
+        paddingHorizontal: 100, // Ajusta o espaço horizontal para melhorar a aparência
+        borderRadius: 14, // Bordas arredondadas
+        maxWidth: '100%', // Define uma largura máxima relativa à largura do pai
+        minWidth: 290, // Aumentado para permitir mais largura
+        marginVertical: 3, // Espaçamento vertical entre botões
+        textAlign: 'center', // Alinha o texto ao centro
+        fontWeight: 'bold',
 
     },
     rowContainer: {
