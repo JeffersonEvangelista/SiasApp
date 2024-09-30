@@ -4,6 +4,7 @@ import Login from '../screens/Manter/Login';
 import Cadastro from '../screens/Manter/Cadastro';
 import TabRoutes from './TiposDeNavegacao/tab.routes';
 import ChatRoom from '../screens/chatRoom';
+import EsqueciSenha from '../screens/Manter/EsqueciSenha';
 
 const Stack = createStackNavigator();
 
@@ -28,6 +29,11 @@ export default function AuthStack() {
             <Stack.Screen
                 name="chatRoom"
                 component={ChatRoom}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="EsqueciSenha"
+                component={EsqueciSenha} // Tela principal com TabNavigator
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>
