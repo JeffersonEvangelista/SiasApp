@@ -1,5 +1,5 @@
 
-import { View, Text, SafeAreaView, Image, TextInput } from 'react-native';
+import { View, Text, SafeAreaView, Image, TextInput, Keyboard } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react'
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -20,6 +20,7 @@ export default function ChatRoom({route, navigation}) {
   const [messages, setMessages] = useState([]);
   const textRef = useRef('');
   const inputRef = useRef(null);
+  const scrollViewRef =  useRef(null);
 
   console.log(item?.userId);
   console.log(user?.id);
@@ -38,7 +39,27 @@ export default function ChatRoom({route, navigation}) {
       });
       setMessages([...allMessages]);
     });
+
+    const KeyBoardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow', UpdateScrollView
+    )
+
+    return()=>{
+      unsub();
+      KeyBoardDidShowListener.remove();
+    }
+
   },[]);
+
+  useEffect(() => {
+    UpdateScrollView();
+  },[messages])
+  
+  const UpdateScrollView = ()=>{
+    setTimeout(() => {
+      scrollViewRef?.current?.scrollToEnd({animated:false})
+    }, 100);
+  }
 
   const handleSendMessage = async ()=>{
     let message = textRef.current.trim();
@@ -70,7 +91,7 @@ export default function ChatRoom({route, navigation}) {
             justifyContent:"space-between",
             alignItems:"center",
             paddingLeft: 6,
-            paddingTop: 28,
+            paddingTop: 30,
             padding: 10,
             backgroundColor:"#ff8c00"
             }}>
@@ -81,7 +102,7 @@ export default function ChatRoom({route, navigation}) {
                 <Image 
                     // source={item?.foto_perfil}
                     source={require('../../assets/images/user1.jpg')}
-                    style={{width:42, aspectRatio:1, borderRadius: 100, marginLeft: 4, marginRight: 6}}
+                    style={{width:42, aspectRatio:1, borderRadius: 100, marginLeft: 4, marginRight: 8}}
                     transition={500}
                 />
                 <Text style={{fontSize:20, color:"white", fontWeight:"bold"}}>{item?.username}</Text>
@@ -89,7 +110,7 @@ export default function ChatRoom({route, navigation}) {
           </View>
           <View style={{flex: 1, justifyContent: 'space-between', overflow:'visible' }}>
             <View style={{ flex:1 }}>
-              <MessagesList messages={messages} currentUser={user}/>
+              <MessagesList scrollViewRef={scrollViewRef} messages={messages} currentUser={user}/>
             </View>
               <View style={{flexDirection:'row', alignItems:'center'}}>
                 <View style={{flex: 1, flexDirection:"row", alignItems:"center", height:46, margin:10, paddingHorizontal:12, borderRadius:10, borderColor: "#ccc", borderWidth: 1}}>

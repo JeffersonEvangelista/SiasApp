@@ -39,7 +39,7 @@ export default function Chat() {
             flexDirection:"row",
             justifyContent:"space-between",
             alignItems:"center",
-            paddingTop: 28,
+            paddingTop: 30,
             paddingBottom: 10,
             paddingHorizontal: 12,
             backgroundColor:"#ff8c00"
