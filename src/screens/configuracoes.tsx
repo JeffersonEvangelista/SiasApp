@@ -8,7 +8,7 @@ import { supabase } from '../services/userService';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { getUserNameAndId } from '../services/userService';
-import { logOutUser } from '../services/Firebase';
+import { getCurrentUserData, logOutUser, UpdateUserProfileImg } from '../services/Firebase';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../components/Header';
@@ -234,12 +234,14 @@ const Configuracoes: React.FC = () => {
     try {
       const base64Image = await getBase64(uri);
       const { id: userId } = await getUserNameAndId(); // Obtendo o ID do usuário
+      const user = getCurrentUserData();
       console.log('User ID:', userId);
 
       // Define o nome da imagem
       const uniqueId = Date.now();
       const publicUrl = await uploadToSupabase(base64Image, 'png', 'avatars', `${userId}_${uniqueId}.png`);
-
+    
+      UpdateUserProfileImg(user?.id!, publicUrl);
       console.log(publicUrl);
 
       if (publicUrl) {
