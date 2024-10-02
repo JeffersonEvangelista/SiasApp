@@ -5,6 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getAuth, updatePassword, signInWithEmailAndPassword } from 'firebase/auth';
 import CustomButton from '../Styles/CustomButton'; // Se não for mais necessário, pode ser removido
 import { useNavigation } from '@react-navigation/native';
+import { Alert } from 'react-native';
+
 
 interface FormErrors {
   email?: string;
@@ -59,6 +61,24 @@ export default function EsqueciSenha() {
     } catch (error) {
       console.error('Erro ao verificar email:', error.message);
       setErrors({ ...errors, error: 'E-mail ou senha incorretos.' });
+
+
+       // Exibir mensagem de sucesso e redirecionar para a Home
+       Alert.alert(
+        'Ops!!',
+        'E-mail ou senha incorreto! Tente Novamente',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Redireciona para a Home
+              navigation.navigate('EsqueciSenha');
+            }
+          }
+        ],
+        { cancelable: false }
+      );
+
     } finally {
       setLoading(false);
     }
@@ -69,15 +89,32 @@ export default function EsqueciSenha() {
       setErrors({ novaSenha: 'A nova senha é obrigatória.' });
       return;
     }
-
+  
     try {
       setLoading(true);
       const auth = getAuth();
       const user = auth.currentUser;
-
+  
       if (user) {
         await updatePassword(user, novaSenha);
         console.log('Senha atualizada com sucesso!');
+        
+        // Exibir mensagem de sucesso e redirecionar para a Home
+        Alert.alert(
+          'Sucesso',
+          'Sua senha foi atualizada com sucesso!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Redireciona para a Home
+                navigation.navigate('Home');
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+        
       } else {
         setErrors({ error: 'Usuário não autenticado.' });
       }
@@ -185,17 +222,18 @@ export default function EsqueciSenha() {
                 <CustomButton title="Atualizar Senha" onPress={handleNovaSenhaSubmit} />
               </>
             )}
-
-
-            <View>
+              <View>
               <Text style={styles.btn}> OU </Text>
             </View>
 
             <View style={styles.footer}>
               <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.footerButtonText}>Login</Text>
+                <Text style={styles.footerButtonText}>Voltar</Text>
               </TouchableOpacity>
             </View>
+                    
+
+          
           </View>
         </LinearGradient>
 
@@ -272,7 +310,7 @@ const styles = StyleSheet.create({
   transitionContainer: {
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
-    marginTop: '25%',
+    marginTop: '56%',
     paddingBottom: 16,
     borderRadius: 20,
     padding: 16,
