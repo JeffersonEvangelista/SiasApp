@@ -24,7 +24,7 @@ export default function EsqueciSenha() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [emailValido, setEmailValido] = useState<boolean>(false); // Flag para validar email
 
-  
+
   const { width, height } = Dimensions.get('window');
 
 
@@ -38,7 +38,7 @@ export default function EsqueciSenha() {
     }
     return points;
   }, [width, height]);
-  
+
   const validateEmail = (email: string) => {
     return /\S+@\S+\.\S+/.test(email);
   };
@@ -92,13 +92,45 @@ export default function EsqueciSenha() {
   return (
     <ScrollView contentContainerStyle={styles.scrollViewContent}>
       <View style={styles.container}>
-        <LinearGradient
-          colors={['#f5fffa', '#f5fffa']} // Gradiente como fundo
-          style={styles.background}
-        >
-          <View style={styles.formContainer}>
+        <LinearGradient colors={['#0D0D1B', '#000']} style={styles.background}>
+          <View style={styles.gridContainer}>
+            {Array.from({ length: Math.floor(height / 30) }).map((_, i) => (
+              <View
+                key={`horizontal-${i}`}
+                style={[
+                  styles.line,
+                  {
+                    top: i * 33,
+                    width: width,
+                    borderColor: 'rgba(224, 224, 224, 0.3)',
+                  },
+                ]}
+              />
+            ))}
+            {Array.from({ length: Math.floor(width / 30) }).map((_, i) => (
+              <View
+                key={`vertical-${i}`}
+                style={[
+                  styles.line,
+                  {
+                    left: i * 36,
+                    height: height,
+                    borderColor: 'rgba(224, 224, 224, 0.3)',
+                    borderLeftWidth: 1,
+                    borderTopWidth: 0,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+          {randomPoints.map((point, index) => (
+            <View key={index} style={[styles.point, { left: point.x, top: point.y }]} />
+          ))}
+
+
+          <View style={styles.transitionContainer}>
             <Text style={styles.header}>Redefinir Senha</Text>
-          
+
             <PaperTextInput
               label="Email"
               style={styles.textInput}
@@ -131,81 +163,70 @@ export default function EsqueciSenha() {
 
             {loading ? (
               <ActivityIndicator size="large" color="#F07A26" />
+            ) : !emailValido ? (
+              <CustomButton title="Verificar Email" onPress={handleEmailSubmit} />
             ) : (
-              !emailValido ? (
-                <CustomButton title="Verificar Email" onPress={handleEmailSubmit} />
-              ) : (
-                <>
-                  <PaperTextInput
-                    label="Nova Senha"
-                    style={styles.textInput}
-                    mode="outlined"
-                    activeOutlineColor="#F07A26"
-                    outlineColor="#CCCCCC"
-                    secureTextEntry
-                    value={novaSenha}
-                    onChangeText={setNovaSenha}
-                    error={!!errors.novaSenha}
-                  />
-                  <HelperText type="error" visible={!!errors.novaSenha}>
-                    {errors.novaSenha}
-                  </HelperText>
+              <>
+                <PaperTextInput
+                  label="Nova Senha"
+                  style={styles.textInput}
+                  mode="outlined"
+                  activeOutlineColor="#F07A26"
+                  outlineColor="#CCCCCC"
+                  secureTextEntry
+                  value={novaSenha}
+                  onChangeText={setNovaSenha}
+                  error={!!errors.novaSenha}
+                />
+                <HelperText type="error" visible={!!errors.novaSenha}>
+                  {errors.novaSenha}
+                </HelperText>
 
-                  <CustomButton title="Atualizar Senha" onPress={handleNovaSenhaSubmit} />
-                </>
-              )
+                <CustomButton title="Atualizar Senha" onPress={handleNovaSenhaSubmit} />
+              </>
             )}
-          </View>
 
-          <View>
-            <Text style={styles.btn}> OU </Text>
-          </View>
-          
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.footerButtonText}>Login</Text>
-            </TouchableOpacity>
+
+            <View>
+              <Text style={styles.btn}> OU </Text>
+            </View>
+
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.footerButtonText}>Login</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
+
       </View>
     </ScrollView>
   );
-}
+
+};
 
 // Estilos
 const styles = StyleSheet.create({
   scrollViewContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: 'black', // Fundo preto
   },
   container: {
     flex: 1,
-    backgroundColor: 'black', // Fundo preto
-  },
-  background: {
-    flex: 1,
-  backgroundColor: 'white', // Fundo branco para os campos
-  borderRadius: 20,
-  padding: 20,
-  width: '90%', // Definindo a largura como 90% da tela
-  maxWidth: 400, // Tamanho máximo para a View
-  height: 300, // Ajuste a altura conforme necessário (diminuída)
-  alignSelf: 'center', // Centraliza a View horizontalmente
-  marginTop: 100, // Aumente a margem superior para afastar do topo
-  marginBottom: 200, // Reduza a margem inferior para não ficar tão próximo do fundo
+    backgroundColor: 'black',
+    padding: 0,
+    margin: 0,
   },
   header: {
     textAlign: 'center',
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000000', // Cor do texto para contraste
+    color: '#000', // Cor do texto para contraste
     marginBottom: 20,
   },
   btn: {
     textAlign: 'center',
-    color: 'black', // Cor do texto "OU" para contraste
+    color: 'black',
+    marginTop:15,
   },
   formContainer: {
     marginBottom: 20,
@@ -228,5 +249,32 @@ const styles = StyleSheet.create({
   footerButtonText: {
     color: '#FFFFFF', // Cor do texto do botão
     fontSize: 16,
+  },
+  gridContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    top: 0,
+    left: 0,
+  },
+  line: {
+    position: 'absolute',
+    borderWidth: 1,
+    borderColor: 'rgba(224, 224, 224, 0.3)',
+  },
+  point: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    backgroundColor: '#F07A26',
+    borderRadius: 2,
+  },
+  transitionContainer: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: '25%',
+    paddingBottom: 16,
+    borderRadius: 20,
+    padding: 16,
   },
 });
