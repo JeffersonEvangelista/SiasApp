@@ -22,13 +22,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000', // Cor de fundo do botão
     borderRadius: 10,
     paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 100,
     marginTop: 20,
     alignItems: 'center',
     position: 'static',
-    top: 119,
+    top: 135,
     opacity: 0,
-    right: -146,
+    right: -90,
   },
   buttonText: {
     color: '#ffffff', // Cor do texto

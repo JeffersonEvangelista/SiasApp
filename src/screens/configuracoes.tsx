@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, Modal, Pressable, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, Modal, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import EditProfileButton from '../components/EditProfileButton';
 import LogOffButton from '../components/LogoffButton';
@@ -239,7 +239,7 @@ const Configuracoes: React.FC = () => {
       // Define o nome da imagem
       const uniqueId = Date.now();
       const publicUrl = await uploadToSupabase(base64Image, 'png', 'avatars', `${userId}_${uniqueId}.png`);
-    
+
       const user = getCurrentUserData();
       UpdateUserProfileImg(user?.id!, publicUrl);
 
@@ -350,163 +350,175 @@ const Configuracoes: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Header />
+    <KeyboardAvoidingView
+    style={styles.container}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+      <SafeAreaView style={styles.container}>
+        <Header />
 
-      <View style={styles.settingsContainer}>
-        <SettingsCard onPress={() => {}} />
+        {/* Adição do título "Configurações" com o ícone de engrenagem */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 30, top: -220, }}>
+        <Icon name="cog" size={42} color="#000" />
+        <Text style={styles.configText}>Configurações</Text>
       </View>
 
-      <View style={styles.profileSection}>
-        <TouchableOpacity style={styles.profileCircle} onPress={pickImage}>
-          {uploading ? (
-            <ActivityIndicator size="large" color="#000" />
-          ) : profileImage ? (
-            <Image source={{ uri: profileImage }} style={styles.profileImage} />
-          ) : (
-            <Text style={styles.placeholderText}>Adicionar Imagem</Text>
-          )}
-        </TouchableOpacity>
-        <Text style={styles.usernameText}>
-          {username ? username : 'Carregando...'}
-        </Text>
-
-        <View style={styles.buttonContainer}>
-          {/* Botão de Editar Dados */}
-          <EditProfileButton onPress={() => setShowEditModal(true)} />
-
-          {/* Botão de Logoff */}
-          <LogOffButton onPress={() => setShowLogoutModal(true)} />
-
-          {/* Botão de Deletar Conta */}
-          <DeleteAccountButton onPress={() => setShowDeleteAccountModal(true)} />
+        <View style={styles.settingsContainer}>
+          <SettingsCard onPress={() => {}} />
         </View>
-      </View>
 
-      {/* Modal para Editar Dados */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showEditModal}
-        onRequestClose={() => setShowEditModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Editar Dados</Text>
+        <View style={styles.profileSection}>
+          <TouchableOpacity style={styles.profileCircle} onPress={pickImage}>
+            {uploading ? (
+              <ActivityIndicator size="large" color="#000" />
+            ) : profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            ) : (
+              <Text style={styles.placeholderText}>Adicionar Imagem</Text>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.usernameText}>
+            {username ? username : 'Carregando...'}
+          </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Nome"
-              value={username}
-              onChangeText={(text) => setUsername(text)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={(text) => setEmail(text)}
-            />
+          <View style={styles.buttonContainer}>
+            {/* Botão de Editar Dados */}
+            <EditProfileButton onPress={() => setShowEditModal(true)} />
 
-          <Pressable
-            style={[styles.buttonModal, styles.buttonSave]}
-            onPress={handleUpdateProfile}  // Chama a função de atualização do perfil
-          >
-            <Text style={styles.textStyle}>Salvar</Text>
-          </Pressable>
-            <Pressable
-              style={[styles.buttonModal, styles.buttonCancel]}
-              onPress={() => setShowEditModal(false)}
-            >
-              <Text style={styles.textStyle}>Cancelar</Text>
-            </Pressable>
+            {/* Botão de Logoff */}
+            <LogOffButton onPress={() => setShowLogoutModal(true)} />
+
+            {/* Botão de Deletar Conta */}
+            <DeleteAccountButton onPress={() => setShowDeleteAccountModal(true)} />
           </View>
         </View>
-      </Modal>
 
-      {/* Modal de Logout */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showLogoutModal}
-        onRequestClose={() => setShowLogoutModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Deseja realmente sair?</Text>
-            <Pressable
-              style={[styles.buttonModal, styles.buttonClose]}
-              onPress={handleLogoff}
-            >
-              <Text style={styles.textStyle}>Sim</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.buttonModal, styles.buttonCancel]}
-              onPress={() => setShowLogoutModal(false)}
-            >
-              <Text style={styles.textStyle}>Não</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+        {/* Modal para Editar Dados */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showEditModal}
+          onRequestClose={() => setShowEditModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>Editar Dados</Text>
 
-      {/* Modal de Deletar Conta */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showDeleteAccountModal}
-        onRequestClose={() => setShowDeleteAccountModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Tem certeza que deseja deletar sua conta?</Text>
-            <Pressable
-              style={[styles.buttonModal, styles.buttonDelete]}
-              onPress={handleDeleteAccount}
-            >
-              <Text style={styles.textStyle}>Sim</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.buttonModal, styles.buttonCancel]}
-              onPress={() => setShowDeleteAccountModal(false)}
-            >
-              <Text style={styles.textStyle}>Não</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+              <TextInput
+                style={styles.input}
+                placeholder="Nome"
+                value={username}
+                onChangeText={(text) => setUsername(text)}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={(text) => setEmail(text)}
+              />
 
-      { /* Modal de confirmar senha */ }
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showPasswordModal}
-        onRequestClose={() => setShowPasswordModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Digite sua senha</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Senha"
-              secureTextEntry
-              value={password}
-              onChangeText={(text) => setPassword(text)}
-            />
             <Pressable
               style={[styles.buttonModal, styles.buttonSave]}
-              onPress={() => handlePasswordSubmit(password)} // Certifique-se de passar a senha atual como argumento
+              onPress={handleUpdateProfile}  // Chama a função de atualização do perfil
             >
-              <Text style={styles.textStyle}>Confirmar</Text>
+              <Text style={styles.textStyle}>Salvar</Text>
             </Pressable>
-            <Pressable style={[styles.buttonModal, styles.buttonCancel]} onPress={() => setShowPasswordModal(false)}>
-              <Text style={styles.textStyle}>Cancelar</Text>
-            </Pressable>
+              <Pressable
+                style={[styles.buttonModal, styles.buttonCancel]}
+                onPress={() => setShowEditModal(false)}
+              >
+                <Text style={styles.textStyle}>Cancelar</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      <StatusBar style="auto" />
-    </SafeAreaView>
+        {/* Modal de Logout */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showLogoutModal}
+          onRequestClose={() => setShowLogoutModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>Deseja realmente sair?</Text>
+              <Pressable
+                style={[styles.buttonModal, styles.buttonClose]}
+                onPress={handleLogoff}
+              >
+                <Text style={styles.textStyle}>Sim</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.buttonModal, styles.buttonCancel]}
+                onPress={() => setShowLogoutModal(false)}
+              >
+                <Text style={styles.textStyle}>Não</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal de Deletar Conta */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showDeleteAccountModal}
+          onRequestClose={() => setShowDeleteAccountModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>Tem certeza que deseja deletar sua conta?</Text>
+              <Pressable
+                style={[styles.buttonModal, styles.buttonDelete]}
+                onPress={handleDeleteAccount}
+              >
+                <Text style={styles.textStyle}>Sim</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.buttonModal, styles.buttonCancel]}
+                onPress={() => setShowDeleteAccountModal(false)}
+              >
+                <Text style={styles.textStyle}>Não</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        { /* Modal de confirmar senha */ }
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showPasswordModal}
+          onRequestClose={() => setShowPasswordModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>Digite sua senha</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Senha"
+                secureTextEntry
+                value={password}
+                onChangeText={(text) => setPassword(text)}
+              />
+              <Pressable
+                style={[styles.buttonModal, styles.buttonSave]}
+                onPress={() => handlePasswordSubmit(password)} // Certifique-se de passar a senha atual como argumento
+              >
+                <Text style={styles.textStyle}>Confirmar</Text>
+              </Pressable>
+              <Pressable style={[styles.buttonModal, styles.buttonCancel]} onPress={() => setShowPasswordModal(false)}>
+                <Text style={styles.textStyle}>Cancelar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        <StatusBar style="auto" />
+      </SafeAreaView>
+  </KeyboardAvoidingView>
   );
 };
 
@@ -523,7 +535,7 @@ const styles = StyleSheet.create({
   profileSection: {
     alignItems: 'center',
     position: 'absolute',
-    top: 100,
+    top: 150,
     left: '10%',
     transform: [{ translateX: -50 }],
   },
@@ -617,6 +629,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  configText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
 });
 
