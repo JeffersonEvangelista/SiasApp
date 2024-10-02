@@ -19,7 +19,7 @@ export default function AuthStack() {
             <Stack.Screen
                 name="Cadastro"
                 component={Cadastro}                
-                options={{ headerShown: false }}
+                options={{ headerShown: true }}
             />
             <Stack.Screen
                 name="Home"

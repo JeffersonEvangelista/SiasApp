@@ -88,6 +88,10 @@ export const getCurrentUserEmail = (): string | null => {
     const user = auth.currentUser;
     return user ? user.email : null;
 };
+export const isUserEmailVerified = (): boolean => {
+    const user = auth.currentUser;
+    return user ? user.emailVerified : false; // Retorna true se o e-mail estiver verificado
+};
 
 // Função para realizar o logoff
 export const logOutUser = async () => {

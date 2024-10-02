@@ -1,28 +1,60 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Feather } from '@expo/vector-icons';
 import Home from '../../screens/home';
 import Assistente from '../../screens/assistente';
 import Chat from '../../screens/chat';
 import Configuracoes from '../../screens/configuracoes';
 import Agenda from '../../screens/Agenda';
+import TabIconWithBadge from '../../components/TabIconWithBadge';
+import { isUserEmailVerified } from '../../services/Firebase';
 
 const Tab = createBottomTabNavigator();
 
-// Definindo os tipos válidos para Feather
-type FeatherIconName =
-    | 'home'
-    | 'calendar'
-    | 'headphones'
-    | 'message-circle'
-    | 'settings';
+// Função para ignorar notificações
+export const handleIgnoreNotification = (setBadgeCounts) => {
+    setBadgeCounts((prevCounts) => ({
+        ...prevCounts,
+        Configurações: 0, // Reseta a contagem de notificações
+    }));
+};
 
 export default function TabRoutes() {
+    // Estado para gerenciar as contagens de notificações
+    const [badgeCounts, setBadgeCounts] = useState({
+        Home: 0,
+        Agenda: 0,
+        Assistente: 0,
+        Chat: 0,
+        Configurações: 0,
+    });
+
+    // Estado para verificar se a notificação foi ignorada
+    const [notificationIgnored, setNotificationIgnored] = useState(false);
+
+    // Efeito para atualizar a contagem na aba "Configurações"
+    useEffect(() => {
+        const emailVerified = isUserEmailVerified();
+
+        // Se a notificação não foi ignorada, atualiza a contagem de notificações
+        if (!notificationIgnored) {
+            setBadgeCounts((prevCounts) => ({
+                ...prevCounts,
+                Configurações: emailVerified ? 0 : 1,
+            }));
+        }
+    }, [notificationIgnored]); // Executa o efeito quando notificationIgnored muda
+
+    // Função para ignorar notificações e atualizar o estado
+    const handleIgnore = () => {
+        handleIgnoreNotification(setBadgeCounts);
+        setNotificationIgnored(true);
+    };
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ color, size }) => {
-                    let iconName: FeatherIconName;
+                    let iconName;
 
                     if (route.name === 'Home') {
                         iconName = 'home';
@@ -38,12 +70,21 @@ export default function TabRoutes() {
                         iconName = 'home'; // Valor padrão
                     }
 
-                    return <Feather name={iconName} color={color} size={size} />;
-                },                
+                    const badgeCount = badgeCounts[route.name] || 0;
+
+                    return (
+                        <TabIconWithBadge
+                            iconName={iconName}
+                            color={color}
+                            size={size}
+                            badgeCount={badgeCount}
+                        />
+                    );
+                },
                 tabBarHideOnKeyboard: true,
-                tabBarActiveTintColor: '#F07A26', // Cor do ícone ativo
-                tabBarInactiveTintColor: 'gray', // Cor do ícone inativo
-                headerShown: false, // Oculta o cabeçalho
+                tabBarActiveTintColor: '#F07A26',
+                tabBarInactiveTintColor: 'gray',
+                headerShown: false,
             })}
         >
             <Tab.Screen

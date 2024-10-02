@@ -226,30 +226,119 @@ export const styles = StyleSheet.create({
 export const stylesAssistente = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
-        justifyContent: 'flex-end',
+        backgroundColor: '#fff',
+        zIndex: 99
     },
-    scrollView: {
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1,
-        height: 50,
-        marginBottom: -710,
+    messagesContainer: {
+        flex: 1,
+        padding: 10,
+        backgroundColor: '#fff',
+        flexDirection: 'column',
+        justifyContent: 'flex-end',
+    }, modalBackground: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    },
+    modalContainer: {
+        width: '90%',
+        height: '90%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'contain',
     },
     headerContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 10,
+        alignItems: 'center'
     },
     chatIdText: {
         fontSize: 16,
-        color: colors.orange,
-        fontWeight: 'bold',
+        fontWeight: 'bold'
     },
-    resetButtonTop: {
+    resetButtonTop: { padding: 5 },
+    message: {
+        marginVertical: 10,
+        padding: 15, borderRadius:
+            10
+    },
+    userMessage: {
+        alignSelf: 'flex-end',
+        backgroundColor: colors.orange,
+        color: 'white', 
+    },
+    botMessage: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#F1F1F1'
+    },
+    userText: { color: '#000' },
+    botText: { color: '#555' },
+    typingContainer: { flexDirection: 'row' },
+    optionsContainer: {
+        flexDirection: 'row',
+        marginTop: 10, alignItems:
+            'flex-end'
+    },
+    optionButton: {
+        backgroundColor: colors.orange,
         padding: 10,
+        borderRadius: 5,
+        marginHorizontal: 5,
+        minHeight: 40
+    },
+    optionButtonText: {
+        color: '#fff',
+        fontWeight: 'bold'
+    },
+    scrollView: { marginVertical: 10 },
+    inputArea: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
+        backgroundColor: '#f8f8f8'
+    },
+    input: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        padding: 10
+    },
+    inputDescription: { width: '82%' },
+    sendButton: {
+        marginLeft: 5,
+        padding: 10,
+        backgroundColor: colors.orange,
+        borderRadius: 5
+    },
+    sendButtonText: { color: '#fff' },
+    subOptionsContainer: {
+        flexDirection: 'row',
+        marginTop: 10,
+        alignItems: 'flex-end'
+    },
+    subOptionButton: {
+        backgroundColor: colors.orange,
+        padding: 10,
+        borderRadius: 5,
+        marginHorizontal: 5,
+        minHeight: 40
+    },
+    subOptionButtonText: {
+        color: colors.background,
+    }, introText: {
+        marginBottom: 20,
+        fontSize: 16,
+        color: '#333',
+    },
+    lottieAnimation: {
+        width: 200,
+        height: 200,
     },
     introContainer: {
         flex: 1,
@@ -258,188 +347,18 @@ export const stylesAssistente = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
         borderRadius: 10,
+        zIndex: 4,
+    }, imageDescription: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 5,
     },
-    introButton: {
-        marginBottom: 10,
+    clipIconContainer:{
+        backgroundColor:  colors.orange,
         padding: 10,
-        backgroundColor: colors.orange,
-        borderRadius: 5,
-        width: '100%',
-        alignItems: 'center',
-    },
-    introButtonText: {
-        color: colors.background,
-        fontSize: 16,
-    },
-    introText: {
-        marginBottom: 20,
-        fontSize: 16,
-        color: colors.textPrimary,
-    },
-    lottieAnimation: {
-        width: 200,
-        height: 200,
-    },
-    messagesContainer: {
-        flex: 1,
-        marginTop: 20,
-    },
-    messages: {
-        flex: 1,
-    },
-    message: {
-        padding: 10,
-        marginVertical: 5,
-        borderRadius: 5,
-    },
-    userMessage: {
-        marginRight: 8,
-        backgroundColor: colors.orange,
-        alignSelf: 'flex-end',
-    },
-    botMessage: {
-        marginLeft: 8,
-        backgroundColor: colors.botBackground,
-        alignSelf: 'flex-start',
-        marginRight: 5,
-        marginEnd: 55,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: colors.borderColor,
-        backgroundColor: colors.background,
-    },
-    input: {
-        flex: 1,
-        borderColor: colors.borderColor,
-        borderWidth: 1,
-        borderRadius: 5,
-        padding: 10,
-        margin: 10,
-    },
-    sendButton: {
-        backgroundColor: colors.orange,
-        padding: 10,
-        borderRadius: 50,
-        marginRight: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    attachButton: {
-        backgroundColor: colors.orange,
-        padding: 10,
-        borderRadius: 5,
-        margin: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    image: {
-        width: 200,
-        height: 200,
-        marginTop: 10,
-        borderRadius: 5,
-    },
-    modalBackground: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: colors.modalBackground,
-    },
-    modalContainer: {
-        width: '90%',
-        height: '80%',
-        backgroundColor: colors.background,
-        borderRadius: 10,
-        overflow: 'hidden',
-        position: 'relative',
-    },
-    modalImage: {
-        width: '100%',
-        height: '100%',
-    },
-    modalVideo: {
-        width: '100%',
-        height: '100%',
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        padding: 10,
-        borderRadius: 50,
-    },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginVertical: 10,
-        paddingHorizontal: 20,
+        borderRadius:4,
+        marginRight : 6,
 
-    },
-    responseButton: {
-        backgroundColor: colors.orange,
-        padding: 10,
-        borderRadius: 5,
-        flex: 1,
-        marginHorizontal: 5,
-    },
-    buttonText: {
-        color: colors.background,
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    scrollContainer: {
-        height: 40,
-        paddingVertical: 5,
-        flexDirection: 'row',
-    },
-    optionsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'flex-start',
-        paddingHorizontal: 10,
-
-    },
-    optionButton: {
-        backgroundColor: colors.orange,
-        borderRadius: 5,
-        paddingVertical: 5,
-        paddingHorizontal: 10,
-        alignItems: 'center',
-        marginHorizontal: 5,
-        borderWidth: 0.5,
-        padding: 5,
-        borderColor: colors.textPrimary,
-    },
-
-    optionButtonText: {
-        color: colors.background,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        fontSize: 16,
-    },
-
-    messageContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-
-    },
-    typingIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 10,
-    },
-
-    typingIndicatorText: {
-        fontSize: 16,
-        color: colors.textPrimary,
-        marginRight: 5,
-    },
-    userText: {
-        color: '#FFFFFF',
-    },
-    botText: {
-        color: '#000000',
-    },
+    }
+    
 });

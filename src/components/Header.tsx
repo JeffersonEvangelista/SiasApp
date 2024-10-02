@@ -1,11 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet,StatusBar  } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const Header = () => {
   return (
     <View style={styles.headerContainer}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>Configurações</Text>
+      <StatusBar barStyle="light-content" backgroundColor="#ff8c00" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 30 }}>
+      <Icon name="cog" style={{ marginTop: '-35%' }} size={42} color="#fff" />
+      <Text style={styles.configText}>Configurações</Text>
       </View>
     </View>
   );
@@ -15,22 +18,29 @@ const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: '#ff8c00',
     paddingHorizontal: 16,
-    paddingVertical: 110, // Aumenta o padding vertical para dar mais espaço
+    paddingVertical: 110,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#cccccc',
-    alignItems: 'center', // Centraliza o conteúdo horizontalmente
-    marginBottom: 40, // Adiciona margem abaixo do cabeçalho para separar dos outros elementos
+    alignItems: 'center',
+    marginBottom: 40,
+    height: '44%',
   },
   titleContainer: {
     flex: 1,
     alignItems: 'center',
   },
   title: {
-    fontSize: 24, // Aumenta o tamanho da fonte do título para mais destaque
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff', // Muda a cor do texto para branco para melhor contraste
+    color: '#fff',
+  },
+  configText: {
+    fontSize: 30,
+    color: '#fff',
+    marginLeft: 20,
+    marginTop: '-35%'
   },
 });
 

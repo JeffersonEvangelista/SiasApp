@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, Modal, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, Modal, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform, Switch, Button } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import EditProfileButton from '../components/EditProfileButton';
 import LogOffButton from '../components/LogoffButton';
@@ -14,7 +14,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../components/Header';
 import SettingsCard from '../components/SettingsCard';
 import { StatusBar } from 'expo-status-bar';
-import { updateUserEmail, auth } from '../services/Firebase';
+import { updateUserEmail, auth, isUserEmailVerified } from '../services/Firebase';
+import { BlurView } from 'expo-blur';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
+
 
 const uploadToSupabase = async (base64Image, imageExtension = 'jpg', bucketName = 'avatars', userId) => {
   try {
@@ -78,19 +83,59 @@ const uploadToSupabase = async (base64Image, imageExtension = 'jpg', bucketName 
 
 const Configuracoes: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [username, setUsername] = useState<string>(''); // Estado para armazenar o nome de usuário
+  const [username, setUsername] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [uploading, setUploading] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [rememberChoice, setRememberChoice] = useState(false); // Para lembrar a escolha
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false); // Estado para o modal de logout
-  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false); // Estado para o modal de deletar conta
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [password, setPassword] = useState('');
-
+  const [isEnabled, setIsEnabled] = useState(false);
+  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
   const navigation = useNavigation();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isNotificationEnabled, setIsNotificationEnabled] = useState(true); // TODO: Persistir estado do botão de notoficação
+  const [badgeCounts, setBadgeCounts] = useState({
+    Home: 0,
+    Agenda: 0,
+    Assistente: 0,
+    Chat: 0,
+    Configurações: 0,
+  });
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
+  const [isDarkModeEnabled, setIsDarkModeEnabled] = useState(false);
 
+  const toggleNotificationsSwitch = () => {
+    setIsNotificationsEnabled(previousState => !previousState);
+  };
+
+  useEffect(() => {
+    const fetchRememberChoice = async () => {
+      try {
+        const choice = await AsyncStorage.getItem('rememberChoice');
+        if (choice !== null) {
+          setRememberChoice(JSON.parse(choice));
+        }
+      } catch (error) {
+        console.error('Error fetching remember choice: ', error);
+      }
+    };
+
+    fetchRememberChoice();
+  }, []);
+  useEffect(() => {
+
+    setEmailVerified(isUserEmailVerified());
+  }, []);
+  const toggleDarkModeSwitch = () => {
+    setIsDarkModeEnabled(previousState => !previousState);
+  };
   const loadUserData = async () => {
     try {
       const { id: userId } = await getUserNameAndId(); // Obtém o ID do usuário
@@ -117,10 +162,21 @@ const Configuracoes: React.FC = () => {
       console.error('Erro ao carregar dados do usuário:', err);
     }
   };
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalContent, setModalContent] = useState('');
 
+  const openModal = (content) => {
+    setModalContent(content);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setModalContent(''); // Limpa o conteúdo do modal ao fechar
+  };
   const resolvePasswordRef = useRef<(password: string) => void>();
 
-    const promptUserForPassword = async () => {
+  const promptUserForPassword = async () => {
     return new Promise((resolve) => {
       resolvePasswordRef.current = resolve; // Armazena a função resolve no ref
       setShowPasswordModal(true); // Exibe o modal
@@ -136,45 +192,64 @@ const Configuracoes: React.FC = () => {
     }
   };
 
-    const handleUpdateProfile = async () => {
-      try {
-        const { id: userId } = await getUserNameAndId();
+  const handleUpdateProfile = async () => {
+    try {
+      const { id: userId } = await getUserNameAndId();
 
-        if (email !== auth.currentUser?.email) {
-          const password = await promptUserForPassword(); // Chama a função que solicita a senha
-          const emailUpdated = await updateUserEmail(email, password);
+      if (email !== auth.currentUser?.email) {
+        const password = await promptUserForPassword(); // Chama a função que solicita a senha
+        const emailUpdated = await updateUserEmail(email, password);
 
-          if (!emailUpdated) {
-            Alert.alert('Erro ao atualizar o e-mail no Firebase.');
-            return;
-          }
+        if (!emailUpdated) {
+          Alert.alert('Erro ao atualizar o e-mail no Firebase.');
+          return;
         }
-
-        const { error } = await supabase
-          .from('candidatos')
-          .update({ nome: username, email })
-          .eq('id', userId);
-
-        if (error) {
-          Alert.alert('Erro ao atualizar dados no Supabase.');
-        } else {
-          Alert.alert('Dados atualizados com sucesso!');
-          setShowEditModal(false);
-          loadUserData();
-        }
-      } catch (error) {
-        console.error('Erro ao salvar os dados:', error);
       }
-    };
+
+      const { error } = await supabase
+        .from('candidatos')
+        .update({ nome: username, email })
+        .eq('id', userId);
+
+      if (error) {
+        Alert.alert('Erro ao atualizar dados no Supabase.');
+      } else {
+        Alert.alert('Dados atualizados com sucesso!');
+        setShowEditModal(false);
+        loadUserData();
+      }
+    } catch (error) {
+      console.error('Erro ao salvar os dados:', error);
+    }
+  };
 
   // LogOff
   const handleLogoff = async () => {
-    const success = await logOutUser(); // Chama a função de logoff
-    if (success) {
-      Alert.alert("Deslogado com sucesso!");
-      navigation.navigate('Auth', { screen: 'Login' });
+    // Lógica para verificar se o usuário deve ser deslogado
+    if (!rememberChoice) {
+      const success = await logOutUser(); // Chama a função de logoff
+      if (success) {
+        Alert.alert("Deslogado com sucesso!");
+        navigation.navigate('Auth', { screen: 'Login' });
+      } else {
+        Alert.alert("Erro ao deslogar. Tente novamente.");
+      }
     } else {
-      Alert.alert("Erro ao deslogar. Tente novamente.");
+      // Lógica se o usuário desejar sair sem confirmação
+      const success = await logOutUser();
+      if (success) {
+        Alert.alert("Deslogado com sucesso!");
+        navigation.navigate('Auth', { screen: 'Login' });
+      } else {
+        Alert.alert("Erro ao deslogar. Tente novamente.");
+      }
+    }
+
+    // Salvar a escolha do usuário
+    try {
+      await AsyncStorage.setItem('rememberChoice', JSON.stringify(rememberChoice));
+    } catch (error) {
+      console.error('Error saving remember choice: ', error);
     }
   };
 
@@ -349,26 +424,16 @@ const Configuracoes: React.FC = () => {
     }
   };
 
+
   return (
     <KeyboardAvoidingView
-    style={styles.container}
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <SafeAreaView style={styles.container}>
         <Header />
-
-        {/* Adição do título "Configurações" com o ícone de engrenagem */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 30, top: -220, }}>
-        <Icon name="cog" size={42} color="#000" />
-        <Text style={styles.configText}>Configurações</Text>
-      </View>
-
-        <View style={styles.settingsContainer}>
-          <SettingsCard onPress={() => {}} />
-        </View>
-
-        <View style={styles.profileSection}>
+        <View style={styles.containerOpcoes}>
           <TouchableOpacity style={styles.profileCircle} onPress={pickImage}>
             {uploading ? (
               <ActivityIndicator size="large" color="#000" />
@@ -381,163 +446,296 @@ const Configuracoes: React.FC = () => {
           <Text style={styles.usernameText}>
             {username ? username : 'Carregando...'}
           </Text>
+          <TouchableOpacity
+            onPress={() => setShowNotification(!showNotification)}
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              padding: 10,
+              backgroundColor: '#fff',
+              borderRadius: 10,
+            }}
+          >
+            <Icon name="bell" size={30} color="#ff8c00" />
+          </TouchableOpacity>
 
-          <View style={styles.buttonContainer}>
-            {/* Botão de Editar Dados */}
-            <EditProfileButton onPress={() => setShowEditModal(true)} />
+          <ScrollView contentContainerStyle={styles.containerScroll}>
+            <View style={styles.line} />
+            <Text style={styles.message}>Configurações de Conta</Text>
 
-            {/* Botão de Logoff */}
-            <LogOffButton onPress={() => setShowLogoutModal(true)} />
+            <TouchableOpacity style={styles.Options} onPress={() => openModal('Editar dados')}>
+              <Text style={styles.text}>Editar dados</Text>
+              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            </TouchableOpacity>
 
-            {/* Botão de Deletar Conta */}
-            <DeleteAccountButton onPress={() => setShowDeleteAccountModal(true)} />
-          </View>
-        </View>
+            <TouchableOpacity style={styles.Options} onPress={() => openModal('Alterar a senha')}>
+              <Text style={styles.text}>Alterar a senha</Text>
+              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            </TouchableOpacity>
 
-        {/* Modal para Editar Dados */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={showEditModal}
-          onRequestClose={() => setShowEditModal(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalView}>
-              <Text style={styles.modalText}>Editar Dados</Text>
-
-              <TextInput
-                style={styles.input}
-                placeholder="Nome"
-                value={username}
-                onChangeText={(text) => setUsername(text)}
+            <View style={styles.switchContainer}>
+              <Text style={styles.textSwitch}>Notificações</Text>
+              <Switch
+                trackColor={{ false: "#767577", true: "#000" }}
+                thumbColor={isNotificationsEnabled ? "#ff8c00" : "#f4f3f4"}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={toggleNotificationsSwitch}
+                value={isNotificationsEnabled}
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={email}
-                onChangeText={(text) => setEmail(text)}
-              />
+            </View>
 
-            <Pressable
-              style={[styles.buttonModal, styles.buttonSave]}
-              onPress={handleUpdateProfile}  // Chama a função de atualização do perfil
+            <View style={styles.switchContainer}>
+              <Text style={styles.textSwitch}>Dark mode</Text>
+              <Switch
+                trackColor={{ false: "#767577", true: "#000" }}
+                thumbColor={isDarkModeEnabled ? "#ff8c00" : "#f4f3f4"}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={toggleDarkModeSwitch}
+                value={isDarkModeEnabled}
+              />
+            </View>
+
+            <View style={styles.line} />
+            <Text style={styles.message}>Mais Opções</Text>
+
+            <TouchableOpacity style={styles.Options} onPress={() => openModal('Sobre nós')}>
+              <Text style={styles.text}>Sobre nós</Text>
+              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.Options} onPress={() => openModal('Política de Privacidade')}>
+              <Text style={styles.text}>Política de Privacidade</Text>
+              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            </TouchableOpacity>
+
+            <View style={styles.line} />
+            <Text style={styles.message}>Opções Avançadas</Text>
+
+            <TouchableOpacity
+              style={styles.Options}
+              onPress={async () => {
+                const choice = await AsyncStorage.getItem('rememberChoice');
+                const isRememberChoice = choice ? JSON.parse(choice) : false;
+
+                if (isRememberChoice) {
+                  // Se o switch estiver ativado, desloga diretamente
+                  handleLogoff();
+                } else {
+                  // Caso contrário, abre o modal
+                  openModal('Sair do App');
+                }
+              }}
             >
-              <Text style={styles.textStyle}>Salvar</Text>
-            </Pressable>
-              <Pressable
-                style={[styles.buttonModal, styles.buttonCancel]}
-                onPress={() => setShowEditModal(false)}
-              >
-                <Text style={styles.textStyle}>Cancelar</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
+              <Text style={styles.text}>Sair do App</Text>
+              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            </TouchableOpacity>
 
-        {/* Modal de Logout */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={showLogoutModal}
-          onRequestClose={() => setShowLogoutModal(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalView}>
-              <Text style={styles.modalText}>Deseja realmente sair?</Text>
-              <Pressable
-                style={[styles.buttonModal, styles.buttonClose]}
-                onPress={handleLogoff}
-              >
-                <Text style={styles.textStyle}>Sim</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.buttonModal, styles.buttonCancel]}
-                onPress={() => setShowLogoutModal(false)}
-              >
-                <Text style={styles.textStyle}>Não</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
 
-        {/* Modal de Deletar Conta */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={showDeleteAccountModal}
-          onRequestClose={() => setShowDeleteAccountModal(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalView}>
-              <Text style={styles.modalText}>Tem certeza que deseja deletar sua conta?</Text>
-              <Pressable
-                style={[styles.buttonModal, styles.buttonDelete]}
-                onPress={handleDeleteAccount}
-              >
-                <Text style={styles.textStyle}>Sim</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.buttonModal, styles.buttonCancel]}
-                onPress={() => setShowDeleteAccountModal(false)}
-              >
-                <Text style={styles.textStyle}>Não</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
+            <TouchableOpacity style={styles.Options} onPress={() => openModal('Deletar Conta')}>
+              <Text style={styles.text}>Deletar Conta</Text>
+              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            </TouchableOpacity>
 
-        { /* Modal de confirmar senha */ }
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={showPasswordModal}
-          onRequestClose={() => setShowPasswordModal(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalView}>
-              <Text style={styles.modalText}>Digite sua senha</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Senha"
-                secureTextEntry
-                value={password}
-                onChangeText={(text) => setPassword(text)}
-              />
-              <Pressable
-                style={[styles.buttonModal, styles.buttonSave]}
-                onPress={() => handlePasswordSubmit(password)} // Certifique-se de passar a senha atual como argumento
+            {/* Modal */}
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={modalVisible}
+              onRequestClose={closeModal}
+            >
+              {/* Background com efeito de Blur */}
+              <BlurView
+                intensity={10} // Intensidade do Blur (de 0 a 100)
+                tint="dark"
+                style={styles.blurContainer}
+                experimentalBlurMethod="dimezisBlurView"
               >
-                <Text style={styles.textStyle}>Confirmar</Text>
-              </Pressable>
-              <Pressable style={[styles.buttonModal, styles.buttonCancel]} onPress={() => setShowPasswordModal(false)}>
-                <Text style={styles.textStyle}>Cancelar</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
+                <View style={styles.modalView}>
+                  {/* Botão de Fechar como um X Vermelho */}
+                  <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </TouchableOpacity>
 
-        <StatusBar style="auto" />
+                  {modalContent === 'Editar dados' && (
+                    <View>
+                      <Text style={{ fontSize: 18 }}>Editar Dados do Perfil</Text>
+                      <TextInput
+                        style={{ borderWidth: 1, borderColor: 'gray', marginTop: '5%', marginBottom: '10%', padding: 8 }}
+                        placeholder="Nome de usuário"
+                        value={username}
+                        onChangeText={setUsername}
+                        editable={emailVerified} // Bloqueia o campo se o e-mail não estiver verificado
+                      />
+                      <TextInput
+                        style={{ borderWidth: 1, borderColor: 'gray', marginBottom: '10%', padding: 8 }}
+                        placeholder="Email do usuário"
+                        value={email}
+                        onChangeText={setEmail}
+                        editable={emailVerified} // Bloqueia o campo se o e-mail não estiver verificado
+                      />
+
+                      {/* Mensagem se o e-mail não estiver verificado */}
+                      {!emailVerified && (
+                        <Text style={{ color: 'red' }}>
+                          Verifique seu e-mail antes de atualizar os dados.
+                        </Text>
+                      )}
+
+                      {/* Botão Atualizar desabilitado se o e-mail não estiver verificado */}
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#ff8c00', padding: 10, marginTop: 10 }}
+                        onPress={handleUpdateProfile}
+                        disabled={!emailVerified}
+                      >
+                        <Text style={{ color: 'white' }}>
+                          {emailVerified ? 'Atualizar' : 'Email não verificado'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+
+                  {modalContent === 'Alterar a senha' && (
+                    <View>
+                      <Text style={styles.modalText}>Alterar Senha</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Nova senha"
+                        secureTextEntry={true}
+                        onChangeText={(text) => console.log(`Nova senha: ${text}`)}
+                      />
+                      <TouchableOpacity style={styles.updateButton} onPress={() => { /* lógica para alterar a senha */ }}>
+                        <Text style={styles.updateButtonText}>Alterar Senha</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {modalContent === 'Sobre nós' && (
+                    <View>
+                      <Text style={styles.modalText}>Sobre Nós</Text>
+                      <Text style={styles.modalInfo}>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Omnis, temporibus. Repudiandae ipsam unde dolor tenetur. Dolorem ab cupiditate aliquid velit. Quas fuga dicta similique! Ducimus culpa nam similique. Rerum, aliquam.</Text>
+                    </View>
+                  )}
+
+                  {modalContent === 'Política de Privacidade' && (
+                    <View>
+                      <Text style={styles.modalText}>Política de Privacidade</Text>
+                      <Text style={styles.modalInfo}>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Numquam, autem esse obcaecati atque quos officiis culpa soluta fuga! In sunt animi officiis distinctio possimus ad omnis sit natus pariatur fuga?</Text>
+                    </View>
+                  )}
+
+                  {modalContent === 'Sair do App' && (
+                    <View>
+                      {/* Ícone */}
+                      <Icon name="sign-out" size={20} color="red" style={styles.icon} />
+
+                      <Text style={styles.modalText}>Tem certeza que deseja sair?</Text>
+                      <Text style={styles.descriptionText}>
+                        Ao sair, você precisará fazer login novamente para acessar sua conta.
+                      </Text>
+
+                      {/* Lembre-se da minha escolha */}
+                      <View style={styles.rememberChoiceContainer}>
+                        <Switch
+                          value={rememberChoice}
+                          onValueChange={setRememberChoice}
+                        />
+                        <Text style={styles.rememberChoiceText}>Lembre-se da minha escolha</Text>
+                      </View>
+
+                      {/* Botões de ação */}
+                      <View style={styles.buttonContainer}>
+                        <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
+                          <Text style={styles.buttonText}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.exitButton}
+                          onPress={handleLogoff}
+                        >
+                          <Text style={styles.buttonText}>Sair</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {modalContent === 'Deletar Conta' && (
+                    <View>
+                      {/* Ícone */}
+                      <Icon name="trash" size={20} color="red" style={styles.icon} />
+
+                      <Text style={styles.modalText}>Tem certeza  que deseja deletar sua conta?</Text>
+                      <Text style={styles.descriptionText}>
+                        Tem certeza de que deseja excluir esta Conta? Esta ação não pode ser desfeita.
+                      </Text>
+
+                      {/* Botões de ação */}
+                      <View style={styles.buttonContainer}>
+                        <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
+                          <Text style={styles.buttonText}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.exitButton}
+                          onPress={handleDeleteAccount}
+                        >
+                          <Text style={styles.buttonText}>Deletar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </BlurView>
+            </Modal>
+          </ScrollView>
+
+          {showNotification && (
+            <View style={styles.notificationContainer}>
+              <Text style={styles.notificationText}>
+                Você Tem que validarr o seu email
+              </Text>
+              <TouchableOpacity
+                style={styles.ignoreButton}
+                onPress={() => {
+                }}
+              >
+                <Text style={styles.ignoreButtonText}>Ignorar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </SafeAreaView>
-  </KeyboardAvoidingView>
+      <StatusBar barStyle="light-content" backgroundColor="#ff8c00" />
+    </KeyboardAvoidingView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f2eeed',
   },
-  settingsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  containerOpcoes: {
+    backgroundColor: '#fff',
+    width: 360,
+    height: '85%',
+    borderRadius: 16,
+    padding: 10,
+    marginLeft: '6%',
+    marginTop: '-70%',
+    // Sombra para iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 3, height: 3 }, // Deslocamento da sombra
+    shadowOpacity: 0.5, // Opacidade da sombra
+    shadowRadius: 4.5, // Raio da sombra
+
+    // Sombra para Android
+    elevation: 10, // Nível da sombra
   },
-  profileSection: {
-    alignItems: 'center',
-    position: 'absolute',
-    top: 150,
-    left: '10%',
-    transform: [{ translateX: -50 }],
+  containerScroll: {
+    backgroundColor: '#fff',
+    marginTop: '15%',
+    flexGrow: 1,
+    paddingBottom: '35%',
   },
   profileCircle: {
     width: 80,
@@ -546,10 +744,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     justifyContent: 'center',
     alignItems: 'center',
-    borderColor: '#ffffff',
+    borderColor: '#ff8c00',
     borderWidth: 2,
     marginBottom: 10,
+    zIndex: 1
   },
+
   profileImage: {
     width: '100%',
     height: '100%',
@@ -559,29 +759,93 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
   },
-  usernameText: { // Estilo para o nome de usuário
+  usernameText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginTop: -65, // Espaço acima do nome de usuário
+    marginTop: -65,
     marginLeft: 30,
     right: -90,
   },
-  buttonContainer: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    top: -52,
-    left: 110,
+  notificationContainer: {
+    position: 'absolute',
+    top: 50,
+    right: 10,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  modalContainer: {
+  notificationText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  ignoreButton: {
+    backgroundColor: '#ff8c00',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  ignoreButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  line: {
+    marginTop: '5%',
+    height: 1,
+    width: '100%',
+    backgroundColor: '#ccc',
+    marginVertical: 10,
+  },
+  message: {
+    marginTop: '5%',
+    fontSize: 15,
+    color: '#333',
+    fontWeight: 'bold',
+    textAlign: 'left',
+  },
+
+  Options: {
+    width: '95%',
+    marginTop: '5%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2.62,
+    elevation: 4,
+    marginVertical: 5,
+    marginLeft: '2%'
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  textSwitch: {
+    fontSize: 16,
+  },
+  blurContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalView: {
+    width: '90%',
+    margin: 20,
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 35,
@@ -591,49 +855,98 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    position: 'relative',
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
+    fontSize: 18,
+  },
+  input: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    marginBottom: 15,
+    paddingHorizontal: 10,
+    width: '100%',
+  },
+  updateButton: {
+    backgroundColor: '#ff8c00',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 15,
+    alignItems: 'center',
+    width: '100%',
+  },
+  updateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 10,
+    zIndex: 10,
+  },
+  closeButtonText: {
+    color: 'red',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  updateButtonDisabled: {
+    backgroundColor: '#b0b0b0', // Cinza para indicar que está desativado
+  },
+  warningText: {
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  icon: {
+    marginBottom: 10, // Espaçamento abaixo do ícone
   },
   modalText: {
     fontSize: 18,
-    marginBottom: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  descriptionText: {
     textAlign: 'center',
-  },
-  input: {
-    width: 200,
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 10,
     marginBottom: 20,
-    borderRadius: 5,
   },
-  buttonModal: {
+  rememberChoiceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  rememberChoiceText: {
+    marginLeft: 10,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  cancelButton: {
+    backgroundColor: 'lightgray',
     padding: 10,
-    margin: 5,
     borderRadius: 5,
-    width: 100,
+    flex: 1,
+    marginRight: 5,
     alignItems: 'center',
   },
-  buttonSave: {
-    backgroundColor: 'green',
-  },
-  buttonClose: {
-    backgroundColor: 'green',
-  },
-  buttonCancel: {
-    backgroundColor: 'gray',
-  },
-  buttonDelete: {
+  exitButton: {
     backgroundColor: 'red',
+    padding: 10,
+    borderRadius: 5,
+    flex: 1,
+    marginLeft: 5,
+    alignItems: 'center',
   },
-  textStyle: {
+  buttonText: {
     color: 'white',
     fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  configText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginLeft: 10,
   },
 });
 
