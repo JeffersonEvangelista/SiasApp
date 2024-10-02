@@ -100,8 +100,9 @@ export default function ChatRoom({route, navigation}) {
                   <Ionicons name="chevron-back-outline" size={30} color="white"/>
                 </TouchableOpacity>
                 <Image 
-                    // source={item?.foto_perfil}
-                    source={require('../../assets/images/user1.jpg')}
+                    source={{
+                      uri: item?.profileImg,
+                    }}
                     style={{width:42, aspectRatio:1, borderRadius: 100, marginLeft: 4, marginRight: 8}}
                     transition={500}
                 />

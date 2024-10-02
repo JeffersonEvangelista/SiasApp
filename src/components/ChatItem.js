@@ -57,7 +57,7 @@ export default function ChatItem({item, currentUser}) {
                 // source={item?.foto_perfil}
                 source={{
                     uri: item?.profileImg,
-                  }}
+                }}
                 style={{width:50, aspectRatio:1, borderRadius: 100}}
                 transition={500}
             />

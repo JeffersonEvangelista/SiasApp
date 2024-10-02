@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import ChatList from '../components/ChatList';
-import { TextInput, TouchableOpacity } from 'react-native-gesture-handler';
+import { ScrollView, TextInput, TouchableOpacity } from 'react-native-gesture-handler';
 import { getCurrentUserData, getCurrentUserEmail } from '../services/Firebase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
@@ -70,22 +70,26 @@ export default function Chat() {
             placeholder='Pesquisar'
             />
           </View>
-          <View style={{flex: 1}}>
-            <StatusBar style='light'/>
+          <ScrollView>
             {
-              users.length>0? (
-                <ChatList currentUser={user} users={users}/>
-              ):(
-                <View style={{
-                  flexDirection:"column",
-                  alignItems:"center",
-                  top: 30
-                }}>
-                  <ActivityIndicator size={'large'} color="#F07A26"/>
-                </View>
-              )
+            <View style={{flex: 1}}>
+              <StatusBar style='light'/>
+              {
+                users.length>0? (
+                  <ChatList currentUser={user} users={users}/>
+                ):(
+                  <View style={{
+                    flexDirection:"column",
+                    alignItems:"center",
+                    top: 30
+                  }}>
+                    <ActivityIndicator size={'large'} color="#F07A26"/>
+                  </View>
+                )
+              }
+            </View>
             }
-          </View>
+          </ScrollView>
         </View>
     </SafeAreaView>
   );
