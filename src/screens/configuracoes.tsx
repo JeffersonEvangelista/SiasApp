@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, Modal, Pressable, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, Modal, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import EditProfileButton from '../components/EditProfileButton';
 import LogOffButton from '../components/LogoffButton';
@@ -347,8 +347,19 @@ const Configuracoes: React.FC = () => {
   };
 
   return (
+    <KeyboardAvoidingView
+    style={styles.container}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
     <SafeAreaView style={styles.container}>
       <Header />
+
+      {/* Adição do título "Configurações" com o ícone de engrenagem */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 30, top: -220, }}>
+        <Icon name="cog" size={42} color="#000" />
+        <Text style={styles.configText}>Configurações</Text>
+      </View>
 
       <View style={styles.settingsContainer}>
         <SettingsCard onPress={() => {}} />
@@ -504,6 +515,7 @@ const Configuracoes: React.FC = () => {
 
       <StatusBar style="auto" />
     </SafeAreaView>
+  </KeyboardAvoidingView>
   );
 };
 
@@ -520,7 +532,7 @@ const styles = StyleSheet.create({
   profileSection: {
     alignItems: 'center',
     position: 'absolute',
-    top: 100,
+    top: 150,
     left: '10%',
     transform: [{ translateX: -50 }],
   },
@@ -614,6 +626,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  configText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
 });
 
