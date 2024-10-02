@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, sendEmailVerification, initializeAuth, updateEmail, reauthenticateWithCredential, EmailAuthProvider} from 'firebase/auth';
-import { collection, doc, getDoc, setDoc, getFirestore, Timestamp } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, sendEmailVerification, initializeAuth, updateEmail, reauthenticateWithCredential, EmailAuthProvider, updateCurrentUser} from 'firebase/auth';
+import { collection, doc, getDoc, setDoc, getFirestore, Timestamp, updateDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRoomId } from '../utils/common';
 
@@ -41,7 +41,7 @@ export const registerChatRoom = async (userId1: string, userId2: string) => {
 }
 
 // Função para registrar o usuário
-export const registerUser = async (email: string, password: string, username:string, identificador:string) => {
+export const registerUser = async (email: string, password: string, username:string, identificador:string, profileImg:string) => {
     try {
         const response = await createUserWithEmailAndPassword(auth, email, password);
 
@@ -49,6 +49,7 @@ export const registerUser = async (email: string, password: string, username:str
             username,
             email,
             identificador,
+            profileImg,
             userId: response?.user?.uid
         });
         return {success: true, data: response?.user}
@@ -63,6 +64,18 @@ export const registerUser = async (email: string, password: string, username:str
         throw error;
     }
 };
+
+export const UpdateUserProfileImg =  async (id:string, foto:string|null) => {
+
+    const docRef = doc(db, "users", id)
+
+    const data = {
+        profileImg: foto
+    };
+    
+    updateDoc(docRef, data)
+    
+}
 
 // Função para obter os dados do usuário logado atualmente
 export const getCurrentUserData = () => {

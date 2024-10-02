@@ -55,7 +55,9 @@ export default function ChatItem({item, currentUser}) {
         <View style={{flexDirection:"row", alignItems:"center"}}>            
             <Image 
                 // source={item?.foto_perfil}
-                source={require('../../assets/images/user1.jpg')}
+                source={{
+                    uri: item?.profileImg,
+                  }}
                 style={{width:50, aspectRatio:1, borderRadius: 100}}
                 transition={500}
             />

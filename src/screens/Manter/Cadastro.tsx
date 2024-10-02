@@ -77,11 +77,12 @@ const CadastroScreen = () => {
       console.log('Formulário válido! Enviando...');
       setLoading(true);
       try {
+        const profileImg ="#"
         const trimmedEmail = email.trim();
         const identifierLength = identificador.replace(/\D/g, '').length; 
   
         // Tentativa de registro no Firebase
-        await registerUser(trimmedEmail, senha, Nome, identificador);
+        await registerUser(trimmedEmail, senha, Nome, identificador, profileImg);
   
         // Criação do objeto de usuário com base no tipo
         const user = {
