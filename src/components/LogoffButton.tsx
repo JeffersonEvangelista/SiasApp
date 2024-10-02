@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     alignItems: 'center',
     position: 'static',
-    top: 485,
+    top: 435,
   },
   buttonText: {
     color: '#ffffff', // Cor do texto

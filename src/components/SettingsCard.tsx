@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     position: 'relative',
-    top: '10%',
+    top: '20%', // Originalmente 10%
     left: '37%',
     transform: [{ translateX: -150 }, { translateY: -140 }],
     height: 720, // Reduz a altura total do container
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   whiteSpace: {
-    height: 90, // Espaço em branco abaixo da notificação
+    height: 35, // Espaço em branco abaixo da notificação
   },
   moreOptionsContainer: {
     paddingVertical: 10,
