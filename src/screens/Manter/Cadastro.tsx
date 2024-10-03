@@ -7,7 +7,7 @@ import { validateIdentifier } from './Dados/validationUtils';
 import CustomButton from '../Styles/CustomButton';
 import { registerUser } from '../../services/Firebase';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { saveRecrutadorToSupabase,saveCandidatoToSupabase  } from '../../services/userService';
+import { saveRecrutadorToSupabase, saveCandidatoToSupabase } from '../../services/userService';
 import { sendNotificationNow } from '../../Notificacao/notifications';
 
 const logo = require('./../../../assets/logo.png');
@@ -77,20 +77,20 @@ const CadastroScreen = () => {
       console.log('Formulário válido! Enviando...');
       setLoading(true);
       try {
-        const profileImg ="#"
+        const profileImg = "#"
         const trimmedEmail = email.trim();
-        const identifierLength = identificador.replace(/\D/g, '').length; 
-  
+        const identifierLength = identificador.replace(/\D/g, '').length;
+
         // Tentativa de registro no Firebase
         await registerUser(trimmedEmail, senha, Nome, identificador, profileImg);
-  
+
         // Criação do objeto de usuário com base no tipo
         const user = {
           nome: Nome,
           email: trimmedEmail,
           cpf: identificador,
         };
-  
+
         // Salvamento no Supabase com base no comprimento do identificador
         if (identifierLength === 11) { // CPF
           await saveCandidatoToSupabase(user);
@@ -99,23 +99,23 @@ const CadastroScreen = () => {
             nome: Nome,
             email: trimmedEmail,
             cnpj: identificador,
-            empresa: nomeEmpresa || 'Nome da Empresa', 
+            empresa: nomeEmpresa || 'Nome da Empresa',
           };
           await saveRecrutadorToSupabase(recrutador);
         } else {
           throw new Error('Identificador inválido. Deve ter 11 dígitos para CPF ou 14 dígitos para CNPJ.');
         }
-  
+
         // Notificação de sucesso
         await sendNotificationNow(
           'Cadastro Completo',
           'Seu cadastro foi realizado com sucesso!'
         );
-  
+
         navigation.navigate('Home');
       } catch (error: any) {
         console.error('Erro ao cadastrar usuário:', error.message);
-  
+
         // Verifica se o erro vem do Firebase ou do Supabase
         if (error.message.includes('Firebase')) {
           setErrors((prevErrors) => ({
@@ -140,7 +140,7 @@ const CadastroScreen = () => {
       console.log('Formulário inválido. Verifique os erros:', errors);
     }
   };
-  
+
 
   const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {
     const digitsOnly = identificador.replace(/\D/g, '');
@@ -322,16 +322,11 @@ const CadastroScreen = () => {
 
             <View style={styles.containeer}>
               <View style={styles.linee} />
-              <Text style={styles.orText}>OU</Text>
               <View style={styles.linee} />
             </View>
           </View>
 
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.footerButton} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.footerButtonText}>Login</Text>
-            </TouchableOpacity>
-          </View>
+
         </View>
       </View>
 
@@ -345,7 +340,7 @@ const CadastroScreen = () => {
             <Text style={styles.modalTitle}>Termos e Condições</Text>
             <ScrollView style={styles.modalContent}>
               <Text style={styles.modalText}>
-                Mil vezes melhor do que o Java, mas tem que mudar isso depois porem fds
+                Lorem ipsum dolor, sit amet consectetur adipisicing elit. Nam ipsum molestiae impedit sequi explicabo accusamus hic dolorum ullam illum dignissimos, assumenda expedita repellat tempore perspiciatis quo officiis odio, laudantium suscipit!
               </Text>
             </ScrollView>
             <Button title="Fechar" onPress={() => setModalVisible(false)} />
