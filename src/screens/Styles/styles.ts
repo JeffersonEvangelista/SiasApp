@@ -108,6 +108,25 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
+    lottieAnimation: { width: 300, height: 300 },
+    customButton: {
+        backgroundColor: '#F07A26',
+        paddingVertical: 15,
+        paddingHorizontal: 25,
+        borderRadius: 8,
+        marginVertical: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.8,
+        shadowRadius: 2,
+        elevation: 5, 
+    },
+    buttonText: {
+        color: '#FFF', 
+        fontSize: 16,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
     modalContainer: {
         width: '80%',
         padding: 20,
@@ -270,7 +289,7 @@ export const stylesAssistente = StyleSheet.create({
     userMessage: {
         alignSelf: 'flex-end',
         backgroundColor: colors.orange,
-        color: 'white', 
+        color: 'white',
     },
     botMessage: {
         alignSelf: 'flex-start',
@@ -353,12 +372,12 @@ export const stylesAssistente = StyleSheet.create({
         color: '#666',
         marginTop: 5,
     },
-    clipIconContainer:{
-        backgroundColor:  colors.orange,
+    clipIconContainer: {
+        backgroundColor: colors.orange,
         padding: 10,
-        borderRadius:4,
-        marginRight : 6,
+        borderRadius: 4,
+        marginRight: 6,
 
     }
-    
+
 });

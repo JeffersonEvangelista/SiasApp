@@ -9,6 +9,8 @@ import { registerUser } from '../../services/Firebase';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { saveRecrutadorToSupabase, saveCandidatoToSupabase } from '../../services/userService';
 import { sendNotificationNow } from '../../Notificacao/notifications';
+import NetInfo from '@react-native-community/netinfo';
+import LottieView from 'lottie-react-native';
 
 const logo = require('./../../../assets/logo.png');
 
@@ -36,6 +38,31 @@ const CadastroScreen = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [showNoConnection, setShowNoConnection] = useState(false);
+
+
+  // Função para formatar CPF ou CNPJ
+  const formatCPFOrCNPJ = (value: any) => {
+    const cleanedValue = value.replace(/\D/g, ''); // Remove caracteres não numéricos
+    let formattedValue = '';
+
+    if (cleanedValue.length <= 11) {
+      // Formatação de CPF: XXX.XXX.XXX-XX
+      formattedValue = cleanedValue.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    } else if (cleanedValue.length <= 14) {
+      // Formatação de CNPJ: XX.XXX.XXX/XXXX-XX
+      formattedValue = cleanedValue.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    } else {
+      formattedValue = value; // Caso passe dos limites, mantém o valor sem formatação
+    }
+
+    return formattedValue;
+  };
+
+  // Função para tratar a mudança de texto
+  const handleChangeText = (value: any) => {
+    setIdentificador(formatCPFOrCNPJ(value));
+  };
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -72,51 +99,61 @@ const CadastroScreen = () => {
   };
 
   const handleSubmit = async () => {
+    const isConnected = await NetInfo.fetch().then(state => state.isConnected);
+
+    if (!isConnected) {
+      setLoading(false);
+      setShowNoConnection(true);
+      return;
+    }
     console.log('Iniciando validação do formulário...');
     if (validateForm()) {
       console.log('Formulário válido! Enviando...');
       setLoading(true);
+
       try {
-        const profileImg = "#"
+        const profileImg = '#';
         const trimmedEmail = email.trim();
         const identifierLength = identificador.replace(/\D/g, '').length;
 
-        // Tentativa de registro no Firebase
-        await registerUser(trimmedEmail, senha, Nome, identificador, profileImg);
+        // Tentativa de registro no Firebase e envio de e-mail
+        const registerResponse = await registerUser(trimmedEmail, senha, Nome, identificador, profileImg);
 
-        // Criação do objeto de usuário com base no tipo
+        // Verifica se o registro e o envio do e-mail de verificação foram bem-sucedidos
+        if (!registerResponse?.success) {
+          throw new Error('O registro no Firebase falhou.');
+        }
+        console.log('Usuário registrado e e-mail de verificação enviado com sucesso.');
+
+        // Criação do objeto de usuário para o Supabase
         const user = {
           nome: Nome,
           email: trimmedEmail,
           cpf: identificador,
         };
 
-        // Salvamento no Supabase com base no comprimento do identificador
+        // Salvamento no Supabase com base no tipo de identificador
         if (identifierLength === 11) { // CPF
           await saveCandidatoToSupabase(user);
+          console.log('Candidato salvo com sucesso no Supabase.');
         } else if (identifierLength === 14) { // CNPJ
           const recrutador = {
             nome: Nome,
             email: trimmedEmail,
             cnpj: identificador,
-            empresa: nomeEmpresa || 'Nome da Empresa',
           };
           await saveRecrutadorToSupabase(recrutador);
+          console.log('Recrutador salvo com sucesso no Supabase.');
         } else {
           throw new Error('Identificador inválido. Deve ter 11 dígitos para CPF ou 14 dígitos para CNPJ.');
         }
 
         // Notificação de sucesso
-        await sendNotificationNow(
-          'Cadastro Completo',
-          'Seu cadastro foi realizado com sucesso!'
-        );
-
+        await sendNotificationNow('Cadastro Completo', 'Seu cadastro foi realizado com sucesso!');
         navigation.navigate('Home');
       } catch (error: any) {
         console.error('Erro ao cadastrar usuário:', error.message);
 
-        // Verifica se o erro vem do Firebase ou do Supabase
         if (error.message.includes('Firebase')) {
           setErrors((prevErrors) => ({
             ...prevErrors,
@@ -140,6 +177,7 @@ const CadastroScreen = () => {
       console.log('Formulário inválido. Verifique os erros:', errors);
     }
   };
+
 
 
   const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {
@@ -250,7 +288,6 @@ const CadastroScreen = () => {
             <HelperText type="error" visible={!!errors.email}>
               {errors.email}
             </HelperText>
-
             <PaperTextInput
               label="Digite seu CPF ou CNPJ"
               style={[styles.textInput, errors.identificador ? { borderColor: 'red', borderWidth: 1 } : {}]}
@@ -260,13 +297,12 @@ const CadastroScreen = () => {
               keyboardType="numeric"
               left={<PaperTextInput.Icon icon="badge-account-horizontal-outline" />}
               value={identificador}
-              onChangeText={setIdentificador}
+              onChangeText={handleChangeText}
               error={!!errors.identificador}
             />
             <HelperText type="error" visible={!!errors.identificador}>
               {errors.identificador}
             </HelperText>
-
             <PaperTextInput
               label="Senha"
               style={styles.textInput}
@@ -329,7 +365,23 @@ const CadastroScreen = () => {
 
         </View>
       </View>
-
+      {/* Animação de Conexão (Modal) */}
+      <Modal transparent={true} visible={showNoConnection}>
+        <View style={styles.modalBackground}>
+          <LottieView
+            source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+          />
+          <TouchableOpacity
+            style={styles.customButton}
+            onPress={() => setShowNoConnection(false)}
+          >
+            <Text style={styles.buttonText}>Tentar novamente</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
       <Modal
         transparent={true}
         visible={modalVisible}
@@ -343,7 +395,12 @@ const CadastroScreen = () => {
                 Lorem ipsum dolor, sit amet consectetur adipisicing elit. Nam ipsum molestiae impedit sequi explicabo accusamus hic dolorum ullam illum dignissimos, assumenda expedita repellat tempore perspiciatis quo officiis odio, laudantium suscipit!
               </Text>
             </ScrollView>
-            <Button title="Fechar" onPress={() => setModalVisible(false)} />
+            <TouchableOpacity
+              style={styles.customButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.buttonText}>Fechar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

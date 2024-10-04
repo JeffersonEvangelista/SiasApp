@@ -40,30 +40,30 @@ export const registerChatRoom = async (userId1: string, userId2: string) => {
     });
 }
 
-// Função para registrar o usuário
-export const registerUser = async (email: string, password: string, username:string, identificador:string, profileImg:string) => {
+// Função para registrar o usuário e enviar e-mail de confirmação
+export const registerUser = async (email: string, password: string, username: string, identificador: string, profileImg: string) => {
     try {
-        const response = await createUserWithEmailAndPassword(auth, email, password);
-
-        await setDoc(doc(db, "users", response?.user?.uid),{
-            username,
-            email,
-            identificador,
-            profileImg,
-            userId: response?.user?.uid
-        });
-        return {success: true, data: response?.user}
-        console.log('Usuário registrado com sucesso');
-
+      const response = await createUserWithEmailAndPassword(auth, email, password);
+  
+      // Salva os dados básicos no Firestore
+      await setDoc(doc(db, 'users', response?.user?.uid), {
+        username,
+        email,
+        identificador,
+        profileImg,
+        userId: response?.user?.uid,
+      });
+  
+      // Envia e-mail de verificação
+      await sendEmailVerification(response.user);
+      console.log('E-mail de verificação enviado com sucesso');
+  
+      return { success: true, data: response?.user };
     } catch (error) {
-        if (error instanceof Error) {
-            console.error('Erro ao registrar usuário:', error.message);
-        } else {
-            console.error('Erro desconhecido ao registrar usuário:', error);
-        }
-        throw error;
+      console.error('Erro ao registrar usuário:', error instanceof Error ? error.message : error);
+      throw error;
     }
-};
+  };
 
 export const UpdateUserProfileImg =  async (id:string, foto:string|null) => {
 
