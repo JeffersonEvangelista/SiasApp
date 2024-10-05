@@ -8,7 +8,7 @@ import CustomButton from '../Styles/CustomButton';
 import { registerUser } from '../../services/Firebase';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { saveRecrutadorToSupabase, saveCandidatoToSupabase } from '../../services/userService';
-import { sendNotificationNow } from '../../Notificacao/notifications';
+import { sendNotificationNow, checkEmailVerificationAndNotify } from '../../Notificacao/notifications';
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 
@@ -150,6 +150,7 @@ const CadastroScreen = () => {
 
         // Notificação de sucesso
         await sendNotificationNow('Cadastro Completo', 'Seu cadastro foi realizado com sucesso!');
+        await checkEmailVerificationAndNotify();
         navigation.navigate('Home');
       } catch (error: any) {
         console.error('Erro ao cadastrar usuário:', error.message);

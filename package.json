@@ -32,7 +32,7 @@
     "expo-dev-client": "~4.0.26",
     "expo-image-picker": "~15.0.7",
     "expo-linear-gradient": "~13.0.2",
-    "expo-notifications": "~0.28.17",
+    "expo-notifications": "~0.28.18",
     "expo-random": "~14.0.1",
     "expo-router": "^3.5.23",
     "expo-status-bar": "~1.12.1",
