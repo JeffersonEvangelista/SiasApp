@@ -12,12 +12,10 @@ import { getCurrentUserData, logOutUser, UpdateUserProfileImg } from '../service
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../components/Header';
-import SettingsCard from '../components/SettingsCard';
 import { StatusBar } from 'expo-status-bar';
 import { updateUserEmail, auth, isUserEmailVerified } from '../services/Firebase';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 
 
 
@@ -88,7 +86,7 @@ const Configuracoes: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [rememberChoice, setRememberChoice] = useState(false); // Para lembrar a escolha
-
+  const [showBell, setShowBell] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -446,19 +444,40 @@ const Configuracoes: React.FC = () => {
           <Text style={styles.usernameText}>
             {username ? username : 'Carregando...'}
           </Text>
-          <TouchableOpacity
-            onPress={() => setShowNotification(!showNotification)}
-            style={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              padding: 10,
-              backgroundColor: '#fff',
-              borderRadius: 10,
-            }}
-          >
-            <Icon name="bell" size={30} color="#ff8c00" />
-          </TouchableOpacity>
+
+          {/* Renderiza o sino somente se o e-mail não estiver verificado */}
+          {showBell && !isUserEmailVerified() && (
+            <TouchableOpacity
+              onPress={() => setShowNotification(!showNotification)}
+              style={{
+                position: 'absolute',
+                top: 10,
+                right: 10,
+                padding: 10,
+                backgroundColor: '#fff',
+                borderRadius: 10,
+              }}
+            >
+              <Icon name="bell" size={30} color="#ff8c00" />
+              {/* Bolinha vermelha */}
+              {!showNotification && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 5,
+                    right: 5,
+                    width: 12,
+                    height: 12,
+                    backgroundColor: 'red',
+                    borderRadius: 15 / 2,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                />
+              )}
+            </TouchableOpacity>
+          )}
+
 
           <ScrollView contentContainerStyle={styles.containerScroll}>
             <View style={styles.line} />
@@ -688,14 +707,18 @@ const Configuracoes: React.FC = () => {
             </Modal>
           </ScrollView>
 
+          {/* Renderiza a notificação se showNotification for verdadeiro */}
           {showNotification && (
             <View style={styles.notificationContainer}>
               <Text style={styles.notificationText}>
-                Você Tem que validarr o seu email
+                Você tem que validar seu e-mail para usar todas  as funcionalidades do aplicativo.
+
               </Text>
               <TouchableOpacity
                 style={styles.ignoreButton}
                 onPress={() => {
+                  setShowNotification(false);
+                  setShowBell(false); // Esconde o sino permanentemente
                 }}
               >
                 <Text style={styles.ignoreButtonText}>Ignorar</Text>
@@ -783,6 +806,7 @@ const styles = StyleSheet.create({
   notificationText: {
     fontSize: 16,
     fontWeight: 'bold',
+    zIndex: 99
   },
   ignoreButton: {
     backgroundColor: '#ff8c00',
