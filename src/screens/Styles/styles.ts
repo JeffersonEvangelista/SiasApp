@@ -274,7 +274,9 @@ export const stylesAssistente = StyleSheet.create({
     headerContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        zIndex:4,
+        marginTop:'4%',
     },
     chatIdText: {
         fontSize: 16,

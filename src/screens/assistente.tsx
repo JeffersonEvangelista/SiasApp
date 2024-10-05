@@ -12,6 +12,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { handleMaisDetalhesSobreOpcoes, handleDuvidasDoSistema, handleDuvidasSobreConta, handleCriadoresDoSistema, handleProposito, handleFuncionalidades, handleEntrevistasMarcadas, handleQuantidadeSolicitacoes, handleTempoConosco } from './Chatbot/Opcoes';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { stylesAssistente } from './Styles/styles';
+import Markdown from 'react-native-markdown-display';
 
 interface Message {
   id: number;
@@ -227,6 +228,9 @@ export default function App() {
 
     // Limpar o campo de entrada após o envio
     setInput('');
+    setTimeout(() => {
+      setIsBotSendingMessage(false);
+    }, 1000);
   };
 
   // Função para iniciar a animação de digitação
@@ -278,23 +282,38 @@ export default function App() {
     setTimeout(() => {
       setIsBotTyping(false);
       stopTypingAnimation();
-    }, 5000);
+    }, 500);
   };
 
-  // Função para resetar o chat ( mexer aqui )
+  // Função para resetar o chat
   const resetChat = () => {
     console.log("Chat resetado.");
     setMessages([]);
     setMensagensMostradas([]);
     setIsImageUploadEnabled(false);
-
+    setInput('');
+    setIsBotTyping(false);
+    setIsBotSendingMessage(false);
+    setIsTrainingMode(false);
+    setInterviewState({});
+    setIsReportingBug(false);
+    setDescription('');
+    setImageUri(null);
+    setIsDescriptionRequired(false);
+    setIsReadyToSend(false);
+    setShowAnimation(true);
+    setShowIntro(true);
+    setAreOptionsVisible(false);
+    setButtonsVisible(false);
+    setSelectedOption(null);
+    setSubOptions([]);
+    setOptionsTimeout(null);
+    setExpectingNextMessage(false);
   };
 
   // Função para lidar com a primeira mensagem do usuário
   const handleFirstMessage = () => {
-    // Verifica se é a primeira mensagem do usuário
     if (messages.length === 0) {
-      // Esconde a animação ao enviar a primeira mensagem
       setShowAnimation(false);
     }
 
@@ -305,7 +324,6 @@ export default function App() {
 
     // Verifica se é a primeira mensagem do usuário
     if (messages.length === 1) {
-      // Chama a função para lidar com a saudação do bot
       handleGreetingMessage();
     }
   };
@@ -330,22 +348,12 @@ export default function App() {
 
   // Função para enviar as mensagens do bot
   const sendBotMessages = (botMessages: string) => {
-    setIsBotSendingMessage(true);
-    // Envia as mensagens do bot uma a uma
+    // Enviar as mensagens do bot uma a uma
     botMessages.forEach((msg, index) => {
       setTimeout(() => {
-        // Inicia a animação de digitação antes da resposta do bot
-        startTypingAnimationBeforeResponse();
-        setMessages(prevMessages => [...prevMessages, msg]);
-        setTimeout(() => {
-          setIsBotTyping(false);
-          stopTypingAnimation();
-        }, 1000);
-      }, 5000 * (index + 1)); // Mensagens com intervalo de 1 segundo
+        setMessages((prevMessages) => [...prevMessages, msg]);
+      }, 100 * (index + 1));
     });
-    setTimeout(() => {
-      setIsBotSendingMessage(false);
-    }, 0 * botMessages.length);
   };
 
   // Função para verificar se o usuário pediu opções
@@ -427,12 +435,14 @@ export default function App() {
 
   // Função para gerar a pergunta de entrevista baseada no perfil do candidato
   const generateInterviewQuestionPrompt = (interviewState: any) => {
-
-    return `
+    console.log("Gerando prompt de pergunta de entrevista...");
+    const prompt = `
     Você é um entrevistador experiente que está conduzindo uma entrevista para a posição de ${interviewState.userPosition}.
     O candidato tem ${interviewState.userExperienceLevel} anos de experiência e formação em ${interviewState.userEducation}.
     Me gere apenas uma pergunta de cada vez, sem a necessidade de explicar ou falar o pq de  tal pergunta, mas leve me consideração os elementos anterios para que a pergunta leve m consideracoa o nivel do candidato e vaga que ele deseja  
-`;
+  `;
+    console.log("Prompt de pergunta de entrevista gerado:", prompt);
+    return prompt;
   };
 
   // Função para coletar informações do usuário
@@ -530,14 +540,14 @@ export default function App() {
   // Função para gerar uma introdução amigável
   const generateIntroduction = async (genAI: any) => {
     const introPrompt = `
-      Crie uma mensagem de boas-vindas para iniciar uma entrevista de emprego.
-          O tom deve ser amigável e profissional. 
-          A mensagem deve incluir os seguintes elementos:
-          1. Uma apresentação do entrevistador, incluindo um nome fictício (ex: "Olá, eu sou o Lucas Pereira").
-          2. Crie Um nome fictício para a empresa (ex: "na TechInnovate").
-          3. Uma expressão de entusiasmo para conhecer o candidato
-          Certifique-se de que a mensagem seja acolhedora e incentive o candidato a se sentir à vontade durante a entrevista.
-    `;
+    Crie uma mensagem de boas-vindas para iniciar uma entrevista de emprego.
+        O tom deve ser amigável e profissional. 
+        A mensagem deve incluir os seguintes elementos:
+        1. Uma apresentação do entrevistador, incluindo um nome fictício (ex: "Olá, eu sou o Lucas Pereira").
+        2. Crie Um nome fictício para a empresa (ex: "na TechInnovate").
+        3. Uma expressão de entusiasmo para conhecer o candidato
+        Certifique-se de que a mensagem seja acolhedora e incentive o candidato a se sentir à vontade durante a entrevista.
+  `;
     const introResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }).generateContent(introPrompt);
     return introResult?.response?.text?.();
   };
@@ -563,50 +573,15 @@ export default function App() {
         throw new Error("Não foi possível gerar o feedback.");
       }
 
-      // Extração das seções do feedback
-      const pontosFortes = feedbackText.split('**1. Pontos Fortes:**')[1]?.split('**2. Pontos a Melhorar:**')[0]?.trim() || "Não identificado.";
-      const pontosAMelhorar = feedbackText.split('**2. Pontos a Melhorar:**')[1]?.split('**3. Nota Final:**')[0]?.trim() || "Não identificado.";
-      const nota = feedbackText.split('**3. Nota Final:**')[1]?.split('\n')[0]?.trim() || "0"; // Default para 0 se não encontrado
-      const conclusao = feedbackText.split('**Conclusão:**')[1]?.trim() || "Não identificada.";
-
-      // Definir a cor da nota com base no valor
-      let corNota;
-      const notaValor = parseInt(nota, 10);
-      if (notaValor <= 4) {
-        corNota = 'red';
-      } else if (notaValor >= 5 && notaValor <= 6) {
-        corNota = 'green';
-      } else if (notaValor >= 7 && notaValor <= 9) {
-        corNota = 'blue';
-      } else if (notaValor === 10) {
-        corNota = 'gold';
-      }
-
-      // Construção da mensagem do bot
+      // Construção da mensagem do bot com formatação Markdown
       const botMessage = {
         id: uuidv4(),
-        text: `
-        <b>Entrevista Concluída!</b>
-  
-        Aqui está o feedback:
-  
-        <b>Pontos Fortes:</b>
-        ${pontosFortes}
-  
-        <b>Pontos a Melhorar:</b>
-        ${pontosAMelhorar}
-  
-        <b>Nota Final:</b>
-        <font color="${corNota}">${nota}</font>
-  
-        <b>Conclusão:</b>
-        ${conclusao}
-      `,
+        text: `## Seu feedback é:\n\n${feedbackText}`,
         sender: "bot",
       };
       console.log("Mensagem do bot:", botMessage);
 
-      // Adicionar a mensagem ao estado
+      // Adicionar a mensagem ao estado e garantir que ela será interpretada como Markdown
       setMessages((prevMessages) => [...prevMessages, botMessage]);
       console.log("Mensagens atualizadas:", prevMessages);
 
@@ -629,21 +604,21 @@ export default function App() {
       .join("\n\n");
 
     const feedbackPrompt = `
-      Você é um entrevistador experiente que acabou de conduzir uma entrevista com base nas seguintes informações:
-      - Posição: ${interviewState.userPosition}
-      - Nível de experiência: ${interviewState.userExperienceLevel}
-      - Formação: ${interviewState.userEducation}
-      - Perguntas e Respostas:
-      ${questionsAnswersText}
-  
-      Avalie o desempenho do candidato considerando os detalhes fornecidos.
-      Informe os pontos fortes, as áreas a melhorar, erros cometidos durante a entrevista, e gere uma nota final para o desempenho do candidato (de 0 a 10).
-      Estruture o feedback em três partes: 
-      1. **Pontos Fortes**
-      2. **Pontos a Melhorar**
-      3. **Nota Final**
-      Use um tom construtivo e por fim informe se você contrataria esse candidato ou não.
-    `;
+    Você é um entrevistador experiente que acabou de conduzir uma entrevista com base nas seguintes informações:
+    - Posição: ${interviewState.userPosition}
+    - Nível de experiência: ${interviewState.userExperienceLevel}
+    - Formação: ${interviewState.userEducation}
+    - Perguntas e Respostas:
+    ${questionsAnswersText}
+
+    Avalie o desempenho do candidato considerando os detalhes fornecidos.
+    Informe os pontos fortes, as áreas a melhorar, erros cometidos durante a entrevista, e gere uma nota final para o desempenho do candidato (de 0 a 10).
+    Estruture o feedback em três partes: 
+    1. **Pontos Fortes**
+    2. **Pontos a Melhorar**
+    3. **Nota Final**
+    Use um tom construtivo e por fim informe se você contrataria esse candidato ou não.
+  `;
 
     console.log("Prompt de feedback gerado:", feedbackPrompt);
     return feedbackPrompt;
@@ -702,15 +677,24 @@ export default function App() {
       setSelectedOption(option);
       setSubOptions(subOptionsMapping[option]);
       setTimeout(() => {
-        const optionsText = options.map(option => `- ${option}`).join('\n');
-        const botMessage = { id: uuidv4(), text: `Você escolheu: ${option}. :\nAqui estão as subopções: :\n${subOptionsMapping[option].join(', ')}`, sender: 'bot' };
-        console.log("Bot respondeu com opção escolhida.");
+        const botMessage = { id: uuidv4(), text: `Você escolheu: ${option}.`, sender: 'bot' };
         setMessages(prevMessages => [...prevMessages, botMessage]);
-        setIsBotTyping(false);
-        stopTypingAnimation();
+
+        subOptionsMapping[option].forEach((subOption, index) => {
+          setTimeout(() => {
+            const subOptionMessage = { id: uuidv4(), text: `- ${subOption}`, sender: 'bot' };
+            setMessages(prevMessages => [...prevMessages, subOptionMessage]);
+          }, 250 * (index + 1));
+        });
+
+        setTimeout(() => {
+          setIsBotTyping(false);
+          stopTypingAnimation();
+        }, 250 * subOptionsMapping[option].length + 1000);
       }, 1000);
       return;
     }
+
     // Se não houver subopções, apenas responde com a escolha
     setTimeout(() => {
       console.log("Bot respondeu com opção escolhida.");
@@ -869,7 +853,7 @@ export default function App() {
 
       if (!result.canceled) {
         const uri = result.assets[0].uri;
-        setImageUri(uri); // Salva a URI da imagem no estado
+        setImageUri(uri);
         setIsDescriptionRequired(true); // Seta um estado para solicitar a descrição
       }
     } catch (error) {
@@ -941,7 +925,7 @@ export default function App() {
           <View style={stylesAssistente.headerContainer}>
             <Text style={stylesAssistente.chatIdText}>Chat #{chatbotCount + 1}</Text>
             <TouchableOpacity style={stylesAssistente.resetButtonTop} onPress={resetChat}>
-              <FontAwesome name="refresh" size={24} color="black" />
+              <FontAwesome name="refresh" size={24} color="red" />
             </TouchableOpacity>
           </View>
         )}
@@ -951,7 +935,7 @@ export default function App() {
           data={[
             ...messages,
             isBotTyping ? { id: 'typing', text: '...', sender: 'bot' } : null
-          ].filter(Boolean)} // Remove nulls do array
+          ].filter(Boolean)}
           renderItem={({ item }) => (
             <View
               style={[
@@ -977,10 +961,16 @@ export default function App() {
                     </View>
                   </TouchableOpacity>
                 ) : (
-                  // Exibe texto se não for uma mensagem de digitação e não houver imagem
-                  <Text style={{ color: item.sender === 'user' ? 'white' : 'black' }}>
-                    {item.text}
-                  </Text>
+                  // Exibe texto ou Markdown, dependendo do conteúdo
+                  item.sender === 'bot' && item.text.includes("##") ? (
+                    // Exibe mensagem do bot como Markdown
+                    <Markdown style={markdownStyles}>{item.text}</Markdown>
+                  ) : (
+                    // Exibe texto simples
+                    <Text style={{ color: item.sender === 'user' ? 'white' : 'black' }}>
+                      {item.text}
+                    </Text>
+                  )
                 )}
               </View>
             </View>
@@ -988,7 +978,6 @@ export default function App() {
           keyExtractor={item => item.id}
           style={stylesAssistente.messages}
         />
-
 
 
         {isImageModalVisible && (
@@ -1127,3 +1116,25 @@ export default function App() {
     </KeyboardAvoidingView>
   );
 };
+const markdownStyles = StyleSheet.create({
+  heading1: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  heading2: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  paragraph: {
+    fontSize: 16,
+    marginBottom: 6,
+  },
+  strong: {
+    fontWeight: 'bold',
+  },
+  list_item: {
+    marginVertical: 4,
+  },
+});
