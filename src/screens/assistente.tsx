@@ -432,37 +432,102 @@ export default function App() {
 
     return trainVariations.some(variation => message.toLowerCase().includes(variation));
   };
+// Função para gerar a pergunta de entrevista baseada no perfil do entrevistado
+const generateInterviewQuestionPrompt = (interviewState: any) => {
+  console.log("Gerando prompt de pergunta de entrevista...");
+  
+  // Variável para armazenar o prompt de maneira condicional
+  let prompt = '';
 
-  // Função para gerar a pergunta de entrevista baseada no perfil do candidato
-  const generateInterviewQuestionPrompt = (interviewState: any) => {
-    console.log("Gerando prompt de pergunta de entrevista...");
-    const prompt = `
+  // Verifica se o usuário é um "candidato" ou um "recrutador"
+  if (interviewState.userType === "candidato") {
+    prompt = `
     Você é um entrevistador experiente que está conduzindo uma entrevista para a posição de ${interviewState.userPosition}.
     O candidato tem ${interviewState.userExperienceLevel} anos de experiência e formação em ${interviewState.userEducation}.
-    Me gere apenas uma pergunta de cada vez, sem a necessidade de explicar ou falar o pq de  tal pergunta, mas leve me consideração os elementos anterios para que a pergunta leve m consideracoa o nivel do candidato e vaga que ele deseja  
-  `;
-    console.log("Prompt de pergunta de entrevista gerado:", prompt);
-    return prompt;
-  };
+    Me gere apenas uma pergunta de cada vez, sem a necessidade de explicar o motivo, mas leve em consideração os elementos anteriores para que a pergunta esteja alinhada com o nível do candidato e a vaga desejada.
+    `;
+  } else if (interviewState.userType === "recrutador") {
+    prompt = `
+    Você é um entrevistador experiente que está conduzindo uma entrevista para a posição de Recrutador (${interviewState.userPosition}).
+    O entrevistado tem ${interviewState.userExperienceLevel} anos de experiência em recrutamento e formação em ${interviewState.userEducation}.
+    Me gere apenas uma pergunta de cada vez, sem a necessidade de explicar o motivo, mas leve em consideração os elementos anteriores para que a pergunta aborde tópicos relevantes para a área de recrutamento, como:
+    - Avaliação de competências dos candidatos
+    - Comunicação interpessoal
+    - Gestão de processos de seleção
+    - Experiência com ferramentas de recrutamento
+    `;
+  }
 
-  // Função para coletar informações do usuário
-  const getCollectInfoMessage = (message: string) => {
-    if (interviewState.step === 0) {
-      setInterviewState((prev) => ({ ...prev, userJobPosition: message, step: 1 }));
-      return { id: uuidv4(), text: "Para qual posição você está se candidatando?", sender: "bot" };
-    } else if (interviewState.step === 1) {
-      setInterviewState((prev) => ({ ...prev, userPosition: message, step: 2 }));
-      return { id: uuidv4(), text: "Qual é o seu nível de experiência para essa posição?", sender: "bot" };
-    } else if (interviewState.step === 2) {
-      setInterviewState((prev) => ({ ...prev, userExperienceLevel: message, step: 3 }));
-      return { id: uuidv4(), text: "Qual é a sua formação?", sender: "bot" };
-    } else if (interviewState.step === 3 && !interviewState.informationCollected) {
-      setInterviewState((prev) => ({ ...prev, userEducation: message, informationCollected: true }));
-      return { id: uuidv4(), text: "Agora que tenho suas informações, vamos começar a sua entrevista ok?", sender: "bot" };
-    }
-    return null;
-  };
+  console.log("Prompt de pergunta de entrevista gerado:", prompt);
+  return prompt;
+};
 
+// Função para coletar informações do usuário durante a entrevista
+const getCollectInfoMessage = (message: string) => {
+  if (interviewState.step === 0) {
+    setInterviewState((prev) => ({ ...prev, userType: message.toLowerCase() === "recrutador" ? "recrutador" : "candidato", step: 1 }));
+    return { id: uuidv4(), text: "Para qual posição você está se candidatando?", sender: "bot" };
+  } else if (interviewState.step === 1) {
+    setInterviewState((prev) => ({ ...prev, userPosition: message, step: 2 }));
+    return { id: uuidv4(), text: "Qual é o seu nível de experiência para essa posição?", sender: "bot" };
+  } else if (interviewState.step === 2) {
+    setInterviewState((prev) => ({ ...prev, userExperienceLevel: message, step: 3 }));
+    return { id: uuidv4(), text: "Qual é a sua formação?", sender: "bot" };
+  } else if (interviewState.step === 3 && !interviewState.informationCollected) {
+    setInterviewState((prev) => ({ ...prev, userEducation: message, informationCollected: true }));
+    return { id: uuidv4(), text: "Agora que tenho suas informações, vamos começar a sua entrevista, ok?", sender: "bot" };
+  }
+  return null;
+};
+
+// Função para gerar o prompt de feedback com base no desempenho
+const generateFeedbackPrompt = (interviewState: any) => {
+  console.log("Gerando prompt de feedback...");
+
+  // Formatação das perguntas e respostas
+  const questionsAnswersText = interviewState.questionsAndAnswers
+    .map((q) => `Pergunta: ${q.question}\nResposta: ${q.answer || "Resposta não fornecida"}`)
+    .join("\n\n");
+
+  // Gerar o prompt de feedback com base no tipo de usuário (candidato ou recrutador)
+  let feedbackPrompt = '';
+
+  if (interviewState.userType === "recrutador") {
+    feedbackPrompt = `
+    Você é um entrevistador experiente que acabou de conduzir uma entrevista com base nas seguintes informações:
+    - Posição: ${interviewState.userPosition}
+    - Nível de experiência: ${interviewState.userExperienceLevel} anos em recrutamento
+    - Formação: ${interviewState.userEducation}
+    - Perguntas e Respostas:
+    ${questionsAnswersText}
+
+    Avalie o desempenho do recrutador considerando os detalhes fornecidos.
+    Informe os pontos fortes, as áreas a melhorar, e uma avaliação geral de como o recrutador lidaria com o processo de seleção e gestão de candidatos.
+    Use um tom construtivo e oriente se você recomendaria o recrutador para a vaga.
+    `;
+  } else {
+    feedbackPrompt = `
+    Você é um entrevistador experiente que acabou de conduzir uma entrevista com base nas seguintes informações:
+    - Posição: ${interviewState.userPosition}
+    - Nível de experiência: ${interviewState.userExperienceLevel} anos
+    - Formação: ${interviewState.userEducation}
+    - Perguntas e Respostas:
+    ${questionsAnswersText}
+
+    Avalie o desempenho do candidato considerando os detalhes fornecidos.
+    Informe os pontos fortes, as áreas a melhorar, erros cometidos durante a entrevista, e gere uma nota final para o desempenho do candidato (de 0 a 10).
+    Estruture o feedback em três partes:
+    1. **Pontos Fortes**
+    2. **Pontos a Melhorar**
+    3. **Nota Final**
+
+    Use um tom construtivo e, por fim, informe se você contrataria esse candidato ou não.
+    `;
+  }
+
+  console.log("Prompt de feedback gerado:", feedbackPrompt);
+  return feedbackPrompt;
+};
 
   const handleTrainRequest = async (message: string) => {
     console.log("Iniciando treinamento...");
@@ -544,7 +609,7 @@ export default function App() {
         O tom deve ser amigável e profissional. 
         A mensagem deve incluir os seguintes elementos:
         1. Uma apresentação do entrevistador, incluindo um nome fictício (ex: "Olá, eu sou o Lucas Pereira").
-        2. Crie Um nome fictício para a empresa (ex: "na TechInnovate").
+        2. Crie Um nome fictício para a empresa, que seja inivador e criativo.
         3. Uma expressão de entusiasmo para conhecer o candidato
         Certifique-se de que a mensagem seja acolhedora e incentive o candidato a se sentir à vontade durante a entrevista.
   `;
@@ -596,33 +661,6 @@ export default function App() {
     }
   };
 
-  const generateFeedbackPrompt = (interviewState) => {
-    console.log("Gerando prompt de feedback...");
-
-    const questionsAnswersText = interviewState.questionsAndAnswers
-      .map((q) => `Pergunta: ${q.question}\nResposta: ${q.answer || "Resposta não fornecida"}`)
-      .join("\n\n");
-
-    const feedbackPrompt = `
-    Você é um entrevistador experiente que acabou de conduzir uma entrevista com base nas seguintes informações:
-    - Posição: ${interviewState.userPosition}
-    - Nível de experiência: ${interviewState.userExperienceLevel}
-    - Formação: ${interviewState.userEducation}
-    - Perguntas e Respostas:
-    ${questionsAnswersText}
-
-    Avalie o desempenho do candidato considerando os detalhes fornecidos.
-    Informe os pontos fortes, as áreas a melhorar, erros cometidos durante a entrevista, e gere uma nota final para o desempenho do candidato (de 0 a 10).
-    Estruture o feedback em três partes: 
-    1. **Pontos Fortes**
-    2. **Pontos a Melhorar**
-    3. **Nota Final**
-    Use um tom construtivo e por fim informe se você contrataria esse candidato ou não.
-  `;
-
-    console.log("Prompt de feedback gerado:", feedbackPrompt);
-    return feedbackPrompt;
-  };
 
   // Função para lidar com a resposta padrão
   const handleDefaultResponse = () => {
