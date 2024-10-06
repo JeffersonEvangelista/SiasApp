@@ -119,7 +119,6 @@ const CadastroScreen = () => {
         // Tentativa de registro no Firebase e envio de e-mail
         const registerResponse = await registerUser(trimmedEmail, senha, Nome, identificador, profileImg);
 
-        // Verifica se o registro e o envio do e-mail de verificação foram bem-sucedidos
         if (!registerResponse?.success) {
           throw new Error('O registro no Firebase falhou.');
         }
@@ -160,11 +159,18 @@ const CadastroScreen = () => {
             ...prevErrors,
             email: 'Esse e-mail já se encontra no nosso banco de dados, utilize outro por favor.',
           }));
-        } else if (error.message.includes('Supabase')) {
-          setErrors((prevErrors) => ({
-            ...prevErrors,
-            identificador: 'Esse identificador já se encontra no nosso banco de dados, utilize outro por favor.',
-          }));
+        } else if (error.message.includes('duplicate key value violates unique constraint')) {
+          if (error.message.includes('candidatos_cpf_key')) {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              identificador: 'Esse CPF já se encontra no nosso banco de dados, utilize outro por favor.',
+            }));
+          } else if (error.message.includes('recrutadores_cnpj_key')) {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              identificador: 'Esse CNPJ já se encontra no nosso banco de dados, utilize outro por favor.',
+            }));
+          }
         } else {
           setErrors((prevErrors) => ({
             ...prevErrors,
