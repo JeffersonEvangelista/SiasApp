@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Dimensions, Alert } from 'react-native';
 import { TextInput as PaperTextInput, HelperText } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 import CustomButton from '../Styles/CustomButton';
 import { useNavigation } from '@react-navigation/native';
-import { collection, query, where, getDocs } from 'firebase/firestore'; // Firestore imports
-import { db } from '../../services/Firebase'; // Importar o db corretamente
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../services/Firebase';
 
 interface FormErrors {
   email?: string;
@@ -18,20 +18,31 @@ export default function EsqueciSenha() {
   const [loading, setLoading] = useState<boolean>(false);
   const [email, setEmail] = useState<string>('');
   const [errors, setErrors] = useState<FormErrors>({});
-  
+  const [randomPoints, setRandomPoints] = useState<{ x: number, y: number }[]>([]);
+
   const { width, height } = Dimensions.get('window');
+
+  useEffect(() => {
+    const generateRandomPoints = () => {
+      const points = Array.from({ length: 30 }).map(() => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+      }));
+      setRandomPoints(points);
+    };
+
+    generateRandomPoints();
+  }, [width, height]);
 
   const validateEmail = (email: string) => {
     return /\S+@\S+\.\S+/.test(email);
   };
 
   const checkIfEmailExists = async (trimmedEmail: string) => {
-    // Fazer a consulta no Firestore para verificar se o email existe
-    const usersCollection = collection(db, 'users'); // Certifique-se de que a coleção esteja correta
-    const q = query(usersCollection, where('email', '==', trimmedEmail)); // Comparação exata do e-mail
+    const usersCollection = collection(db, 'users');
+    const q = query(usersCollection, where('email', '==', trimmedEmail));
     const querySnapshot = await getDocs(q);
-    
-    return !querySnapshot.empty; // Retorna true se o email existir
+    return !querySnapshot.empty;
   };
 
   const handlePasswordReset = async () => {
@@ -45,7 +56,6 @@ export default function EsqueciSenha() {
     try {
       setLoading(true);
 
-      // Verificar se o e-mail existe no banco de dados
       const emailExists = await checkIfEmailExists(trimmedEmail);
       if (!emailExists) {
         setErrors({ email: 'O e-mail fornecido não existe. Verifique o e-mail informado.' });
@@ -54,9 +64,8 @@ export default function EsqueciSenha() {
       }
 
       const auth = getAuth();
-      await sendPasswordResetEmail(auth, trimmedEmail); // Enviar o e-mail exatamente como foi digitado
+      await sendPasswordResetEmail(auth, trimmedEmail);
 
-      // Exibir mensagem de sucesso e redirecionar para o Login
       Alert.alert(
         'Sucesso',
         'Um e-mail para redefinir sua senha foi enviado!',
@@ -94,6 +103,11 @@ export default function EsqueciSenha() {
               />
             ))}
           </View>
+          
+          {/* Renderização dos pontos laranjas */}
+          {randomPoints.map((point, index) => (
+            <View key={index} style={[styles.point, { left: point.x, top: point.y }]} />
+          ))}
 
           <View style={styles.transitionContainer}>
             <Text style={styles.header}>Redefinir Senha</Text>
@@ -135,7 +149,7 @@ export default function EsqueciSenha() {
   );
 }
 
-// Estilos (mantidos do seu código original)
+// Estilos
 const styles = StyleSheet.create({
   scrollViewContent: {
     flexGrow: 1,
@@ -188,6 +202,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderWidth: 1,
     borderColor: 'rgba(224, 224, 224, 0.3)',
+  },
+  point: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    backgroundColor: '#F07A26', // Cor laranja
+    borderRadius: 5,
   },
   transitionContainer: {
     backgroundColor: '#ffffff',
