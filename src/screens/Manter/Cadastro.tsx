@@ -7,7 +7,7 @@ import { validateIdentifier } from './Dados/validationUtils';
 import CustomButton from '../Styles/CustomButton';
 import { registerUser } from '../../services/Firebase';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { saveRecrutadorToSupabase, saveCandidatoToSupabase } from '../../services/userService';
+import { saveRecrutadorToSupabase, saveCandidatoToSupabase, supabase } from '../../services/userService';
 import { sendNotificationNow, checkEmailVerificationAndNotify } from '../../Notificacao/notifications';
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
@@ -112,25 +112,83 @@ const CadastroScreen = () => {
       setLoading(true);
 
       try {
+        setLoading(true);
         const profileImg = '#';
         const trimmedEmail = email.trim();
         const identifierLength = identificador.replace(/\D/g, '').length;
-
+    
+        // Funções auxiliares para verificar se o CPF ou CNPJ já existe no Supabase
+        const checkIfCpfExists = async (cpf) => {
+          const { data, error } = await supabase
+            .from('candidatos')
+            .select('cpf')
+            .eq('cpf', cpf);
+    
+          if (error) {
+            console.error('Erro ao verificar CPF no Supabase:', error.message);
+            return false;
+          }
+    
+          return data.length > 0; // Retorna true se o CPF já existe
+        };
+    
+        const checkIfCnpjExists = async (cnpj) => { //Verificação antes da criação do usuario
+          const { data, error } = await supabase
+            .from('recrutadores')
+            .select('cnpj')
+            .eq('cnpj', cnpj);
+    
+          if (error) {
+            console.error('Erro ao verificar CNPJ no Supabase:', error.message);
+            return false;
+          }
+    
+          return data.length > 0; // Retorna true se o CNPJ já existe
+        };
+    
+        // Verifica se o identificador (CPF ou CNPJ) já existe no banco de dados
+        let exists;
+        if (identifierLength === 11) { // CPF
+          exists = await checkIfCpfExists(identificador);
+          if (exists) {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              identificador: 'Esse CPF já se encontra no nosso banco de dados, utilize outro por favor.',
+            }));
+            return; // Interrompe o processo se o CPF já existe
+          }
+        } else if (identifierLength === 14) { // CNPJ
+          exists = await checkIfCnpjExists(identificador);
+          if (exists) {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              identificador: 'Esse CNPJ já se encontra no nosso banco de dados, utilize outro por favor.',
+            }));
+            return; // Interrompe o processo se o CNPJ já existe
+          }
+        } else {
+          setErrors((prevErrors) => ({
+            ...prevErrors,
+            identificador: 'Identificador inválido. Deve ter 11 dígitos para CPF ou 14 dígitos para CNPJ.',
+          }));
+          return; // Interrompe o processo se o identificador não é válido
+        }
+    
         // Tentativa de registro no Firebase e envio de e-mail
         const registerResponse = await registerUser(trimmedEmail, senha, Nome, identificador, profileImg);
-
+    
         if (!registerResponse?.success) {
           throw new Error('O registro no Firebase falhou.');
         }
         console.log('Usuário registrado e e-mail de verificação enviado com sucesso.');
-
+    
         // Criação do objeto de usuário para o Supabase
         const user = {
           nome: Nome,
           email: trimmedEmail,
           cpf: identificador,
         };
-
+    
         // Salvamento no Supabase com base no tipo de identificador
         if (identifierLength === 11) { // CPF
           await saveCandidatoToSupabase(user);
@@ -143,46 +201,47 @@ const CadastroScreen = () => {
           };
           await saveRecrutadorToSupabase(recrutador);
           console.log('Recrutador salvo com sucesso no Supabase.');
-        } else {
-          throw new Error('Identificador inválido. Deve ter 11 dígitos para CPF ou 14 dígitos para CNPJ.');
         }
-
+    
         // Notificação de sucesso
         await sendNotificationNow('Cadastro Completo', 'Seu cadastro foi realizado com sucesso!');
         await checkEmailVerificationAndNotify();
         navigation.navigate('Home');
       } catch (error: any) {
         console.error('Erro ao cadastrar usuário:', error.message);
-
+    
         if (error.message.includes('Firebase')) {
           setErrors((prevErrors) => ({
             ...prevErrors,
             email: 'Esse e-mail já se encontra no nosso banco de dados, utilize outro por favor.',
           }));
+          return;
         } else if (error.message.includes('duplicate key value violates unique constraint')) {
           if (error.message.includes('candidatos_cpf_key')) {
             setErrors((prevErrors) => ({
               ...prevErrors,
               identificador: 'Esse CPF já se encontra no nosso banco de dados, utilize outro por favor.',
             }));
+            return;
           } else if (error.message.includes('recrutadores_cnpj_key')) {
             setErrors((prevErrors) => ({
               ...prevErrors,
               identificador: 'Esse CNPJ já se encontra no nosso banco de dados, utilize outro por favor.',
             }));
+            return;
           }
         } else {
           setErrors((prevErrors) => ({
             ...prevErrors,
             error: 'Erro ao cadastrar usuário. Tente novamente.',
           }));
+          return;
         }
       } finally {
         setLoading(false);
       }
-    } else {
-      console.log('Formulário inválido. Verifique os erros:', errors);
-    }
+    
+    };
   };
 
 
