@@ -7,7 +7,7 @@ import CustomButton from '../Styles/CustomButton';
 import { styles } from '../Styles/styles';
 import { useNavigation } from '@react-navigation/native'; 
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-
+import { checkEmailVerificationAndNotifyLogin } from '../../Notificacao/notifications';
 const logo = require('./../../../assets/logo.png');
 
 interface FormErrors {
@@ -106,7 +106,7 @@ export default function Login() {
           await AsyncStorage.setItem('rememberMe', 'false');
           console.log('Credenciais removidas, rememberMe:', rememberMe); // Verifica se as credenciais foram removidas
         }
-
+        checkEmailVerificationAndNotifyLogin();
         navigation.navigate('Home'); 
       } catch (error) {
         console.error('Erro ao fazer login:', error.message);

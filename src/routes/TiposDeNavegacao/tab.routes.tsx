@@ -7,16 +7,10 @@ import Configuracoes from '../../screens/configuracoes';
 import Agenda from '../../screens/Agenda';
 import TabIconWithBadge from '../../components/TabIconWithBadge';
 import { isUserEmailVerified } from '../../services/Firebase';
+import { useColorScheme } from 'nativewind';
 
 const Tab = createBottomTabNavigator();
 
-// Função para ignorar notificações
-export const handleIgnoreNotification = (setBadgeCounts) => {
-    setBadgeCounts((prevCounts) => ({
-        ...prevCounts,
-        Configurações: 0, // Reseta a contagem de notificações
-    }));
-};
 
 export default function TabRoutes() {
     // Estado para gerenciar as contagens de notificações
@@ -28,27 +22,8 @@ export default function TabRoutes() {
         Configurações: 0,
     });
 
-    // Estado para verificar se a notificação foi ignorada
-    const [notificationIgnored, setNotificationIgnored] = useState(false);
-
-    // Efeito para atualizar a contagem na aba "Configurações"
-    useEffect(() => {
-        const emailVerified = isUserEmailVerified();
-
-        // Se a notificação não foi ignorada, atualiza a contagem de notificações
-        if (!notificationIgnored) {
-            setBadgeCounts((prevCounts) => ({
-                ...prevCounts,
-                Configurações: emailVerified ? 0 : 1,
-            }));
-        }
-    }, [notificationIgnored]); // Executa o efeito quando notificationIgnored muda
-
-    // Função para ignorar notificações e atualizar o estado
-    const handleIgnore = () => {
-        handleIgnoreNotification(setBadgeCounts);
-        setNotificationIgnored(true);
-    };
+    // Obtém o esquema de cores atual (light ou dark)
+    const { colorScheme, toggleColorScheme } = useColorScheme();
 
     return (
         <Tab.Navigator
@@ -61,13 +36,13 @@ export default function TabRoutes() {
                     } else if (route.name === 'Agenda') {
                         iconName = 'calendar';
                     } else if (route.name === 'Assistente') {
-                        iconName = 'headphones';
+                        iconName = 'help-circle';
                     } else if (route.name === 'Chat') {
                         iconName = 'message-circle';
                     } else if (route.name === 'Configurações') {
                         iconName = 'settings';
                     } else {
-                        iconName = 'home'; // Valor padrão
+                        iconName = 'home';
                     }
 
                     const badgeCount = badgeCounts[route.name] || 0;
@@ -82,8 +57,11 @@ export default function TabRoutes() {
                     );
                 },
                 tabBarHideOnKeyboard: true,
-                tabBarActiveTintColor: '#F07A26',
-                tabBarInactiveTintColor: 'gray',
+                tabBarActiveTintColor: '#F07A26', // Cor laranja para ícones ativos
+                tabBarInactiveTintColor: colorScheme === 'dark' ? 'white' : 'gray', // Branco se no dark mode, cinza no light mode
+                tabBarStyle: {
+                    backgroundColor: colorScheme === 'dark' ? '#000' : '#fff', // Preto no dark mode, branco no light mode
+                },
                 headerShown: false,
             })}
         >
@@ -97,21 +75,23 @@ export default function TabRoutes() {
                 component={Agenda}
                 options={{ tabBarLabel: 'Agenda' }}
             />
-            <Tab.Screen
-                name="Assistente"
-                component={Assistente}
-                options={{ tabBarLabel: 'Assistente' }}
-            />
+
             <Tab.Screen
                 name="Chat"
                 component={Chat}
                 options={{ tabBarLabel: 'Chat' }}
             />
             <Tab.Screen
+                name="Assistente"
+                component={Assistente}
+                options={{ tabBarLabel: 'Assistente' }}
+            />
+            <Tab.Screen
                 name="Configurações"
                 component={Configuracoes}
                 options={{ tabBarLabel: 'Configurações' }}
             />
+
         </Tab.Navigator>
     );
 }

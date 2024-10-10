@@ -8,10 +8,11 @@ import CustomButton from '../Styles/CustomButton';
 import { registerUser } from '../../services/Firebase';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { saveRecrutadorToSupabase, saveCandidatoToSupabase } from '../../services/userService';
-import { sendNotificationNow } from '../../Notificacao/notifications';
+import { sendNotificationNow, checkEmailVerificationAndNotify } from '../../Notificacao/notifications';
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
-
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../../services/Firebase';
 const logo = require('./../../../assets/logo.png');
 
 interface FormErrors {
@@ -107,9 +108,13 @@ const CadastroScreen = () => {
       return;
     }
     console.log('Iniciando validação do formulário...');
+
+    // Seu código de registro com modificação para exclusão no caso de erro
     if (validateForm()) {
       console.log('Formulário válido! Enviando...');
       setLoading(true);
+
+      let userIdFirebase: string | null = null; // Variável para armazenar o ID do usuário no Firebase
 
       try {
         const profileImg = '#';
@@ -119,10 +124,10 @@ const CadastroScreen = () => {
         // Tentativa de registro no Firebase e envio de e-mail
         const registerResponse = await registerUser(trimmedEmail, senha, Nome, identificador, profileImg);
 
-        // Verifica se o registro e o envio do e-mail de verificação foram bem-sucedidos
         if (!registerResponse?.success) {
           throw new Error('O registro no Firebase falhou.');
         }
+        userIdFirebase = registerResponse.data.uid; // Armazena o userId retornado
         console.log('Usuário registrado e e-mail de verificação enviado com sucesso.');
 
         // Criação do objeto de usuário para o Supabase
@@ -148,22 +153,38 @@ const CadastroScreen = () => {
           throw new Error('Identificador inválido. Deve ter 11 dígitos para CPF ou 14 dígitos para CNPJ.');
         }
 
-        // Notificação de sucesso
-        await sendNotificationNow('Cadastro Completo', 'Seu cadastro foi realizado com sucesso!');
+        // Primeiro, navega para a Home
         navigation.navigate('Home');
+
+        // Depois de garantir que a navegação ocorreu, enviar notificações
+        await sendNotificationNow('Cadastro Completo', 'Seu cadastro foi realizado com sucesso!');
+        await checkEmailVerificationAndNotify();
       } catch (error: any) {
         console.error('Erro ao cadastrar usuário:', error.message);
+
+        if (userIdFirebase) {
+          // Se um erro ocorrer e o registro foi feito no Firebase, exclua o usuário
+          console.log(`Excluindo o usuário ${userIdFirebase} no Firebase devido a um erro.`);
+          await deleteFirebaseUser(userIdFirebase);
+        }
 
         if (error.message.includes('Firebase')) {
           setErrors((prevErrors) => ({
             ...prevErrors,
             email: 'Esse e-mail já se encontra no nosso banco de dados, utilize outro por favor.',
           }));
-        } else if (error.message.includes('Supabase')) {
-          setErrors((prevErrors) => ({
-            ...prevErrors,
-            identificador: 'Esse identificador já se encontra no nosso banco de dados, utilize outro por favor.',
-          }));
+        } else if (error.message.includes('duplicate key value violates unique constraint')) {
+          if (error.message.includes('candidatos_cpf_key')) {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              identificador: 'Esse CPF já se encontra no nosso banco de dados, utilize outro por favor.',
+            }));
+          } else if (error.message.includes('recrutadores_cnpj_key')) {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              identificador: 'Esse CNPJ já se encontra no nosso banco de dados, utilize outro por favor.',
+            }));
+          }
         } else {
           setErrors((prevErrors) => ({
             ...prevErrors,
@@ -176,8 +197,18 @@ const CadastroScreen = () => {
     } else {
       console.log('Formulário inválido. Verifique os erros:', errors);
     }
-  };
+  }
 
+
+  const deleteFirebaseUser = async (userId: string) => {
+    try {
+      // Deletar o documento do usuário no Firestore
+      await deleteDoc(doc(db, 'users', userId));
+      console.log(`Usuário com ID ${userId} excluído do Firestore.`);
+    } catch (error) {
+      console.error('Erro ao excluir usuário no Firestore:', error);
+    }
+  };
 
 
   const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {

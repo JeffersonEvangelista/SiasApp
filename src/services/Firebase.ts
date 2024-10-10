@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, sendEmailVerification, initializeAuth, updateEmail, reauthenticateWithCredential, EmailAuthProvider, updateCurrentUser} from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, sendEmailVerification, initializeAuth, updateEmail, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { collection, doc, getDoc, setDoc, getFirestore, Timestamp, updateDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRoomId } from '../utils/common';
@@ -44,7 +44,7 @@ export const registerChatRoom = async (userId1: string, userId2: string) => {
 export const registerUser = async (email: string, password: string, username: string, identificador: string, profileImg: string) => {
     try {
       const response = await createUserWithEmailAndPassword(auth, email, password);
-  
+
       // Salva os dados básicos no Firestore
       await setDoc(doc(db, 'users', response?.user?.uid), {
         username,
@@ -53,11 +53,11 @@ export const registerUser = async (email: string, password: string, username: st
         profileImg,
         userId: response?.user?.uid,
       });
-  
+
       // Envia e-mail de verificação
       await sendEmailVerification(response.user);
       console.log('E-mail de verificação enviado com sucesso');
-  
+
       return { success: true, data: response?.user };
     } catch (error) {
       console.error('Erro ao registrar usuário:', error instanceof Error ? error.message : error);
@@ -72,9 +72,9 @@ export const UpdateUserProfileImg =  async (id:string, foto:string|null) => {
     const data = {
         profileImg: foto
     };
-    
+
     updateDoc(docRef, data)
-    
+
 }
 
 // Função para obter os dados do usuário logado atualmente
@@ -107,34 +107,26 @@ export const logOutUser = async () => {
   };
 
 // Função para atualizar o e-mail no Firebase Authentication
-export const updateUserEmail = async (newEmail: string, password: string) => {
-    const user = auth.currentUser;
+export const updateUserEmail = async (newEmail: string, password: string): Promise<boolean> => {
+  const user = auth.currentUser;
 
-    if (!user) {
-        console.error('Nenhum usuário está autenticado.');
-        return false;
-    }
+  if (!user) {
+    console.error('Nenhum usuário autenticado.');
+    return false;
+  }
 
-    try {
-        // Reautenticar o usuário antes de mudar o e-mail
-        const credential = EmailAuthProvider.credential(user.email || '', password);
-        await reauthenticateWithCredential(user, credential);
+  try {
+    // Reautenticar o usuário com o e-mail e senha fornecidos
+    const credential = EmailAuthProvider.credential(user.email || '', password);
+    await reauthenticateWithCredential(user, credential);
 
-        // Verifica se o e-mail atual foi verificado
-        if (!user.emailVerified) {
-            // Se o e-mail atual não foi verificado, envia um e-mail de verificação
-            await sendEmailVerification(user);
-            console.error('O e-mail atual não foi verificado. Um e-mail de verificação foi enviado. Verifique seu e-mail antes de alterar.');
-            return false;
-        }
+    // Atualizar o e-mail
+    await updateEmail(user, newEmail);
+    await sendEmailVerification(user); // Enviar e-mail de verificação
 
-        // Atualiza o e-mail no Firebase
-        await updateEmail(user, newEmail); // Atualiza o e-mail
-        await sendEmailVerification(user); // Envia e-mail de verificação para o novo e-mail
-        console.log('E-mail atualizado. Um e-mail de verificação foi enviado para o novo e-mail.');
-        return true;
-    } catch (error) {
-        console.error('Erro ao atualizar e-mail no Firebase:', error);
-        return false;
-    }
+    return true;
+  } catch (error) {
+    console.error('Erro ao atualizar o e-mail no Firebase:', error);
+    return false;
+  }
 };

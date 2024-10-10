@@ -10,31 +10,35 @@ import { ActivityIndicator } from 'react-native-paper';
 import { query, where, getDocs } from 'firebase/firestore'
 import { usersRef } from '../services/Firebase'
 
+import { useColorScheme } from 'nativewind';
+
 export default function Chat() {
 
   const user = getCurrentUserData();
-  
+
+  const { colorScheme, toggleColorScheme } = useColorScheme(); // Dark Mode
+
   const [users, setUsers] = useState([]);
   useEffect(()=>{
     getUsers();
   }, [])
-  
+
   const getUsers = async ()=>{
     const q =  query(usersRef, where('userId', '!=', user?.id))
 
     const querySnapshot = await getDocs(q);
     let data = [];
     querySnapshot.forEach((doc) => {
-      data.push({...doc.data()}); 
+      data.push({...doc.data()});
     });
 
     setUsers(data);
 
   }
-  
+
   return (
-    <SafeAreaView style={{flex: 1}}>
-        <View style={{flex: 1}}>          
+    <SafeAreaView style={{flex: 1, ...(colorScheme === 'dark' ? { backgroundColor: '#1a1a1a' } : {})}}>
+        <View style={{flex: 1}}>
           <View style={{
             flexDirection:"row",
             justifyContent:"space-between",
@@ -46,7 +50,7 @@ export default function Chat() {
             }}>
               <Text style={{fontSize:24, color:"white", fontWeight:"bold"}}>Chat</Text>
               <TouchableOpacity onPress={()=>console.log("Add contact")} >
-                <Ionicons name="add-outline" size={30} color="white" /> 
+                <Ionicons name="add-outline" size={30} color="white" />
               </TouchableOpacity>
           </View>
 
@@ -58,7 +62,8 @@ export default function Chat() {
             paddingHorizontal:12,
             borderRadius:10,
             borderColor: "#ccc",
-            borderWidth: 1
+            borderWidth: 1,
+            backgroundColor: '#fff',
           }}>
             <Ionicons name="search-outline" size={24} color="black" />
             <TextInput style={{
@@ -72,22 +77,22 @@ export default function Chat() {
           </View>
           <ScrollView>
             {
-              <View style={{flex: 1}}>
-                <StatusBar style='light'/>
-                {
-                  users.length>0? (
-                    <ChatList currentUser={user} users={users}/>
-                  ):(
-                    <View style={{
-                      flexDirection:"column",
-                      alignItems:"center",
-                      top: 30
-                    }}>
-                      <ActivityIndicator size={'large'} color="#F07A26"/>
-                    </View>
-                  )
-                }
-              </View>
+            <View style={{flex: 1}}>
+              <StatusBar style='light'/>
+              {
+                users.length>0? (
+                  <ChatList currentUser={user} users={users} />
+                ):(
+                  <View style={{
+                    flexDirection:"column",
+                    alignItems:"center",
+                    top: 30,
+                  }}>
+                    <ActivityIndicator size={'large'} color="#F07A26"/>
+                  </View>
+                )
+              }
+            </View>
             }
           </ScrollView>
         </View>
