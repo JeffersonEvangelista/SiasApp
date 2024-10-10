@@ -43,15 +43,12 @@ export default function Chat() {
             flexDirection:"row",
             justifyContent:"space-between",
             alignItems:"center",
-            paddingTop: 30,
+            paddingTop: 40,
             paddingBottom: 10,
             paddingHorizontal: 12,
             backgroundColor:"#ff8c00"
             }}>
               <Text style={{fontSize:24, color:"white", fontWeight:"bold"}}>Chat</Text>
-              <TouchableOpacity onPress={()=>console.log("Add contact")} >
-                <Ionicons name="add-outline" size={30} color="white" />
-              </TouchableOpacity>
           </View>
 
           <View style={{
@@ -75,26 +72,24 @@ export default function Chat() {
             placeholder='Pesquisar'
             />
           </View>
-          <ScrollView>
-            {
             <View style={{flex: 1}}>
               <StatusBar style='light'/>
-              {
-                users.length>0? (
-                  <ChatList currentUser={user} users={users} />
-                ):(
-                  <View style={{
-                    flexDirection:"column",
-                    alignItems:"center",
-                    top: 30,
-                  }}>
-                    <ActivityIndicator size={'large'} color="#F07A26"/>
-                  </View>
-                )
-              }
+              <ScrollView>
+                {
+                  users.length>0? (
+                    <ChatList currentUser={user} users={users} />
+                  ):(
+                    <View style={{
+                      flexDirection:"column",
+                      alignItems:"center",
+                      top: 30,
+                    }}>
+                      <ActivityIndicator size={'large'} color="#F07A26"/>
+                    </View>
+                  )
+                }
+              </ScrollView>
             </View>
-            }
-          </ScrollView>
         </View>
     </SafeAreaView>
   );

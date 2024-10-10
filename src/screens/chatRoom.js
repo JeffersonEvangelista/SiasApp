@@ -94,9 +94,9 @@ export default function ChatRoom({route, navigation}) {
             flexDirection:"row",
             justifyContent:"space-between",
             alignItems:"center",
-            paddingLeft: 6,
-            paddingTop: 30,
-            padding: 10,
+            paddingTop: 40,
+            paddingBottom: 10,
+            paddingLeft:10,
             backgroundColor:"#ff8c00"
             }}>
               <View style={{flexDirection:"row", alignItems:"center"}}>
@@ -104,10 +104,12 @@ export default function ChatRoom({route, navigation}) {
                   <Ionicons name="chevron-back-outline" size={30} color="white"/>
                 </TouchableOpacity>
                 <Image
-                    source={{
-                      uri: item?.profileImg,
-                    }}
-                    style={{width:42, aspectRatio:1, borderRadius: 100, marginLeft: 4, marginRight: 8}}
+                    source={
+                      item?.profileImg
+                          ? { uri: item.profileImg }
+                          : require('../../assets/profilePlaceholderGray.png')
+                    }
+                    style={{width:42, aspectRatio:1, borderRadius: 100, marginLeft: 8, marginRight: 8}}
                     transition={500}
                 />
                 <Text style={{fontSize:20, color:"white", fontWeight:"bold"}}>{item?.username}</Text>
@@ -117,8 +119,8 @@ export default function ChatRoom({route, navigation}) {
             <View style={{ flex:1 }}>
               <MessagesList scrollViewRef={scrollViewRef} messages={messages} currentUser={user}/>
             </View>
-              <View style={{flexDirection:'row', alignItems:'center'}}>
-                <View style={{flex: 1, flexDirection:"row", alignItems:"center", height:46, margin:10, paddingHorizontal:12, borderRadius:10, borderColor: "#ccc", borderWidth: 1, backgroundColor: '#fff'}}>
+              <View style={{flexDirection:'row', alignItems:'center', margin:10}}>
+                <View style={{flex: 1, flexDirection:"row", alignItems:"center", height:46, marginRight:10, paddingHorizontal:12, borderRadius:10, borderColor: "#ccc", borderWidth: 1, backgroundColor: '#fff'}}>
                   <TextInput
                   ref={inputRef}
                   onChangeText={value=> textRef.current = value}
@@ -126,8 +128,14 @@ export default function ChatRoom({route, navigation}) {
                   placeholder='Digite sua mensagem'
                   />
                 </View>
-                <TouchableOpacity onPress={handleSendMessage} style={stylesAssistente.sendButton}>
-                   <Icon name="send" size={24} color="#fff" />
+                <TouchableOpacity 
+                  onPress={handleSendMessage} 
+                  style={{
+                    backgroundColor:"#F07A26",
+                    padding:12,
+                    borderRadius:100
+                  }}>
+                    <Icon name="send" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
           </View>

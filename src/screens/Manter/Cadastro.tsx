@@ -117,7 +117,7 @@ const CadastroScreen = () => {
       let userIdFirebase: string | null = null; // Variável para armazenar o ID do usuário no Firebase
 
       try {
-        const profileImg = '#';
+        const profileImg = '';
         const trimmedEmail = email.trim();
         const identifierLength = identificador.replace(/\D/g, '').length;
 
