@@ -72,22 +72,22 @@ export default function Chat() {
           </View>
           <ScrollView>
             {
-            <View style={{flex: 1}}>
-              <StatusBar style='light'/>
-              {
-                users.length>0? (
-                  <ChatList currentUser={user} users={users}/>
-                ):(
-                  <View style={{
-                    flexDirection:"column",
-                    alignItems:"center",
-                    top: 30
-                  }}>
-                    <ActivityIndicator size={'large'} color="#F07A26"/>
-                  </View>
-                )
-              }
-            </View>
+              <View style={{flex: 1}}>
+                <StatusBar style='light'/>
+                {
+                  users.length>0? (
+                    <ChatList currentUser={user} users={users}/>
+                  ):(
+                    <View style={{
+                      flexDirection:"column",
+                      alignItems:"center",
+                      top: 30
+                    }}>
+                      <ActivityIndicator size={'large'} color="#F07A26"/>
+                    </View>
+                  )
+                }
+              </View>
             }
           </ScrollView>
         </View>
