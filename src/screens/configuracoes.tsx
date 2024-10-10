@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, Modal, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform, Switch, Button } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import EditProfileButton from '../components/EditProfileButton';
-import LogOffButton from '../components/LogoffButton';
-import DeleteAccountButton from '../components/DeleteAccountButton';
 import { supabase } from '../services/userService';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
@@ -14,10 +11,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../components/Header';
 import { StatusBar } from 'expo-status-bar';
 import { updateUserEmail, auth, isUserEmailVerified } from '../services/Firebase';
+import { reauthenticateWithCredential, EmailAuthProvider, updatePassword, deleteUser } from 'firebase/auth';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { useColorScheme } from 'nativewind';
 
+import * as Notifications from 'expo-notifications'; // Para notificações : EXPERIMENTAL
 
 const uploadToSupabase = async (base64Image, imageExtension = 'jpg', bucketName = 'avatars', userId) => {
   try {
@@ -77,7 +77,7 @@ const uploadToSupabase = async (base64Image, imageExtension = 'jpg', bucketName 
     console.error(err);
     return null;
   }
-};
+  };
 
 const Configuracoes: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -93,7 +93,7 @@ const Configuracoes: React.FC = () => {
   const [showNotification, setShowNotification] = useState(false);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [password, setPassword] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [isEnabled, setIsEnabled] = useState(false);
   const toggleSwitch = () => setIsEnabled(previousState => !previousState);
   const navigation = useNavigation();
@@ -106,11 +106,38 @@ const Configuracoes: React.FC = () => {
     Chat: 0,
     Configurações: 0,
   });
-  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
   const [isDarkModeEnabled, setIsDarkModeEnabled] = useState(false);
 
-  const toggleNotificationsSwitch = () => {
-    setIsNotificationsEnabled(previousState => !previousState);
+  const [currentPassword, setCurrentPassword] = useState(''); // Armazenar a senha atual
+  const [newPassword, setNewPassword] = useState(''); // Armazenar a nova senha
+
+  const toggleNotificationsSwitch = async () => {
+    try {
+      const newValue = !isNotificationsEnabled;
+      setIsNotificationsEnabled(newValue);
+      await AsyncStorage.setItem('notificationsEnabled', JSON.stringify(newValue));
+
+      if (newValue) {
+        // Solicitar permissão para enviar notificações
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          const { status: newStatus } = await Notifications.requestPermissionsAsync();
+          if (newStatus !== 'granted') {
+            Alert.alert('Permissão para notificações foi negada.');
+            setIsNotificationsEnabled(false); // Desative a opção se a permissão não for concedida
+            return;
+          }
+        }
+        console.log('Notificações habilitadas.');
+      } else {
+        // Cancelar todas as notificações se desativadas
+        await Notifications.cancelAllScheduledNotificationsAsync();
+        console.log('Notificações desativadas.');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar configurações de notificações:', error);
+    }
   };
 
   useEffect(() => {
@@ -131,9 +158,13 @@ const Configuracoes: React.FC = () => {
 
     setEmailVerified(isUserEmailVerified());
   }, []);
+
+  const { colorScheme, toggleColorScheme } = useColorScheme();
+
   const toggleDarkModeSwitch = () => {
     setIsDarkModeEnabled(previousState => !previousState);
   };
+
   const loadUserData = async () => {
     try {
       const { id: userId } = await getUserNameAndId(); // Obtém o ID do usuário
@@ -160,6 +191,7 @@ const Configuracoes: React.FC = () => {
       console.error('Erro ao carregar dados do usuário:', err);
     }
   };
+
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState('');
 
@@ -174,52 +206,103 @@ const Configuracoes: React.FC = () => {
   };
   const resolvePasswordRef = useRef<(password: string) => void>();
 
-  const promptUserForPassword = async () => {
+  // Função para abrir o modal de senha e solicitar a senha do usuário
+  // Abre o modal para solicitar senha
+  const promptUserForPassword = (): Promise<string> => {
     return new Promise((resolve) => {
-      resolvePasswordRef.current = resolve; // Armazena a função resolve no ref
+      resolvePasswordRef.current = resolve; // Armazena a função resolve
       setShowPasswordModal(true); // Exibe o modal
     });
   };
 
-  const handlePasswordSubmit = (password: string) => {
-    setShowPasswordModal(false); // Fecha o modal
+  // Função chamada ao submeter a senha
+  const handlePasswordSubmit = () => {
     if (resolvePasswordRef.current) {
-      resolvePasswordRef.current(password); // Resolve a Promise com a senha digitada pelo usuário
-    } else {
-      console.error("resolvePassword is undefined");
+      resolvePasswordRef.current(passwordInput); // Passa a senha para a Promise
+    }
+    setShowPasswordModal(false); // Fecha o modal
+    setPasswordInput(''); // Limpa o campo de senha
+  };
+
+  const handleChangePassword = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert('Você precisa estar logado para alterar a senha.');
+      return;
+    }
+
+    try {
+      // Criar credenciais para reautenticação
+      const credential = EmailAuthProvider.credential(user.email || '', currentPassword);
+      // Reautenticar o usuário
+      await reauthenticateWithCredential(user, credential);
+
+      // Atualizar a senha
+      await updatePassword(user, newPassword);
+      Alert.alert('Senha alterada com sucesso!');
+
+      // Limpar os campos
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (error) {
+      console.error('Erro ao alterar a senha:', error);
+      Alert.alert('Erro ao alterar a senha. Verifique suas credenciais e tente novamente.');
     }
   };
 
-  const handleUpdateProfile = async () => {
+  const getUserIdFromSupabase = async (): Promise<string | null> => {
+    const userEmail = auth.currentUser?.email;
+    console.log('Usuário autenticado:', auth.currentUser); // Adicionando log para depuração
+
+    const { data, error } = await supabase
+      .from('candidatos')
+      .select('id')
+      .eq('email', userEmail?.toLowerCase()) // Comparação insensível a maiúsculas e minúsculas
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Erro ao buscar o ID do Supabase:', error);
+      return null;
+    }
+
+    return data ? data.id : null; // Retorna null se data for undefined
+};
+
+// Função de atualização de perfil
+const handleUpdateProfile = async () => {
     try {
-      const { id: userId } = await getUserNameAndId();
+      const userId = await getUserIdFromSupabase(); // busca o ID do Supabase
+      if (!userId) {
+        Alert.alert('ID do usuário não encontrado. Verifique se o e-mail está correto.');
+        return;
+      }
 
       if (email !== auth.currentUser?.email) {
-        const password = await promptUserForPassword(); // Chama a função que solicita a senha
-        const emailUpdated = await updateUserEmail(email, password);
-
-        if (!emailUpdated) {
-          Alert.alert('Erro ao atualizar o e-mail no Firebase.');
+        const password = await promptUserForPassword();
+        const emailUpdateSuccess = await updateUserEmail(email, password);
+        if (!emailUpdateSuccess) {
+          Alert.alert('Erro ao atualizar o e-mail. Verifique suas credenciais.');
           return;
         }
       }
 
+      // Atualiza o nome e e-mail no Supabase
       const { error } = await supabase
         .from('candidatos')
         .update({ nome: username, email })
-        .eq('id', userId);
+        .eq('id', userId); // Usa o userId correto do Supabase
 
       if (error) {
+        console.error('Erro ao atualizar dados no Supabase:', error);
         Alert.alert('Erro ao atualizar dados no Supabase.');
       } else {
         Alert.alert('Dados atualizados com sucesso!');
-        setShowEditModal(false);
-        loadUserData();
+        loadUserData(); // Função para recarregar os dados atualizados
       }
     } catch (error) {
       console.error('Erro ao salvar os dados:', error);
     }
-  };
+};
 
   // LogOff
   const handleLogoff = async () => {
@@ -251,12 +334,50 @@ const Configuracoes: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = () => {
-    // TODO: mplementar a lógica de deletar a conta do usuário.
-    Alert.alert("Conta deletada com sucesso!");
-    setShowDeleteAccountModal(false);
-    navigation.navigate('Auth', { screen: 'Login' }); // Redireciona para a tela de login após deletar a conta
+  // Função para confirmar a exclusão após a senha
+  const handleDeleteAccount = async () => {
+    try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        Alert.alert('Você precisa estar logado para excluir sua conta.');
+        return;
+      }
+
+      // Reautentica o usuário com a senha fornecida
+      const credential = EmailAuthProvider.credential(user.email, passwordInput);
+      await reauthenticateWithCredential(user, credential);
+
+      // Primeiro tenta deletar o usuário no Supabase
+      const { error: supabaseError } = await supabase
+        .from('candidatos')
+        .delete()
+        .eq('email', user.email);
+
+      if (supabaseError) {
+        console.error('Erro ao deletar conta no Supabase:', supabaseError);
+        Alert.alert('Erro ao deletar a conta no Supabase. Tente novamente mais tarde.');
+        return; // Se a exclusão no Supabase falhar, não continuar.
+      }
+
+      console.log('Usuário deletado no Supabase com sucesso!');
+
+      // Agora tenta deletar o usuário no Firebase, somente se a deleção no Supabase foi bem-sucedida
+      await deleteUser(user);
+      console.log("Usuário deletado no Firebase com sucesso!");
+
+      // Fecha o modal de senha e volta à tela inicial (ou navega para o login)
+      setShowPasswordModal(false);
+      Alert.alert('Conta deletada com sucesso!');
+      closeModal();
+      navigation.navigate('Auth', { screen: 'Login' });
+
+    } catch (error) {
+      console.error('Erro ao deletar conta:', error);
+      Alert.alert('Erro ao deletar a conta. Verifique sua senha e tente novamente.');
+    }
   };
+
 
   useEffect(() => {
     loadUserData(); // Chama a função ao inicializar o componente
@@ -422,26 +543,38 @@ const Configuracoes: React.FC = () => {
     }
   };
 
+  console.log(colorScheme);
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[
+        styles.container,
+        colorScheme === 'dark' && { backgroundColor: '#1a1a1a' } // Muda a cor do fundo no dark mode
+      ]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={[
+          styles.container,
+          colorScheme === 'dark' && { backgroundColor: '#212121' } // Aplica o dark mode
+        ]}
+      >
         <Header />
-        <View style={styles.containerOpcoes}>
+        <View style={[
+          styles.containerOpcoes,
+          colorScheme === 'dark' && { backgroundColor: '#000' } // Fundo preto no dark mode
+        ]}>
           <TouchableOpacity style={styles.profileCircle} onPress={pickImage}>
             {uploading ? (
-              <ActivityIndicator size="large" color="#000" />
+               <ActivityIndicator size="large" color={colorScheme === 'dark' ? '#fff' : '#000'} />
             ) : profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.profileImage} />
             ) : (
-              <Text style={styles.placeholderText}>Adicionar Imagem</Text>
+              <Text style={[styles.placeholderText, colorScheme === 'dark' && { color: '#fff' }]}>Adicionar Imagem</Text>
             )}
           </TouchableOpacity>
-          <Text style={styles.usernameText}>
+          <Text style={[styles.usernameText, colorScheme === 'dark' && { color: '#fff' }]}>
             {username ? username : 'Carregando...'}
           </Text>
 
@@ -454,7 +587,7 @@ const Configuracoes: React.FC = () => {
                 top: 10,
                 right: 10,
                 padding: 10,
-                backgroundColor: '#fff',
+                backgroundColor: colorScheme === 'dark' ? '#000' : '#fff', // Preto no Dark Mode, branco no Light Mode
                 borderRadius: 10,
               }}
             >
@@ -478,26 +611,46 @@ const Configuracoes: React.FC = () => {
             </TouchableOpacity>
           )}
 
-
-          <ScrollView contentContainerStyle={styles.containerScroll}>
+            <ScrollView contentContainerStyle={[
+                    styles.containerScroll,
+                    colorScheme === 'dark' && { backgroundColor: '#000' } // Fundo preto no dark mode
+            ]}>
             <View style={styles.line} />
-            <Text style={styles.message}>Configurações de Conta</Text>
+            <Text style={[styles.message, colorScheme === 'dark' && { color: '#fff' }]}>Configurações de Conta</Text>
 
-            <TouchableOpacity style={styles.Options} onPress={() => openModal('Editar dados')}>
-              <Text style={styles.text}>Editar dados</Text>
-              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            <TouchableOpacity
+              style={[
+                styles.Options,
+                colorScheme === 'dark' && { backgroundColor: '#ff8c00' } // Laranja no dark mode
+              ]}
+              onPress={() => openModal('Editar dados')}
+            >
+              <Text style={[styles.text, colorScheme === 'dark' && { color: '#fff' }]}>
+                Editar dados
+              </Text>
+              <Icon name="chevron-right" size={20} color={colorScheme === 'dark' ? '#fff' : '#ff8c00'} style={styles.icon} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.Options} onPress={() => openModal('Alterar a senha')}>
-              <Text style={styles.text}>Alterar a senha</Text>
-              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            <TouchableOpacity
+              style={[
+                styles.Options,
+                colorScheme === 'dark' && { backgroundColor: '#ff8c00' } // Laranja no dark mode
+              ]}
+              onPress={() => openModal('Alterar a senha')}
+            >
+              <Text style={[styles.text, colorScheme === 'dark' && { color: '#fff' }]}>
+                Alterar a senha
+              </Text>
+              <Icon name="chevron-right" size={20} color={colorScheme === 'dark' ? '#fff' : '#ff8c00'} style={styles.icon} />
             </TouchableOpacity>
 
             <View style={styles.switchContainer}>
-              <Text style={styles.textSwitch}>Notificações</Text>
+              <Text style={[styles.textSwitch, colorScheme === 'dark' && { color: '#fff' }]}>
+                Notificações
+              </Text>
               <Switch
-                trackColor={{ false: "#767577", true: "#000" }}
-                thumbColor={isNotificationsEnabled ? "#ff8c00" : "#f4f3f4"}
+                trackColor={{ false: "#767577", true: "#ff8c00" }}  // Barrinha laranja quando acionada
+                thumbColor={isNotificationsEnabled ? "#ff8c00" : "#f4f3f4"}  // Botão laranja quando ativado
                 ios_backgroundColor="#3e3e3e"
                 onValueChange={toggleNotificationsSwitch}
                 value={isNotificationsEnabled}
@@ -505,55 +658,85 @@ const Configuracoes: React.FC = () => {
             </View>
 
             <View style={styles.switchContainer}>
-              <Text style={styles.textSwitch}>Dark mode</Text>
+              <Text style={[styles.text, colorScheme === 'dark' && { color: '#fff' }]}>
+                Dark mode
+              </Text>
               <Switch
-                trackColor={{ false: "#767577", true: "#000" }}
-                thumbColor={isDarkModeEnabled ? "#ff8c00" : "#f4f3f4"}
+                trackColor={{ false: "#767577", true: "#ff8c00" }}  // Barrinha laranja quando ativada
+                thumbColor={colorScheme === 'dark' ? "#ff8c00" : "#f4f3f4"}  // Laranja quando dark mode está ativado
                 ios_backgroundColor="#3e3e3e"
                 onValueChange={toggleDarkModeSwitch}
-                value={isDarkModeEnabled}
+                value={colorScheme === 'dark'}
+                onChange={toggleColorScheme}
               />
             </View>
 
             <View style={styles.line} />
-            <Text style={styles.message}>Mais Opções</Text>
+            <Text style={[styles.message, colorScheme === 'dark' && { color: '#fff' }]}>Mais Opções</Text>
 
-            <TouchableOpacity style={styles.Options} onPress={() => openModal('Sobre nós')}>
-              <Text style={styles.text}>Sobre nós</Text>
-              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            <TouchableOpacity
+              style={[
+                styles.Options,
+                colorScheme === 'dark' && { backgroundColor: '#ff8c00' } // Laranja no dark mode
+              ]}
+              onPress={() => openModal('Sobre nós')}
+            >
+              <Text style={[styles.text, colorScheme === 'dark' && { color: '#fff' }]}>
+                Sobre nós
+              </Text>
+              <Icon name="chevron-right" size={20} color={colorScheme === 'dark' ? '#fff' : '#ff8c00'} style={styles.icon} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.Options} onPress={() => openModal('Política de Privacidade')}>
-              <Text style={styles.text}>Política de Privacidade</Text>
-              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            <TouchableOpacity
+              style={[
+                styles.Options,
+                colorScheme === 'dark' && { backgroundColor: '#ff8c00' } // Laranja no dark mode
+              ]}
+              onPress={() => openModal('Política de Privacidade')}
+            >
+              <Text style={[styles.text, colorScheme === 'dark' && { color: '#fff' }]}>
+                Política de Privacidade
+              </Text>
+              <Icon name="chevron-right" size={20} color={colorScheme === 'dark' ? '#fff' : '#ff8c00'} style={styles.icon} />
             </TouchableOpacity>
 
             <View style={styles.line} />
-            <Text style={styles.message}>Opções Avançadas</Text>
+            <Text style={[styles.message, colorScheme === 'dark' && { color: '#fff' }]}>Opções Avançadas</Text>
 
             <TouchableOpacity
-              style={styles.Options}
+              style={[
+                styles.Options,
+                colorScheme === 'dark' && { backgroundColor: '#ff8c00' } // Laranja no dark mode
+              ]}
               onPress={async () => {
                 const choice = await AsyncStorage.getItem('rememberChoice');
                 const isRememberChoice = choice ? JSON.parse(choice) : false;
 
                 if (isRememberChoice) {
-                  // Se o switch estiver ativado, desloga diretamente
-                  handleLogoff();
+                  handleLogoff(); // Desloga diretamente
                 } else {
-                  // Caso contrário, abre o modal
-                  openModal('Sair do App');
+                  openModal('Sair do App'); // Abre o modal
                 }
               }}
             >
-              <Text style={styles.text}>Sair do App</Text>
-              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+              <Text style={[styles.text, colorScheme === 'dark' && { color: '#fff' }]}>
+                Sair do App
+              </Text>
+              <Icon name="chevron-right" size={20} color={colorScheme === 'dark' ? '#fff' : '#ff8c00'} style={styles.icon} />
             </TouchableOpacity>
 
 
-            <TouchableOpacity style={styles.Options} onPress={() => openModal('Deletar Conta')}>
-              <Text style={styles.text}>Deletar Conta</Text>
-              <Icon name="chevron-right" size={20} color="#ff8c00" style={styles.icon} />
+            <TouchableOpacity
+              style={[
+                styles.Options,
+                colorScheme === 'dark' && { backgroundColor: '#ff8c00' } // Laranja no dark mode
+              ]}
+              onPress={() => openModal('Deletar Conta')}
+            >
+              <Text style={[styles.text, colorScheme === 'dark' && { color: '#fff' }]}>
+                Deletar Conta
+              </Text>
+              <Icon name="chevron-right" size={20} color={colorScheme === 'dark' ? '#fff' : '#ff8c00'} style={styles.icon} />
             </TouchableOpacity>
 
             {/* Modal */}
@@ -570,36 +753,92 @@ const Configuracoes: React.FC = () => {
                 style={styles.blurContainer}
                 experimentalBlurMethod="dimezisBlurView"
               >
-                <View style={styles.modalView}>
+                <View style={[
+                  styles.modalView,
+                  colorScheme === 'dark' && { backgroundColor: '#1a1a1a' } // Fundo preto no dark mode
+                ]}>
                   {/* Botão de Fechar como um X Vermelho */}
                   <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                     <Text style={styles.closeButtonText}>✕</Text>
                   </TouchableOpacity>
 
                   {modalContent === 'Editar dados' && (
-                    <View>
-                      <Text style={{ fontSize: 18 }}>Editar Dados do Perfil</Text>
+                  <View
+                      style={{
+                          padding: 20,
+                          backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#fff', // Fundo do modal
+                          borderRadius: 10,
+                          elevation: 5, // Sombra no Android
+                          shadowColor: colorScheme === 'dark' ? '#000' : '#ccc', // Sombra
+                          shadowOpacity: 0.5,
+                          shadowRadius: 10,
+                      }}
+                  >
+                      <Text
+                          style={{
+                              fontSize: 18,
+                              color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto
+                          }}
+                      >
+                          Editar Dados do Perfil
+                      </Text>
                       <TextInput
-                        style={{ borderWidth: 1, borderColor: 'gray', marginTop: '5%', marginBottom: '10%', padding: 8 }}
-                        placeholder="Nome de usuário"
-                        value={username}
-                        onChangeText={setUsername}
-                        editable={emailVerified} // Bloqueia o campo se o e-mail não estiver verificado
+                          style={{
+                              borderWidth: 1,
+                              borderColor: colorScheme === 'dark' ? '#fff' : 'gray', // Cor da borda
+                              marginTop: '5%',
+                              marginBottom: '10%',
+                              padding: 8,
+                              color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto no campo
+                              backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#fff', // Fundo do campo
+                          }}
+                          placeholder="Nome de usuário"
+                          placeholderTextColor={colorScheme === 'dark' ? '#aaa' : '#777'} // Cor do placeholder
+                          value={username}
+                          onChangeText={setUsername}
+                          editable={emailVerified} // Bloqueia o campo se o e-mail não estiver verificado
                       />
                       <TextInput
-                        style={{ borderWidth: 1, borderColor: 'gray', marginBottom: '10%', padding: 8 }}
-                        placeholder="Email do usuário"
-                        value={email}
-                        onChangeText={setEmail}
-                        editable={emailVerified} // Bloqueia o campo se o e-mail não estiver verificado
+                          style={{
+                              borderWidth: 1,
+                              borderColor: colorScheme === 'dark' ? '#fff' : 'gray', // Cor da borda
+                              marginBottom: '10%',
+                              padding: 8,
+                              color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto no campo
+                              backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#fff', // Fundo do campo
+                          }}
+                          placeholder="Email do usuário"
+                          placeholderTextColor={colorScheme === 'dark' ? '#aaa' : '#777'} // Cor do placeholder
+                          value={email}
+                          onChangeText={setEmail}
+                          editable={emailVerified} // Bloqueia o campo se o e-mail não estiver verificado
                       />
 
                       {/* Mensagem se o e-mail não estiver verificado */}
                       {!emailVerified && (
-                        <Text style={{ color: 'red' }}>
-                          Verifique seu e-mail antes de atualizar os dados.
-                        </Text>
+                          <Text style={{ color: 'red' }}>
+                              Verifique seu e-mail antes de atualizar os dados.
+                          </Text>
                       )}
+
+                      {/* Modal de confirmar senha */}
+                      <Modal visible={showPasswordModal} transparent={true} animationType="slide">
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                          <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10 }}>
+                            <Text>Digite sua senha para confirmar:</Text>
+                            <TextInput
+                              secureTextEntry
+                              style={{ borderWidth: 1, borderColor: 'gray', marginTop: 10, padding: 10 }}
+                              placeholder="Senha"
+                              value={passwordInput}
+                              onChangeText={setPasswordInput}
+                            />
+                            <TouchableOpacity onPress={handlePasswordSubmit} style={{ backgroundColor: '#ff8c00', padding: 10, marginTop: 10 }}>
+                              <Text style={{ color: 'white' }}>Confirmar</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </Modal>
 
                       {/* Botão Atualizar desabilitado se o e-mail não estiver verificado */}
                       <TouchableOpacity
@@ -614,33 +853,88 @@ const Configuracoes: React.FC = () => {
                     </View>
                   )}
 
-
                   {modalContent === 'Alterar a senha' && (
-                    <View>
-                      <Text style={styles.modalText}>Alterar Senha</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Nova senha"
-                        secureTextEntry={true}
-                        onChangeText={(text) => console.log(`Nova senha: ${text}`)}
-                      />
-                      <TouchableOpacity style={styles.updateButton} onPress={() => { /* lógica para alterar a senha */ }}>
-                        <Text style={styles.updateButtonText}>Alterar Senha</Text>
-                      </TouchableOpacity>
-                    </View>
+                    <View
+                    style={{
+                      backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#fff', // Fundo do modal
+                      padding: 20,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto
+                        fontSize: 18,
+                        marginBottom: 20,
+                      }}
+                    >
+                      Alterar Senha
+                    </Text>
+
+                    <TextInput
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colorScheme === 'dark' ? '#fff' : 'gray', // Cor da borda
+                        backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#fff', // Fundo do campo
+                        color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto no campo
+                        padding: 10,
+                        marginBottom: 15,
+                      }}
+                      placeholder="Senha Atual"
+                      placeholderTextColor={colorScheme === 'dark' ? '#aaa' : '#777'} // Placeholder adaptado
+                      secureTextEntry={true}
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                    />
+
+                    <TextInput
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colorScheme === 'dark' ? '#fff' : 'gray', // Cor da borda
+                        backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#fff', // Fundo do campo
+                        color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto no campo
+                        padding: 10,
+                        marginBottom: 15,
+                      }}
+                      placeholder="Nova Senha"
+                      placeholderTextColor={colorScheme === 'dark' ? '#aaa' : '#777'} // Placeholder adaptado
+                      secureTextEntry={true}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                    />
+
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#ff8c00', // Cor do botão
+                        padding: 10,
+                        borderRadius: 5,
+                        alignItems: 'center',
+                      }}
+                      onPress={handleChangePassword}
+                    >
+                      <Text
+                        style={{
+                          color: '#fff', // Cor do texto do botão
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        Alterar Senha
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   )}
 
                   {modalContent === 'Sobre nós' && (
                     <View>
-                      <Text style={styles.modalText}>Sobre Nós</Text>
-                      <Text style={styles.modalInfo}>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Omnis, temporibus. Repudiandae ipsam unde dolor tenetur. Dolorem ab cupiditate aliquid velit. Quas fuga dicta similique! Ducimus culpa nam similique. Rerum, aliquam.</Text>
+                      <Text style={[styles.modalText, colorScheme === 'dark' && { color: '#fff' }]}>Sobre Nós</Text>
+                      <Text style={[styles.modalInfo, colorScheme === 'dark' && { color: '#fff' }]}>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Omnis, temporibus. Repudiandae ipsam unde dolor tenetur. Dolorem ab cupiditate aliquid velit. Quas fuga dicta similique! Ducimus culpa nam similique. Rerum, aliquam.</Text>
                     </View>
                   )}
 
                   {modalContent === 'Política de Privacidade' && (
                     <View>
-                      <Text style={styles.modalText}>Política de Privacidade</Text>
-                      <Text style={styles.modalInfo}>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Numquam, autem esse obcaecati atque quos officiis culpa soluta fuga! In sunt animi officiis distinctio possimus ad omnis sit natus pariatur fuga?</Text>
+                      <Text style={[styles.modalText, colorScheme === 'dark' && { color: '#fff' }]}>Política de Privacidade</Text>
+                      <Text style={[styles.modalInfo, colorScheme === 'dark' && { color: '#fff' }]}>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Numquam, autem esse obcaecati atque quos officiis culpa soluta fuga! In sunt animi officiis distinctio possimus ad omnis sit natus pariatur fuga?</Text>
                     </View>
                   )}
 
@@ -649,8 +943,8 @@ const Configuracoes: React.FC = () => {
                       {/* Ícone */}
                       <Icon name="sign-out" size={20} color="red" style={styles.icon} />
 
-                      <Text style={styles.modalText}>Tem certeza que deseja sair?</Text>
-                      <Text style={styles.descriptionText}>
+                      <Text style={[styles.modalText, colorScheme === 'dark' && { color: '#fff' }]}>Tem certeza que deseja sair?</Text>
+                      <Text style={[styles.modalDescriptionText, colorScheme === 'dark' && { color: '#fff' }]}>
                         Ao sair, você precisará fazer login novamente para acessar sua conta.
                       </Text>
 
@@ -660,7 +954,7 @@ const Configuracoes: React.FC = () => {
                           value={rememberChoice}
                           onValueChange={setRememberChoice}
                         />
-                        <Text style={styles.rememberChoiceText}>Lembre-se da minha escolha</Text>
+                        <Text style={[styles.rememberChoiceText, colorScheme === 'dark' && { color: '#fff' }]}>Lembre-se da minha escolha</Text>
                       </View>
 
                       {/* Botões de ação */}
@@ -679,40 +973,61 @@ const Configuracoes: React.FC = () => {
                   )}
 
                   {modalContent === 'Deletar Conta' && (
-                    <View>
-                      {/* Ícone */}
-                      <Icon name="trash" size={20} color="red" style={styles.icon} />
+                  <View>
+                    {/* Ícone de Lixeira */}
+                    <Icon name="trash" size={20} color="red" />
 
-                      <Text style={styles.modalText}>Tem certeza  que deseja deletar sua conta?</Text>
-                      <Text style={styles.descriptionText}>
-                        Tem certeza de que deseja excluir esta Conta? Esta ação não pode ser desfeita.
-                      </Text>
+                    <Text style={[styles.modalText, colorScheme === 'dark' && { color: '#fff' }]}>Tem certeza  que deseja deletar sua conta?</Text>
+                    <Text style={[styles.modalDescriptionText, colorScheme === 'dark' && { color: '#fff' }]}>
+                      Tem certeza de que deseja excluir esta Conta? Esta ação não pode ser desfeita.
+                    </Text>
 
-                      {/* Botões de ação */}
-                      <View style={styles.buttonContainer}>
-                        <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
-                          <Text style={styles.buttonText}>Cancelar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.exitButton}
-                          onPress={handleDeleteAccount}
-                        >
-                          <Text style={styles.buttonText}>Deletar</Text>
-                        </TouchableOpacity>
-                      </View>
+                    {/* Botões de Ação */}
+                    <View style={styles.buttonContainer}>
+                      <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
+                        <Text style={styles.buttonText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.exitButton}
+                        onPress={() => setShowPasswordModal(true)} // Abre modal para digitar senha
+                      >
+                        <Text style={styles.buttonText}>Deletar</Text>
+                      </TouchableOpacity>
                     </View>
-                  )}
+                  </View>
+                )}
                 </View>
               </BlurView>
             </Modal>
           </ScrollView>
 
+          {/* Modal para solicitar senha */}
+          <Modal visible={showPasswordModal} transparent={true} animationType="slide">
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+              <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10 }}>
+                <Text>Digite sua senha para confirmar:</Text>
+                <TextInput
+                  secureTextEntry
+                  style={{ borderWidth: 1, borderColor: 'gray', marginTop: 10, padding: 10 }}
+                  placeholder="Senha"
+                  value={passwordInput}
+                  onChangeText={setPasswordInput}
+                />
+                <TouchableOpacity onPress={handleDeleteAccount} style={{ backgroundColor: '#ff8c00', padding: 10, marginTop: 10 }}>
+                  <Text style={{ color: 'white' }}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
           {/* Renderiza a notificação se showNotification for verdadeiro */}
           {showNotification && (
-            <View style={styles.notificationContainer}>
-              <Text style={styles.notificationText}>
-                Você tem que validar seu e-mail para usar todas  as funcionalidades do aplicativo.
-
+            <View style={[
+              styles.notificationContainer,
+              colorScheme === 'dark' && { backgroundColor: '#000' }  // Preto no Dark Mode
+            ]}>
+              <Text style={[styles.notificationText, colorScheme === 'dark' && { color: '#fff' }]}>
+                Você tem que validar seu e-mail para usar todas as funcionalidades do aplicativo.
               </Text>
               <TouchableOpacity
                 style={styles.ignoreButton}
@@ -721,13 +1036,13 @@ const Configuracoes: React.FC = () => {
                   setShowBell(false); // Esconde o sino permanentemente
                 }}
               >
-                <Text style={styles.ignoreButtonText}>Ignorar</Text>
+                <Text style={[styles.ignoreButtonText, colorScheme === 'dark' && { color: '#fff' }]}>Ignorar</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
       </SafeAreaView>
-      <StatusBar barStyle="light-content" backgroundColor="#ff8c00" />
+      <StatusBar style="auto" />
     </KeyboardAvoidingView>
   );
 }
@@ -802,6 +1117,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    zIndex: 5000,
   },
   notificationText: {
     fontSize: 16,

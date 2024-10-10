@@ -7,6 +7,7 @@ import Configuracoes from '../../screens/configuracoes';
 import Agenda from '../../screens/Agenda';
 import TabIconWithBadge from '../../components/TabIconWithBadge';
 import { isUserEmailVerified } from '../../services/Firebase';
+import { useColorScheme } from 'nativewind';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,6 +21,9 @@ export default function TabRoutes() {
         Chat: 0,
         Configurações: 0,
     });
+
+    // Obtém o esquema de cores atual (light ou dark)
+    const { colorScheme, toggleColorScheme } = useColorScheme();
 
     return (
         <Tab.Navigator
@@ -38,7 +42,7 @@ export default function TabRoutes() {
                     } else if (route.name === 'Configurações') {
                         iconName = 'settings';
                     } else {
-                        iconName = 'home'; 
+                        iconName = 'home';
                     }
 
                     const badgeCount = badgeCounts[route.name] || 0;
@@ -53,8 +57,11 @@ export default function TabRoutes() {
                     );
                 },
                 tabBarHideOnKeyboard: true,
-                tabBarActiveTintColor: '#F07A26',
-                tabBarInactiveTintColor: 'gray',
+                tabBarActiveTintColor: '#F07A26', // Cor laranja para ícones ativos
+                tabBarInactiveTintColor: colorScheme === 'dark' ? 'white' : 'gray', // Branco se no dark mode, cinza no light mode
+                tabBarStyle: {
+                    backgroundColor: colorScheme === 'dark' ? '#000' : '#fff', // Preto no dark mode, branco no light mode
+                },
                 headerShown: false,
             })}
         >
@@ -68,7 +75,7 @@ export default function TabRoutes() {
                 component={Agenda}
                 options={{ tabBarLabel: 'Agenda' }}
             />
-            
+
             <Tab.Screen
                 name="Chat"
                 component={Chat}
@@ -84,7 +91,7 @@ export default function TabRoutes() {
                 component={Configuracoes}
                 options={{ tabBarLabel: 'Configurações' }}
             />
-            
+
         </Tab.Navigator>
     );
 }

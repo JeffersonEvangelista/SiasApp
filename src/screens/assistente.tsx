@@ -14,6 +14,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { stylesAssistente } from './Styles/styles';
 import Markdown from 'react-native-markdown-display';
 
+import { useColorScheme } from 'nativewind';
+
 interface Message {
   id: number;
   text: string;
@@ -435,7 +437,7 @@ export default function App() {
 // Função para gerar a pergunta de entrevista baseada no perfil do entrevistado
 const generateInterviewQuestionPrompt = (interviewState: any) => {
   console.log("Gerando prompt de pergunta de entrevista...");
-  
+
   // Variável para armazenar o prompt de maneira condicional
   let prompt = '';
 
@@ -606,7 +608,7 @@ const generateFeedbackPrompt = (interviewState: any) => {
   const generateIntroduction = async (genAI: any) => {
     const introPrompt = `
     Crie uma mensagem de boas-vindas para iniciar uma entrevista de emprego.
-        O tom deve ser amigável e profissional. 
+        O tom deve ser amigável e profissional.
         A mensagem deve incluir os seguintes elementos:
         1. Uma apresentação do entrevistador, incluindo um nome fictício (ex: "Olá, eu sou o Lucas Pereira").
         2. Crie Um nome fictício para a empresa, que seja inivador e criativo.
@@ -937,13 +939,20 @@ const generateFeedbackPrompt = (interviewState: any) => {
     setSelectedImageUri(uri);
   };
 
+  const { colorScheme, toggleColorScheme } = useColorScheme(); // Para o Dark Mode
+
   return (
     <KeyboardAvoidingView
-      style={stylesAssistente.container}
+      style={[stylesAssistente.container, colorScheme === 'dark' && { backgroundColor: '#212121' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
-      <StatusBar style="auto" />
+
+    <StatusBar
+      style={colorScheme === 'dark' ? 'light' : 'dark'}
+      backgroundColor="#ff8c00"
+    />
+
 
       {showAnimation && (
         <View style={stylesAssistente.introContainer}>
@@ -953,15 +962,15 @@ const generateFeedbackPrompt = (interviewState: any) => {
             loop
             style={stylesAssistente.lottieAnimation}
           />
-          <Text style={stylesAssistente.introText}>Olá! Sou o Assistente do Sias, me chamo Botly</Text>
-          <Text style={stylesAssistente.introText}>Escreva alguma coisa para começarmos</Text>
+          <Text style={[stylesAssistente.introText, colorScheme === 'dark' && { color: '#fff' }]}>Olá! Sou o Assistente do Sias, me chamo Botly</Text>
+          <Text style={[stylesAssistente.introText, colorScheme === 'dark' && { color: '#fff' }]}>Escreva alguma coisa para começarmos</Text>
         </View>
       )}
 
-      <View style={stylesAssistente.messagesContainer}>
+      <View style={[stylesAssistente.messagesContainer, colorScheme === 'dark' && { backgroundColor: '#212121' }]}>
         {messages.length > 0 && (
-          <View style={stylesAssistente.headerContainer}>
-            <Text style={stylesAssistente.chatIdText}>Chat #{chatbotCount + 1}</Text>
+          <View style={[stylesAssistente.headerContainer, colorScheme === 'dark' && { backgroundColor: '#212121' }]}>
+            <Text style={[stylesAssistente.chatIdText, colorScheme === 'dark' && { backgroundColor: 'transparent', color: '#fff' }]}>Chat #{chatbotCount + 1}</Text>
             <TouchableOpacity style={stylesAssistente.resetButtonTop} onPress={resetChat}>
               <FontAwesome name="refresh" size={24} color="red" />
             </TouchableOpacity>
@@ -1088,7 +1097,7 @@ const generateFeedbackPrompt = (interviewState: any) => {
 
 
 
-      <View style={stylesAssistente.inputArea}>
+      <View style={[stylesAssistente.inputArea, colorScheme === 'dark' && { backgroundColor: '#212121' }]}>
         {isImageUploadEnabled && (
           <TouchableOpacity onPress={selectImage} style={stylesAssistente.clipIconContainer}>
             <Icon name="paperclip" size={24} color="#fff" />
@@ -1126,7 +1135,7 @@ const generateFeedbackPrompt = (interviewState: any) => {
         {!isDescriptionRequired && (
           <View style={{ flexDirection: 'row' }}>
             <TextInput
-              style={stylesAssistente.input}
+              style={[stylesAssistente.input, colorScheme === 'dark' && { backgroundColor: '#fff' }]}
               placeholder="Digite sua mensagem"
               value={input}
               onChangeText={setInput}
