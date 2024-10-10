@@ -112,6 +112,8 @@ const Configuracoes: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState(''); // Armazenar a senha atual
   const [newPassword, setNewPassword] = useState(''); // Armazenar a nova senha
 
+  const [actionType, setActionType] = useState<"updateEmail" | "deleteAccount" | null>(null); // Para lidar com estado da ação (Deletar Conta e Alterar Email)
+
   const toggleNotificationsSwitch = async () => {
     try {
       const newValue = !isNotificationsEnabled;
@@ -206,22 +208,30 @@ const Configuracoes: React.FC = () => {
   };
   const resolvePasswordRef = useRef<(password: string) => void>();
 
-  // Função para abrir o modal de senha e solicitar a senha do usuário
-  // Abre o modal para solicitar senha
-  const promptUserForPassword = (): Promise<string> => {
+  // Função de abrir modal com ação específica
+  const promptUserForPassword = (action: "updateEmail" | "deleteAccount"): Promise<string> => {
     return new Promise((resolve) => {
       resolvePasswordRef.current = resolve; // Armazena a função resolve
+      setActionType(action); // Define qual ação será executada após a senha
       setShowPasswordModal(true); // Exibe o modal
     });
   };
 
   // Função chamada ao submeter a senha
-  const handlePasswordSubmit = () => {
+  const handlePasswordSubmit = async () => {
     if (resolvePasswordRef.current) {
-      resolvePasswordRef.current(passwordInput); // Passa a senha para a Promise
+      const password = passwordInput;
+      resolvePasswordRef.current(password); // Passa a senha para a Promise
+
+      if (actionType === "updateEmail") {
+        await handleUpdateProfile(); // Chama a função de atualização de perfil
+      } else if (actionType === "deleteAccount") {
+        await handleDeleteAccount(); // Chama a função de deletar conta
+      }
     }
     setShowPasswordModal(false); // Fecha o modal
     setPasswordInput(''); // Limpa o campo de senha
+    setActionType(null); // Reseta a ação
   };
 
   const handleChangePassword = async () => {
@@ -251,58 +261,99 @@ const Configuracoes: React.FC = () => {
   };
 
   const getUserIdFromSupabase = async (): Promise<string | null> => {
-    const userEmail = auth.currentUser?.email;
-    console.log('Usuário autenticado:', auth.currentUser); // Adicionando log para depuração
+    try {
+      // Forçar a recarga dos dados do usuário do Firebase para garantir que o email esteja atualizado
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+      }
 
-    const { data, error } = await supabase
-      .from('candidatos')
-      .select('id')
-      .eq('email', userEmail?.toLowerCase()) // Comparação insensível a maiúsculas e minúsculas
-      .single();
+      const userEmail = auth.currentUser?.email;
+      console.log('Usuário autenticado:', auth.currentUser); // Adicionando log para depuração
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('Erro ao buscar o ID do Supabase:', error);
+      if (!userEmail) {
+        console.error('Email do usuário não encontrado no Firebase');
+        return null;
+      }
+
+      // Buscar o ID do usuário no Supabase com o email atualizado
+      const { data, error } = await supabase
+        .from('candidatos')
+        .select('id')
+        .eq('email', userEmail?.toLowerCase()) // Comparação insensível a maiúsculas e minúsculas
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar o ID no Supabase:', error);
+        return null;
+      }
+
+      return data ? data.id : null; // Retorna o ID do Supabase ou null se não houver dados
+    } catch (error) {
+      console.error('Erro na função getUserIdFromSupabase:', error);
       return null;
     }
+  };
 
-    return data ? data.id : null; // Retorna null se data for undefined
-};
-
-// Função de atualização de perfil
-const handleUpdateProfile = async () => {
+  const handleUpdateProfile = async () => {
     try {
+      // Validações antes de fazer update
+      const emailTrimmed = email.trim();
+      if (!validateEmail(emailTrimmed)) {
+        Alert.alert('Por favor, insira um e-mail válido.');
+        return;
+      }
+
+      if (!username.trim()) {
+        Alert.alert('Por favor, insira um nome de usuário válido.');
+        return;
+      }
+
       const userId = await getUserIdFromSupabase(); // busca o ID do Supabase
       if (!userId) {
         Alert.alert('ID do usuário não encontrado. Verifique se o e-mail está correto.');
         return;
       }
 
-      if (email !== auth.currentUser?.email) {
-        const password = await promptUserForPassword();
-        const emailUpdateSuccess = await updateUserEmail(email, password);
+      if (emailTrimmed !== auth.currentUser?.email) {
+        // Solicita a senha para atualização de email
+        const password = await promptUserForPassword("updateEmail");
+
+        // Tenta atualizar o email no Firebase
+        const emailUpdateSuccess = await updateUserEmail(emailTrimmed, password);
         if (!emailUpdateSuccess) {
-          Alert.alert('Erro ao atualizar o e-mail. Verifique suas credenciais.');
+          Alert.alert('Erro ao atualizar o e-mail no Firebase. Verifique suas credenciais.');
           return;
         }
+
+        // Fechar o modal após sucesso no Firebase
+        setShowPasswordModal(false);
       }
 
-      // Atualiza o nome e e-mail no Supabase
+      // Atualiza nome e e-mail no Supabase
       const { error } = await supabase
         .from('candidatos')
-        .update({ nome: username, email })
-        .eq('id', userId); // Usa o userId correto do Supabase
+        .update({ nome: username.trim(), email: emailTrimmed })
+        .eq('id', userId);
 
       if (error) {
         console.error('Erro ao atualizar dados no Supabase:', error);
         Alert.alert('Erro ao atualizar dados no Supabase.');
       } else {
         Alert.alert('Dados atualizados com sucesso!');
-        loadUserData(); // Função para recarregar os dados atualizados
+        loadUserData(); // Atualiza os dados do usuário
+        setShowPasswordModal(false); // Fecha o modal, se estiver aberto
       }
     } catch (error) {
       console.error('Erro ao salvar os dados:', error);
+      Alert.alert('Ocorreu um erro ao salvar os dados. Tente novamente.');
     }
-};
+  };
+
+  // Validação de formato de e-mail
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+  };
 
   // LogOff
   const handleLogoff = async () => {
@@ -334,7 +385,6 @@ const handleUpdateProfile = async () => {
     }
   };
 
-  // Função para confirmar a exclusão após a senha
   const handleDeleteAccount = async () => {
     try {
       const user = auth.currentUser;
@@ -344,8 +394,11 @@ const handleUpdateProfile = async () => {
         return;
       }
 
+      // Solicita a senha agora para a ação 'deleteAccount'
+      const password = await promptUserForPassword("deleteAccount");
+
       // Reautentica o usuário com a senha fornecida
-      const credential = EmailAuthProvider.credential(user.email, passwordInput);
+      const credential = EmailAuthProvider.credential(user.email, password);
       await reauthenticateWithCredential(user, credential);
 
       // Primeiro tenta deletar o usuário no Supabase
@@ -377,7 +430,6 @@ const handleUpdateProfile = async () => {
       Alert.alert('Erro ao deletar a conta. Verifique sua senha e tente novamente.');
     }
   };
-
 
   useEffect(() => {
     loadUserData(); // Chama a função ao inicializar o componente
@@ -544,6 +596,7 @@ const handleUpdateProfile = async () => {
   };
 
   console.log(colorScheme);
+  console.log(actionType);
 
   return (
     <KeyboardAvoidingView
@@ -763,63 +816,64 @@ const handleUpdateProfile = async () => {
                   </TouchableOpacity>
 
                   {modalContent === 'Editar dados' && (
-                  <View
-                      style={{
-                          padding: 20,
-                          backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#fff', // Fundo do modal
-                          borderRadius: 10,
-                          elevation: 5, // Sombra no Android
-                          shadowColor: colorScheme === 'dark' ? '#000' : '#ccc', // Sombra
-                          shadowOpacity: 0.5,
-                          shadowRadius: 10,
-                      }}
-                  >
-                      <Text
-                          style={{
-                              fontSize: 18,
-                              color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto
-                          }}
-                      >
-                          Editar Dados do Perfil
-                      </Text>
-                      <TextInput
-                          style={{
-                              borderWidth: 1,
-                              borderColor: colorScheme === 'dark' ? '#fff' : 'gray', // Cor da borda
-                              marginTop: '5%',
-                              marginBottom: '10%',
-                              padding: 8,
-                              color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto no campo
-                              backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#fff', // Fundo do campo
-                          }}
-                          placeholder="Nome de usuário"
-                          placeholderTextColor={colorScheme === 'dark' ? '#aaa' : '#777'} // Cor do placeholder
-                          value={username}
-                          onChangeText={setUsername}
-                          editable={emailVerified} // Bloqueia o campo se o e-mail não estiver verificado
-                      />
-                      <TextInput
-                          style={{
-                              borderWidth: 1,
-                              borderColor: colorScheme === 'dark' ? '#fff' : 'gray', // Cor da borda
-                              marginBottom: '10%',
-                              padding: 8,
-                              color: colorScheme === 'dark' ? '#fff' : '#000', // Cor do texto no campo
-                              backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#fff', // Fundo do campo
-                          }}
-                          placeholder="Email do usuário"
-                          placeholderTextColor={colorScheme === 'dark' ? '#aaa' : '#777'} // Cor do placeholder
-                          value={email}
-                          onChangeText={setEmail}
-                          editable={emailVerified} // Bloqueia o campo se o e-mail não estiver verificado
-                      />
+                    <View
+                        style={{
+                            padding: 20,
+                            backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#fff',
+                            borderRadius: 10,
+                            elevation: 5,
+                            shadowColor: colorScheme === 'dark' ? '#000' : '#ccc',
+                            shadowOpacity: 0.5,
+                            shadowRadius: 10,
+                        }}
+                    >
+                        <Text style={{
+                            fontSize: 18,
+                            color: colorScheme === 'dark' ? '#fff' : '#000',
+                        }}>
+                            Editar Dados do Perfil
+                        </Text>
 
-                      {/* Mensagem se o e-mail não estiver verificado */}
-                      {!emailVerified && (
-                          <Text style={{ color: 'red' }}>
-                              Verifique seu e-mail antes de atualizar os dados.
-                          </Text>
-                      )}
+                        {/* Campo para nome de usuário */}
+                        <TextInput
+                            style={{
+                                borderWidth: 1,
+                                borderColor: colorScheme === 'dark' ? '#fff' : 'gray',
+                                marginTop: '5%',
+                                marginBottom: '10%',
+                                padding: 8,
+                                color: colorScheme === 'dark' ? '#fff' : '#000',
+                                backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#fff',
+                            }}
+                            placeholder="Nome de usuário"
+                            placeholderTextColor={colorScheme === 'dark' ? '#aaa' : '#777'}
+                            value={username}
+                            onChangeText={setUsername}
+                            editable={emailVerified}
+                        />
+
+                        {/* Campo para email */}
+                        <TextInput
+                            style={{
+                                borderWidth: 1,
+                                borderColor: colorScheme === 'dark' ? '#fff' : 'gray',
+                                marginBottom: '10%',
+                                padding: 8,
+                                color: colorScheme === 'dark' ? '#fff' : '#000',
+                                backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#fff',
+                            }}
+                            placeholder="Email do usuário"
+                            placeholderTextColor={colorScheme === 'dark' ? '#aaa' : '#777'}
+                            value={email}
+                            onChangeText={setEmail}
+                            editable={emailVerified}
+                        />
+
+                        {!emailVerified && (
+                            <Text style={{ color: 'red' }}>
+                                Verifique seu e-mail antes de atualizar os dados.
+                            </Text>
+                        )}
 
                       {/* Modal de confirmar senha */}
                       <Modal visible={showPasswordModal} transparent={true} animationType="slide">
@@ -989,7 +1043,10 @@ const handleUpdateProfile = async () => {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.exitButton}
-                        onPress={() => setShowPasswordModal(true)} // Abre modal para digitar senha
+                        onPress={() => {
+                          setActionType('deleteAccount'); // Define o actionType para deletar conta
+                          setShowPasswordModal(true); // Abre o modal de senha
+                        }} // Abre modal para digitar senha
                       >
                         <Text style={styles.buttonText}>Deletar</Text>
                       </TouchableOpacity>
@@ -1013,7 +1070,7 @@ const handleUpdateProfile = async () => {
                   value={passwordInput}
                   onChangeText={setPasswordInput}
                 />
-                <TouchableOpacity onPress={handleDeleteAccount} style={{ backgroundColor: '#ff8c00', padding: 10, marginTop: 10 }}>
+                <TouchableOpacity onPress={handlePasswordSubmit} style={{ backgroundColor: '#ff8c00', padding: 10, marginTop: 10 }}>
                   <Text style={{ color: 'white' }}>Confirmar</Text>
                 </TouchableOpacity>
               </View>

@@ -12,8 +12,10 @@ import { doc, getDoc, setDoc, getFirestore, collection, addDoc, Timestamp, order
 import { db } from '../services/Firebase';
 import { getRoomId } from '../utils/common';
 
+import { useColorScheme } from 'nativewind';
+
 export default function ChatRoom({route, navigation}) {
-  
+
   const {item} = route.params;
   const user = getCurrentUserData();
   const router = useRouter();
@@ -21,6 +23,8 @@ export default function ChatRoom({route, navigation}) {
   const textRef = useRef('');
   const inputRef = useRef(null);
   const scrollViewRef =  useRef(null);
+
+  const { colorScheme, toggleColorScheme } = useColorScheme(); // Dark Mode
 
   console.log(item?.userId);
   console.log(user?.id);
@@ -54,7 +58,7 @@ export default function ChatRoom({route, navigation}) {
   useEffect(() => {
     UpdateScrollView();
   },[messages])
-  
+
   const UpdateScrollView = ()=>{
     setTimeout(() => {
       scrollViewRef?.current?.scrollToEnd({animated:false})
@@ -84,8 +88,8 @@ export default function ChatRoom({route, navigation}) {
   console.log('messages', messages);
 
   return (
-    <SafeAreaView style={{flex: 1}}>
-        <View style={{flex: 1}}>          
+    <SafeAreaView style={{flex: 1, ...(colorScheme === 'dark' ? { backgroundColor: '#1a1a1a' } : {})}}>
+        <View style={{flex: 1}}>
           <View style={{
             flexDirection:"row",
             justifyContent:"space-between",
@@ -99,7 +103,7 @@ export default function ChatRoom({route, navigation}) {
                 <TouchableOpacity onPress={() =>{navigation.goBack()}}>
                   <Ionicons name="chevron-back-outline" size={30} color="white"/>
                 </TouchableOpacity>
-                <Image 
+                <Image
                     source={{
                       uri: item?.profileImg,
                     }}
@@ -114,14 +118,14 @@ export default function ChatRoom({route, navigation}) {
               <MessagesList scrollViewRef={scrollViewRef} messages={messages} currentUser={user}/>
             </View>
               <View style={{flexDirection:'row', alignItems:'center'}}>
-                <View style={{flex: 1, flexDirection:"row", alignItems:"center", height:46, margin:10, paddingHorizontal:12, borderRadius:10, borderColor: "#ccc", borderWidth: 1}}>
+                <View style={{flex: 1, flexDirection:"row", alignItems:"center", height:46, margin:10, paddingHorizontal:12, borderRadius:10, borderColor: "#ccc", borderWidth: 1, backgroundColor: '#fff'}}>
                   <TextInput
                   ref={inputRef}
                   onChangeText={value=> textRef.current = value}
                   style={{fontSize: 18}}
                   placeholder='Digite sua mensagem'
                   />
-                </View>                
+                </View>
                 <TouchableOpacity onPress={handleSendMessage} style={stylesAssistente.sendButton}>
                    <Icon name="send" size={24} color="#fff" />
                 </TouchableOpacity>
