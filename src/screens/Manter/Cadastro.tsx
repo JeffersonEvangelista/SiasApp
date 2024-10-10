@@ -153,10 +153,12 @@ const CadastroScreen = () => {
           throw new Error('Identificador inválido. Deve ter 11 dígitos para CPF ou 14 dígitos para CNPJ.');
         }
 
-        // Notificação de sucesso
+        // Primeiro, navega para a Home
+        navigation.navigate('Home');
+
+        // Depois de garantir que a navegação ocorreu, enviar notificações
         await sendNotificationNow('Cadastro Completo', 'Seu cadastro foi realizado com sucesso!');
         await checkEmailVerificationAndNotify();
-        navigation.navigate('Home');
       } catch (error: any) {
         console.error('Erro ao cadastrar usuário:', error.message);
 
@@ -198,243 +200,243 @@ const CadastroScreen = () => {
   }
 
 
-    const deleteFirebaseUser = async (userId: string) => {
-      try {
-        // Deletar o documento do usuário no Firestore
-        await deleteDoc(doc(db, 'users', userId));
-        console.log(`Usuário com ID ${userId} excluído do Firestore.`);
-      } catch (error) {
-        console.error('Erro ao excluir usuário no Firestore:', error);
-      }
-    };
-
-
-    const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {
-      const digitsOnly = identificador.replace(/\D/g, '');
-      return digitsOnly.length === 11 ? 'CPF' : 'CNPJ';
-    };
-
-    // Gerar os pontos aleatórios uma única vez e memorizar o valor.
-    const randomPoints = useMemo(() => {
-      const points = [];
-      for (let i = 0; i < 100; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * height;
-        points.push({ x, y });
-      }
-      return points;
-    }, [width, height]);
-
-    useEffect(() => {
-      if (!isFocused) {
-        setEmail('');
-        setNome('');
-        setIdentificador('');
-        setSenha('');
-        setConfirmarSenha('');
-        setErrors({});
-      }
-    }, [isFocused]);
-
-    return (
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.container}>
-          <LinearGradient
-            colors={['#0D0D1B', '#000']}
-            style={styles.background}
-          >
-            <View style={styles.gridContainer}>
-              {Array.from({ length: Math.floor(height / 30) }).map((_, i) => (
-                <View
-                  key={`horizontal-${i}`}
-                  style={[styles.line, {
-                    top: i * 33,
-                    width: width,
-                    borderColor: 'rgba(224, 224, 224, 0.3)',
-                  }]} />
-              ))}
-              {Array.from({ length: Math.floor(width / 30) }).map((_, i) => (
-                <View
-                  key={`vertical-${i}`}
-                  style={[styles.line, {
-                    left: i * 36,
-                    height: height,
-                    borderColor: 'rgba(224, 224, 224, 0.3)',
-                    borderLeftWidth: 1,
-                    borderTopWidth: 0,
-                  }]} />
-              ))}
-            </View>
-            {randomPoints.map((point, index) => (
-              <View
-                key={index}
-                style={[styles.point, { left: point.x, top: point.y }]} />
-            ))}
-          </LinearGradient>
-
-          <View style={styles.frameLayout}>
-            <View style={styles.row}>
-              <Image
-                source={logo}
-                style={styles.image}
-                resizeMode="contain"
-              />
-              <Text style={styles.title}>Sias</Text>
-            </View>
-          </View>
-
-          <Text style={styles.header}>Inscreva-se Agora</Text>
-          <Text style={styles.subHeader}>Crie sua conta e descubra tudo o que nosso aplicativo oferece</Text>
-
-          <View style={styles.transitionContainer}>
-            <View style={styles.formContainer}>
-              <PaperTextInput
-                label="Digite o seu nome completo"
-                style={styles.textInput}
-                mode="outlined"
-                activeOutlineColor="#F07A26"
-                outlineColor="#CCCCCC"
-                left={<PaperTextInput.Icon icon="account" />}
-                value={Nome}
-                onChangeText={setNome}
-                error={!!errors.Nome}
-              />
-              <HelperText type="error" visible={!!errors.Nome}>
-                {errors.Nome}
-              </HelperText>
-
-              <PaperTextInput
-                label="Email"
-                style={[styles.textInput, errors.email ? { borderColor: 'red', borderWidth: 1 } : {}]}
-                mode="outlined"
-                activeOutlineColor="#F07A26"
-                outlineColor="#CCCCCC"
-                left={<PaperTextInput.Icon icon="email" />}
-                value={email}
-                onChangeText={setEmail}
-                error={!!errors.email}
-              />
-              <HelperText type="error" visible={!!errors.email}>
-                {errors.email}
-              </HelperText>
-              <PaperTextInput
-                label="Digite seu CPF ou CNPJ"
-                style={[styles.textInput, errors.identificador ? { borderColor: 'red', borderWidth: 1 } : {}]}
-                mode="outlined"
-                activeOutlineColor="#F07A26"
-                outlineColor="#CCCCCC"
-                keyboardType="numeric"
-                left={<PaperTextInput.Icon icon="badge-account-horizontal-outline" />}
-                value={identificador}
-                onChangeText={handleChangeText}
-                error={!!errors.identificador}
-              />
-              <HelperText type="error" visible={!!errors.identificador}>
-                {errors.identificador}
-              </HelperText>
-              <PaperTextInput
-                label="Senha"
-                style={styles.textInput}
-                mode="outlined"
-                activeOutlineColor="#F07A26"
-                outlineColor="#CCCCCC"
-                secureTextEntry={!showPassword}
-                right={
-                  <PaperTextInput.Icon
-                    icon={showPassword ? "eye-off" : "eye"}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
-                value={senha}
-                onChangeText={setSenha}
-                error={!!errors.senha}
-              />
-              <HelperText type="error" visible={!!errors.senha}>
-                {errors.senha}
-              </HelperText>
-
-              <PaperTextInput
-                label="Confirmar Senha"
-                style={[styles.textInput, errors.confirmarSenha ? { borderColor: 'red', borderWidth: 1 } : {}]}
-                mode="outlined"
-                activeOutlineColor="#F07A26"
-                outlineColor="#CCCCCC"
-                secureTextEntry={!showConfirmPassword}
-                right={
-                  <PaperTextInput.Icon
-                    icon={showConfirmPassword ? "eye-off" : "eye"}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  />
-                }
-                value={confirmarSenha}
-                onChangeText={setConfirmarSenha}
-                error={!!errors.confirmarSenha}
-              />
-              <HelperText type="error" visible={!!errors.confirmarSenha}>
-                {errors.confirmarSenha}
-              </HelperText>
-
-              <Text style={styles.termsText}>Ao continuar, você concorda com os</Text>
-              <TouchableOpacity onPress={() => setModalVisible(true)}>
-                <Text style={styles.terms}> termos</Text>
-              </TouchableOpacity>
-
-              {loading ? (
-                <ActivityIndicator size="large" color="#F07A26" />
-              ) : (
-                <CustomButton title="Cadastrar" onPress={handleSubmit} />
-              )}
-
-              <View style={styles.containeer}>
-                <View style={styles.linee} />
-                <View style={styles.linee} />
-              </View>
-            </View>
-
-
-          </View>
-        </View>
-        {/* Animação de Conexão (Modal) */}
-        <Modal transparent={true} visible={showNoConnection}>
-          <View style={styles.modalBackground}>
-            <LottieView
-              source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
-              autoPlay
-              loop
-              style={styles.lottieAnimation}
-            />
-            <TouchableOpacity
-              style={styles.customButton}
-              onPress={() => setShowNoConnection(false)}
-            >
-              <Text style={styles.buttonText}>Tentar novamente</Text>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-        <Modal
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalBackground}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Termos e Condições</Text>
-              <ScrollView style={styles.modalContent}>
-                <Text style={styles.modalText}>
-                  Lorem ipsum dolor, sit amet consectetur adipisicing elit. Nam ipsum molestiae impedit sequi explicabo accusamus hic dolorum ullam illum dignissimos, assumenda expedita repellat tempore perspiciatis quo officiis odio, laudantium suscipit!
-                </Text>
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.customButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Fechar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </ScrollView>
-    );
+  const deleteFirebaseUser = async (userId: string) => {
+    try {
+      // Deletar o documento do usuário no Firestore
+      await deleteDoc(doc(db, 'users', userId));
+      console.log(`Usuário com ID ${userId} excluído do Firestore.`);
+    } catch (error) {
+      console.error('Erro ao excluir usuário no Firestore:', error);
+    }
   };
 
-  export default CadastroScreen;
+
+  const determineIdentifierType = (identificador: string): 'CPF' | 'CNPJ' => {
+    const digitsOnly = identificador.replace(/\D/g, '');
+    return digitsOnly.length === 11 ? 'CPF' : 'CNPJ';
+  };
+
+  // Gerar os pontos aleatórios uma única vez e memorizar o valor.
+  const randomPoints = useMemo(() => {
+    const points = [];
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      points.push({ x, y });
+    }
+    return points;
+  }, [width, height]);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setEmail('');
+      setNome('');
+      setIdentificador('');
+      setSenha('');
+      setConfirmarSenha('');
+      setErrors({});
+    }
+  }, [isFocused]);
+
+  return (
+    <ScrollView contentContainerStyle={styles.scrollViewContent}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0D0D1B', '#000']}
+          style={styles.background}
+        >
+          <View style={styles.gridContainer}>
+            {Array.from({ length: Math.floor(height / 30) }).map((_, i) => (
+              <View
+                key={`horizontal-${i}`}
+                style={[styles.line, {
+                  top: i * 33,
+                  width: width,
+                  borderColor: 'rgba(224, 224, 224, 0.3)',
+                }]} />
+            ))}
+            {Array.from({ length: Math.floor(width / 30) }).map((_, i) => (
+              <View
+                key={`vertical-${i}`}
+                style={[styles.line, {
+                  left: i * 36,
+                  height: height,
+                  borderColor: 'rgba(224, 224, 224, 0.3)',
+                  borderLeftWidth: 1,
+                  borderTopWidth: 0,
+                }]} />
+            ))}
+          </View>
+          {randomPoints.map((point, index) => (
+            <View
+              key={index}
+              style={[styles.point, { left: point.x, top: point.y }]} />
+          ))}
+        </LinearGradient>
+
+        <View style={styles.frameLayout}>
+          <View style={styles.row}>
+            <Image
+              source={logo}
+              style={styles.image}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Sias</Text>
+          </View>
+        </View>
+
+        <Text style={styles.header}>Inscreva-se Agora</Text>
+        <Text style={styles.subHeader}>Crie sua conta e descubra tudo o que nosso aplicativo oferece</Text>
+
+        <View style={styles.transitionContainer}>
+          <View style={styles.formContainer}>
+            <PaperTextInput
+              label="Digite o seu nome completo"
+              style={styles.textInput}
+              mode="outlined"
+              activeOutlineColor="#F07A26"
+              outlineColor="#CCCCCC"
+              left={<PaperTextInput.Icon icon="account" />}
+              value={Nome}
+              onChangeText={setNome}
+              error={!!errors.Nome}
+            />
+            <HelperText type="error" visible={!!errors.Nome}>
+              {errors.Nome}
+            </HelperText>
+
+            <PaperTextInput
+              label="Email"
+              style={[styles.textInput, errors.email ? { borderColor: 'red', borderWidth: 1 } : {}]}
+              mode="outlined"
+              activeOutlineColor="#F07A26"
+              outlineColor="#CCCCCC"
+              left={<PaperTextInput.Icon icon="email" />}
+              value={email}
+              onChangeText={setEmail}
+              error={!!errors.email}
+            />
+            <HelperText type="error" visible={!!errors.email}>
+              {errors.email}
+            </HelperText>
+            <PaperTextInput
+              label="Digite seu CPF ou CNPJ"
+              style={[styles.textInput, errors.identificador ? { borderColor: 'red', borderWidth: 1 } : {}]}
+              mode="outlined"
+              activeOutlineColor="#F07A26"
+              outlineColor="#CCCCCC"
+              keyboardType="numeric"
+              left={<PaperTextInput.Icon icon="badge-account-horizontal-outline" />}
+              value={identificador}
+              onChangeText={handleChangeText}
+              error={!!errors.identificador}
+            />
+            <HelperText type="error" visible={!!errors.identificador}>
+              {errors.identificador}
+            </HelperText>
+            <PaperTextInput
+              label="Senha"
+              style={styles.textInput}
+              mode="outlined"
+              activeOutlineColor="#F07A26"
+              outlineColor="#CCCCCC"
+              secureTextEntry={!showPassword}
+              right={
+                <PaperTextInput.Icon
+                  icon={showPassword ? "eye-off" : "eye"}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
+              value={senha}
+              onChangeText={setSenha}
+              error={!!errors.senha}
+            />
+            <HelperText type="error" visible={!!errors.senha}>
+              {errors.senha}
+            </HelperText>
+
+            <PaperTextInput
+              label="Confirmar Senha"
+              style={[styles.textInput, errors.confirmarSenha ? { borderColor: 'red', borderWidth: 1 } : {}]}
+              mode="outlined"
+              activeOutlineColor="#F07A26"
+              outlineColor="#CCCCCC"
+              secureTextEntry={!showConfirmPassword}
+              right={
+                <PaperTextInput.Icon
+                  icon={showConfirmPassword ? "eye-off" : "eye"}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                />
+              }
+              value={confirmarSenha}
+              onChangeText={setConfirmarSenha}
+              error={!!errors.confirmarSenha}
+            />
+            <HelperText type="error" visible={!!errors.confirmarSenha}>
+              {errors.confirmarSenha}
+            </HelperText>
+
+            <Text style={styles.termsText}>Ao continuar, você concorda com os</Text>
+            <TouchableOpacity onPress={() => setModalVisible(true)}>
+              <Text style={styles.terms}> termos</Text>
+            </TouchableOpacity>
+
+            {loading ? (
+              <ActivityIndicator size="large" color="#F07A26" />
+            ) : (
+              <CustomButton title="Cadastrar" onPress={handleSubmit} />
+            )}
+
+            <View style={styles.containeer}>
+              <View style={styles.linee} />
+              <View style={styles.linee} />
+            </View>
+          </View>
+
+
+        </View>
+      </View>
+      {/* Animação de Conexão (Modal) */}
+      <Modal transparent={true} visible={showNoConnection}>
+        <View style={styles.modalBackground}>
+          <LottieView
+            source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+          />
+          <TouchableOpacity
+            style={styles.customButton}
+            onPress={() => setShowNoConnection(false)}
+          >
+            <Text style={styles.buttonText}>Tentar novamente</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Termos e Condições</Text>
+            <ScrollView style={styles.modalContent}>
+              <Text style={styles.modalText}>
+                Lorem ipsum dolor, sit amet consectetur adipisicing elit. Nam ipsum molestiae impedit sequi explicabo accusamus hic dolorum ullam illum dignissimos, assumenda expedita repellat tempore perspiciatis quo officiis odio, laudantium suscipit!
+              </Text>
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.customButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.buttonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
+  );
+};
+
+export default CadastroScreen;
