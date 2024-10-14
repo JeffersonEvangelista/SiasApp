@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StatusBar, StyleSheet, Image, ActivityIndicator, ScrollView } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-import { getUserNameAndId, supabase } from '../services/userService';
+import { getUserNameAndId, supabase, getInterviewCountByDate } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
+import InterviewCountChart from './InterviewCountChart';
 
 const App = () => {
   const [userData, setUserData] = useState({ nome: '', cnpj: null });
@@ -11,6 +12,7 @@ const App = () => {
   const [jobOffers, setJobOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [interviewCounts, setInterviewCounts] = useState([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -31,6 +33,9 @@ const App = () => {
           if (recruiterData.foto_perfil) {
             setProfileImage(recruiterData.foto_perfil);
           }
+          // Chama a função getInterviewCountByDate e armazena o resultado no estado
+          const counts = await getInterviewCountByDate(recruiterData.id);
+          setInterviewCounts(counts || []);
         } else {
           // Se o usuário não for recrutador, verificar se é candidato
           const { data: candidateData, error: candidateError } = await supabase
@@ -65,9 +70,9 @@ const App = () => {
         // Se o usuário for recrutador, buscar as vagas criadas por ele
         if (userType === 'recrutador') {
           query = supabase
-            .from('vagas') 
+            .from('vagas')
             .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao, recrutadores (nome), candidatos (nome)`)
-            .eq('id_recrutador', userId) 
+            .eq('id_recrutador', userId)
             .limit(5);
         } else {
           // Se o usuário for candidato, buscar as vagas em que ele se inscreveu
@@ -118,14 +123,14 @@ const App = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.top}>
         {profileImage ? (
-          <Image 
-            source={{ uri: profileImage }} 
+          <Image
+            source={{ uri: profileImage }}
             style={styles.profileImage}
           />
         ) : (
-          <Image 
-            source={require('../../assets/perfil.png')} 
-            style={styles.profileImage} 
+          <Image
+            source={require('../../assets/perfil.png')}
+            style={styles.profileImage}
           />
         )}
         <View style={styles.textContainer}>
@@ -136,58 +141,29 @@ const App = () => {
         </View>
         <StatusBar style="auto" />
       </View>
-          
+
       <View style={styles.mid}>
-        <Text style={styles.text1}>
-          {userType === 'recrutador' ? 'Ofertas de Trabalho Disponíveis' : 'Entrevistas Oferecidas'}
+        <Text style={styles.textStyle}>
+          {userType === 'recrutador' ? 'Entrevistas Oferecidas' : 'Entrevistas Recebidas'}
         </Text>
         <Animatable.View animation="fadeIn" duration={1000}>
-          <LineChart
-            data={data}
-            width={350}
-            height={220}
-            yAxisLabel=""
-            chartConfig={{
-              backgroundColor: '#ffffff',
-              backgroundGradientFrom: '#ffffff',
-              backgroundGradientTo: '#ffffff',
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              style: {
-                borderRadius: 16,
-                borderColor: '#00008B',
-                borderWidth: 4,
-              },
-              propsForDots: {
-                r: '6',
-                strokeWidth: '2',
-                stroke: '#00008B',
-              },
-            }}
-            bezier
-            style={{
-              marginVertical: 8,
-              borderRadius: 24,
-              alignSelf: 'center',
-              borderColor: '#00008B',
-              borderWidth: 7,
-            }}
-          />
+        {userType === 'recrutador' && (
+                <InterviewCountChart data={interviewCounts} /> // Passando os dados de contagem para o gráfico
+            )}
         </Animatable.View>
       </View>
-      
+
       <Text style={styles.text1}>
-      {userType === 'recrutador' ? 'Vagas Criadas Recente ' : 'Últimas Inscrições'}
+        {userType === 'recrutador' ? 'Vagas Criadas Recente ' : 'Últimas Inscrições'}
       </Text>
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : jobOffers.length > 0 ? (
         jobOffers.map((job) => (
-          <Animatable.View 
-            key={job.id} 
-            style={styles.jobContainer} 
-            animation="bounceIn" 
+          <Animatable.View
+            key={job.id}
+            style={styles.jobContainer}
+            animation="bounceIn"
             duration={500}
           >
             <Text style={styles.jobTitle}>{job.titulo}</Text>
@@ -224,10 +200,12 @@ const styles = StyleSheet.create({
   top: {
     backgroundColor: '#ff8c00',
     height: 160,
-    width: '97%',
+    width: '100%',
     borderWidth: 2,
     borderColor: '#ff8c00',
-    borderRadius: 20,
+    borderRadius: 0,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 0,
@@ -251,7 +229,7 @@ const styles = StyleSheet.create({
     marginTop: 5
   },
   text1: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'left',
     color: 'black',
@@ -316,11 +294,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   text2: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'left',
     color: 'white',
     marginTop: 5
+  },
+  textStyle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'left',
+    color: 'black',
+    width: '100%',
+    marginLeft: '-40%',
   }
 });
 

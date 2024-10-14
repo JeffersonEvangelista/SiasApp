@@ -622,3 +622,20 @@ export const processAndSaveBugReport = async (userId, userType, description, ima
         return false; // Retornar false em caso de erro
     }
 };
+
+export const getInterviewCountByDate = async (recruiterId: string) => {
+    try {
+        const { data, error } = await supabase
+            .rpc('count_interviews_by_date', { recruiter_id: recruiterId });
+
+        if (error) {
+            throw error; // Lança um erro se houver
+        }
+
+        console.log('Contagem de solicitações de entrevista por data:', data);
+        return data; // Retorna os dados
+    } catch (error) {
+        console.error('Erro ao buscar contagem de entrevistas por data:', error);
+        return null; // Retorna null em caso de erro
+    }
+};
