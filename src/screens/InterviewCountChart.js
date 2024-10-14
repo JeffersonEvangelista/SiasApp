@@ -13,10 +13,6 @@ const InterviewCountChart = ({ data }) => {
         return <Text>Carregando dados...</Text>;
     }
 
-    if (data.length === 0) {
-        return <Text>Nenhuma solicitação de entrevista encontrada.</Text>;
-    }
-
     // Filtra os dados para o mês e ano atuais
     const filterDataByMonth = (data, date) => {
         const month = date.getMonth();
@@ -29,32 +25,51 @@ const InterviewCountChart = ({ data }) => {
 
     const filteredData = filterDataByMonth(data, currentDate);
 
-    // Agrupa os dados por dia, somando as ocorrências
+    // Agrupa os dados por data completa, somando as ocorrências
     const groupedData = filteredData.reduce((acc, item) => {
         const itemDate = new Date(item.data_criacao);
-        const day = itemDate.getUTCDate(); // Usa getUTCDate() para evitar problemas de fuso horário
-        acc[day] = (acc[day] || 0) + item.count; // Soma a quantidade de entrevistas no dia
+        // Use a data completa no formato YYYY-MM-DD
+        const dateKey = itemDate.toISOString().split('T')[0];
+
+        // Se a data não existir no objeto, inicialize com 0
+        if (!acc[dateKey]) {
+            acc[dateKey] = 0;
+        }
+
+        // Some a contagem de entrevistas para aquela data
+        acc[dateKey] += item.count; 
+
         return acc;
     }, {});
 
-    // Ordena os dias para que sejam exibidos em ordem
-    const uniqueDays = Object.keys(groupedData).sort((a, b) => a - b);
+    // Obtenha as chaves únicas e ordenadas
+    const uniqueDays = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
 
-    // Prepara os labels e os valores para o gráfico
+    // Prepare os dados do gráfico
     const chartData = {
-        labels: uniqueDays.map(day => day.toString()),
+        labels: uniqueDays,
         datasets: [{
             data: uniqueDays.map(day => groupedData[day]),
             color: () => `rgba(240, 122, 38, 1)`,
-            strokeWidth: 2,
+            strokeWidth: 1,
         }],
     };
 
-    // Função para mudar o mês ao deslizar
+    // Obter os valores únicos e ordenados para o eixo Y
+    const uniqueYValues = [...new Set(chartData.datasets[0].data)].sort((a, b) => a - b);
+
+    const [changingMonth, setChangingMonth] = useState(false);
+
     const changeMonth = (direction) => {
-        const newDate = new Date(currentDate);
-        newDate.setMonth(currentDate.getMonth() + direction);
-        setCurrentDate(newDate);
+        if (!changingMonth) {
+            setChangingMonth(true);
+            const newDate = new Date(currentDate);
+            newDate.setMonth(currentDate.getMonth() + direction);
+            setCurrentDate(newDate);
+            setTimeout(() => {
+                setChangingMonth(false);
+            }, 500); // tempo de espera para evitar mudanças rápidas
+        }
     };
 
     return (
@@ -66,10 +81,12 @@ const InterviewCountChart = ({ data }) => {
                 <PanGestureHandler
                     onGestureEvent={(event) => {
                         const { translationX } = event.nativeEvent;
-                        if (translationX > 50) {
-                            changeMonth(-1); // Mês anterior
-                        } else if (translationX < -50) {
-                            changeMonth(1); // Próximo mês
+                        if (Math.abs(translationX) > 50) {
+                            if (translationX > 0) {
+                                changeMonth(-1); // Mês anterior
+                            } else {
+                                changeMonth(1); // Próximo mês
+                            }
                         }
                     }}
                 >
@@ -83,16 +100,32 @@ const InterviewCountChart = ({ data }) => {
                                 backgroundGradientFrom: '#ffffff',
                                 backgroundGradientTo: '#ffffff',
                                 decimalPlaces: 0,
-                                color: (opacity = 1) => `rgba(240, 122, 38, ${opacity})`,
+                                yAxisInterval: 1,
+                                yAxisSuffix: '',
+                                yLabelsOffset: 10,
+                                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                                 labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
                                 style: {
                                     borderRadius: 16,
+                                },
+                                propsForLabels: {
+                                    labelStyle: { transform: [{ translateX: -10 }] },
+                                },
+                                propsForDots: {
+                                    r: "4",
+                                    strokeWidth: "2",
+                                    stroke: "#ffa726",
+                                },
+                                propsForBackgroundLines: {
+                                    strokeDasharray: "0", // remove linhas horizontais extras
                                 },
                             }}
                             style={{
                                 marginVertical: 8,
                                 borderRadius: 16,
                             }}
+                            yAxisLabel=""
+                            bezier
                         />
                         <Text style={{ position: 'absolute', left: '50%', top: '90%', transform: [{ translateX: -50 }] }}>Dias do Mês</Text>
                         <Text style={{ position: 'absolute', left: '1%', top: '20%', transform: [{ translateY: -50 }] }}>Contagem de Entrevistas</Text>
