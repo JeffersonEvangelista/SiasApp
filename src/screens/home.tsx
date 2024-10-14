@@ -24,6 +24,7 @@ const App = () => {
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [location, setLocation] = useState("");
   const [selectedJobId, setSelectedJobId] = useState(null);
+  const [candidateStatus, setCandidateStatus] = useState({});
 
 
   useEffect(() => {
@@ -156,7 +157,12 @@ const App = () => {
   const toggleExpand = (id) => {
     setExpandedJobs((prev) => ({ ...prev, [id]: !prev[id] }));
   };
-
+  const handleCandidateDecision = (candidateId, decision) => {
+    setCandidateStatus(prevState => ({
+      ...prevState,
+      [candidateId]: decision, // 'accepted' ou 'rejected'
+    }));
+  };
   // Funções de manipulação e renderização
   const openModal = (candidate: any, jobId: any) => {
     setSelectedCandidate(candidate);
@@ -201,39 +207,84 @@ const App = () => {
       const { id: userId } = await getUserNameAndId();
       const id_recrutador = userId;
       const id_candidato = selectedCandidate.candidatos.id;
-      const id_vaga = selectedCandidate.id_vaga; // Utilize a propriedade id_vaga do selectedCandidate
+      const id_vaga = selectedCandidate.id_vaga;
       const data_entrevista = date.toISOString().split('T')[0];
       const horario = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const local = location;
       const status = 'pendente';
 
-      const response = await supabase
+      // Verificar se já existe uma solicitação para este candidato e vaga
+      const existingRequestResponse = await supabase
         .from('solicitacoes_entrevista')
-        .insert([
-          {
-            id_recrutador,
-            id_candidato,
-            id_vaga,
-            data_entrevista,
-            horario,
-            local,
-            status,
-          },
-        ]);
+        .select('*')
+        .eq('id_candidato', id_candidato)
+        .eq('id_vaga', id_vaga)
+        .single();
 
-      if (response.error) {
-        console.error('Erro ao salvar solicitação de entrevista:', response.error);
-        alert('Erro ao salvar solicitação de entrevista.');
+      if (existingRequestResponse.error) {
+        console.error('Erro ao buscar solicitação existente:', existingRequestResponse.error);
+        alert('Erro ao buscar solicitação existente.');
+        return;
+      }
+
+      if (existingRequestResponse.data) {
+        // Se a solicitação já existe, verificar o status
+        if (existingRequestResponse.data.status === 'pendente') {
+          // Atualizar a solicitação existente
+          const updateResponse = await supabase
+            .from('solicitacoes_entrevista')
+            .update({
+              data_entrevista,
+              horario,
+              local,
+              status,
+            })
+            .eq('id_candidato', id_candidato)
+            .eq('id_vaga', id_vaga);
+
+          if (updateResponse.error) {
+            console.error('Erro ao atualizar solicitação de entrevista:', updateResponse.error);
+            alert('Erro ao atualizar solicitação de entrevista.');
+          } else {
+            console.log('Solicitação de entrevista atualizada com sucesso!');
+            alert('Solicitação de entrevista atualizada com sucesso!');
+            closeModal();
+          }
+        } else {
+          // Se o status não é 'pendente', não permitir nova solicitação
+          alert('Não é possível enviar uma nova solicitação, pois já existe uma solicitação com status diferente de "pendente".');
+        }
       } else {
-        console.log('Solicitação de entrevista salva com sucesso!');
-        alert('Solicitação de entrevista salva com sucesso!');
-        closeModal();
+        // Caso não exista uma solicitação, criar uma nova
+        const insertResponse = await supabase
+          .from('solicitacoes_entrevista')
+          .insert([
+            {
+              id_recrutador,
+              id_candidato,
+              id_vaga,
+              data_entrevista,
+              horario,
+              local,
+              status,
+            },
+          ]);
+
+        if (insertResponse.error) {
+          console.error('Erro ao salvar solicitação de entrevista:', insertResponse.error);
+          alert('Erro ao salvar solicitação de entrevista.');
+        } else {
+          console.log('Solicitação de entrevista salva com sucesso!');
+          alert('Solicitação de entrevista salva com sucesso!');
+          closeModal();
+        }
       }
     } catch (error) {
       console.error('Erro ao salvar solicitação de entrevista:', error);
       alert('Erro ao salvar solicitação de entrevista.');
     }
   };
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -263,6 +314,7 @@ const App = () => {
         {userType === 'recrutador' ? 'Vagas Criadas Recentes' : 'Últimas Inscrições'}
       </Text>
 
+      
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : jobOffers.length > 0 ? (
@@ -280,24 +332,36 @@ const App = () => {
 
             {expandedJobs[job.id] && (
               candidates.length > 0 ? (
-                candidates.map(candidate => (
-                  <View key={candidate.id} style={styles.candidateContainer}>
-                    <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
-                      <View style={styles.candidateDetails}>
-                        {candidate.candidatos.foto_perfil ? (
-                          <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
-                        ) : (
-                          <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                        )}
-                        <View style={styles.infoContainer}>
-                          <Text style={styles.name}>{candidate.candidatos.nome}</Text>
-                          <Text style={styles.email}>{candidate.candidatos.email}</Text>
-                          <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                [...new Map(candidates.map(candidate => [candidate.candidatos.id, candidate])).values()]
+                  .map(candidate => (
+                    <View key={candidate.id} style={styles.candidateContainer}>
+                      <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
+                        <View style={styles.candidateDetails}>
+                          {candidate.candidatos.foto_perfil ? (
+                            <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
+                          ) : (
+                            <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                          )}
+                          <View style={styles.infoContainer}>
+                            <Text style={styles.name}>{candidate.candidatos.nome}</Text>
+                            <Text style={styles.email}>{candidate.candidatos.email}</Text>
+                            <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+
+                            {/* Aqui adicionamos a lógica para mostrar o status */}
+                            {candidate.status === 'aceito' && (
+                              <Text style={styles.statusText}>✔️ Aceito</Text> // Ícone ou texto para aceito
+                            )}
+                            {candidate.status === 'recusado' && (
+                              <Text style={styles.statusText}>❌ Recusado</Text> // Ícone ou texto para recusado
+                            )}
+                            {candidate.status === 'pendente' && (
+                              <Text style={styles.statusText}>⏳ Pendente</Text> // Ícone ou texto para pendente
+                            )}
+                          </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                ))
+                      </TouchableOpacity>
+                    </View>
+                  ))
               ) : (
                 <Text style={styles.noCandidatesText}>Nenhum candidato inscrito.</Text>
               )
@@ -305,8 +369,9 @@ const App = () => {
           </Animatable.View>
         ))
       ) : (
-        <Text style={styles.noJobsText}>Nenhuma vaga encontrada.</Text>
+        <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
       )}
+
 
       <View>
         {/* Modal para informações do candidato */}
