@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Button, } from 'react-native';
 import InterviewCountChart from './InterviewCountChart';
 import { getUserNameAndId, supabase, getInterviewCountByDate } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
-import { DraggableFlatList } from 'react-native-draggable-flatlist';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const App = () => {
   const [userData, setUserData] = useState({ nome: '', cnpj: null });
@@ -15,6 +16,16 @@ const App = () => {
   const [interviewCounts, setInterviewCounts] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [expandedJobs, setExpandedJobs] = useState({});
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
+  const [location, setLocation] = useState("");
+  const [selectedJobId, setSelectedJobId] = useState(null);
+
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -146,11 +157,89 @@ const App = () => {
     setExpandedJobs((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Funções de manipulação e renderização
+  const openModal = (candidate: any, jobId: any) => {
+    setSelectedCandidate(candidate);
+    setSelectedJobId(jobId);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedCandidate(null);
+    setDate(new Date());
+    setTime(new Date());
+  };
+
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
+  };
+
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
+  };
+
+  const handleConfirmDate = (selectedDate: any) => {
+    setDate(selectedDate);
+    hideDatePicker();
+  };
+
+  const showTimePicker = () => {
+    setTimePickerVisibility(true);
+  };
+
+  const hideTimePicker = () => {
+    setTimePickerVisibility(false);
+  };
+
+  const handleConfirmTime = (selectedTime: any) => {
+    setTime(selectedTime);
+    hideTimePicker();
+  };
+  const handleSave = async () => {
+    try {
+      const { id: userId } = await getUserNameAndId();
+      const id_recrutador = userId;
+      const id_candidato = selectedCandidate.candidatos.id;
+      const id_vaga = selectedCandidate.id_vaga; // Utilize a propriedade id_vaga do selectedCandidate
+      const data_entrevista = date.toISOString().split('T')[0];
+      const horario = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const local = location;
+      const status = 'pendente';
+
+      const response = await supabase
+        .from('solicitacoes_entrevista')
+        .insert([
+          {
+            id_recrutador,
+            id_candidato,
+            id_vaga,
+            data_entrevista,
+            horario,
+            local,
+            status,
+          },
+        ]);
+
+      if (response.error) {
+        console.error('Erro ao salvar solicitação de entrevista:', response.error);
+        alert('Erro ao salvar solicitação de entrevista.');
+      } else {
+        console.log('Solicitação de entrevista salva com sucesso!');
+        alert('Solicitação de entrevista salva com sucesso!');
+        closeModal();
+      }
+    } catch (error) {
+      console.error('Erro ao salvar solicitação de entrevista:', error);
+      alert('Erro ao salvar solicitação de entrevista.');
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.top}>
-        {profileImage ? (
-          <Image source={{ uri: profileImage }} style={styles.profileImage} />
+        {userData.profileImage ? (
+          <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
         ) : (
           <Image source={require('../../assets/perfil.png')} style={styles.profileImage} />
         )}
@@ -180,7 +269,7 @@ const App = () => {
         jobOffers.map((job, index) => (
           <Animatable.View
             key={job.id}
-            style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]} // Alterna entre azul e laranja
+            style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
             animation="bounceIn"
             duration={500}
           >
@@ -193,31 +282,116 @@ const App = () => {
               candidates.length > 0 ? (
                 candidates.map(candidate => (
                   <View key={candidate.id} style={styles.candidateContainer}>
-                    <View style={styles.candidateDetails}>
-                      {candidate.candidatos.foto_perfil ? (
-                        <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
-                      ) : (
-                        <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                      )}
-                      <View style={styles.infoContainer}>
-                        <Text style={styles.name}>{candidate.candidatos.nome}</Text>
-                        <Text style={styles.email}>{candidate.candidatos.email}</Text>
-                        <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                    <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
+                      <View style={styles.candidateDetails}>
+                        {candidate.candidatos.foto_perfil ? (
+                          <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
+                        ) : (
+                          <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                        )}
+                        <View style={styles.infoContainer}>
+                          <Text style={styles.name}>{candidate.candidatos.nome}</Text>
+                          <Text style={styles.email}>{candidate.candidatos.email}</Text>
+                          <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                        </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   </View>
                 ))
               ) : (
                 <Text style={styles.noCandidatesText}>Nenhum candidato inscrito.</Text>
               )
             )}
-
-
           </Animatable.View>
         ))
       ) : (
         <Text style={styles.noJobsText}>Nenhuma vaga encontrada.</Text>
       )}
+
+      <View>
+        {/* Modal para informações do candidato */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={closeModal}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              {selectedCandidate && (
+                <>
+                  <Text style={styles.modalTitle}>Detalhes do Candidato</Text>
+                  <Text style={styles.modalText}>
+                    <Text style={styles.modalLabel}>Nome: </Text>
+                    {selectedCandidate.candidatos.nome || 'Nome não disponível'}
+                  </Text>
+                  <Text style={styles.modalText}>
+                    <Text style={styles.modalLabel}>Email: </Text>
+                    {selectedCandidate.candidatos.email || 'Email não disponível'}
+                  </Text>
+
+                  <TextInput
+                    style={{ borderColor: '#FF8C00', borderWidth: 1, height: 40, padding: 10 }}
+                    placeholder="Digite o local"
+                    value={location}
+                    onChangeText={(text) => setLocation(text)}
+                    placeholderTextColor="#888"
+                    selectionColor="#000"
+                    underlineColorAndroid="transparent"
+                  />
+                  {/* Input para selecionar Data */}
+                  <TouchableOpacity onPress={showDatePicker} style={styles.inputContainer}>
+                    <TextInput
+                      style={[styles.input, { color: '#000' }]}
+                      value={date ? date.toLocaleDateString() : ''}
+                      placeholder="Selecionar Data"
+                      editable={false}
+                      placeholderTextColor="#000"
+                    />
+                    <Icon name="calendar" size={20} color="#FF8C00" style={styles.icon} />
+                  </TouchableOpacity>
+
+                  {/* Input para selecionar Hora */}
+                  <TouchableOpacity onPress={showTimePicker} style={styles.inputContainer}>
+                    <TextInput
+                      style={[styles.input, { color: '#000' }]}
+                      value={time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      placeholder="Selecionar Hora"
+                      editable={false}
+                      placeholderTextColor="#000"
+                    />
+                    <Icon name="clock-o" size={20} color="#FF8C00" style={styles.icon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.closeButton]} onPress={closeModal}>
+                    <Text style={styles.buttonText}>Fechar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
+                    <Text style={styles.buttonText}>Salvar</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Seletor de Data */}
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="date"
+          onConfirm={handleConfirmDate}
+          onCancel={hideDatePicker}
+          minimumDate={new Date()} // Restringe a seleção de datas passadas
+        />
+
+        {/* Seletor de Hora */}
+        <DateTimePickerModal
+          isVisible={isTimePickerVisible}
+          mode="time"
+          onConfirm={handleConfirmTime}
+          onCancel={hideTimePicker}
+        />
+      </View>
+
     </ScrollView>
   );
 
@@ -390,6 +564,62 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     color: '#F07A26',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '90%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalText: {
+    fontSize: 16,
+    marginVertical: 5,
+  },
+  modalLabel: {
+    fontWeight: 'bold',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FF8C00',
+    borderRadius: 5,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff',
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+  },
+  icon: {
+    marginLeft: 10,
+  },
+  button: {
+    backgroundColor: '#FF8C00',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    backgroundColor: '#888',
   },
 });
 
