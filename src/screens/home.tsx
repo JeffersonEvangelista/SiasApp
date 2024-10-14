@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StatusBar, StyleSheet, Image, ActivityIndicator, ScrollView } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import { View, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import InterviewCountChart from './InterviewCountChart';
 import { getUserNameAndId, supabase, getInterviewCountByDate } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
-import InterviewCountChart from './InterviewCountChart';
+import { DraggableFlatList } from 'react-native-draggable-flatlist';
 
 const App = () => {
   const [userData, setUserData] = useState({ nome: '', cnpj: null });
@@ -13,7 +13,8 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [interviewCounts, setInterviewCounts] = useState([]);
-
+  const [candidates, setCandidates] = useState([]);
+  const [expandedJobs, setExpandedJobs] = useState({});
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -33,7 +34,6 @@ const App = () => {
           if (recruiterData.foto_perfil) {
             setProfileImage(recruiterData.foto_perfil);
           }
-          // Chama a função getInterviewCountByDate e armazena o resultado no estado
           const counts = await getInterviewCountByDate(recruiterData.id);
           setInterviewCounts(counts || []);
         } else {
@@ -53,8 +53,9 @@ const App = () => {
           }
         }
 
-        // Chama a função fetchJobOffers aqui para buscar as vagas
-        fetchJobOffers(userId);
+        // Chama as funções para buscar ofertas de trabalho e candidatos
+        await fetchJobOffers(userId);
+        await fetchCandidates(userId);
       } catch (error) {
         console.error('Erro ao buscar perfil:', error);
         setError('Erro ao buscar perfil.');
@@ -71,14 +72,14 @@ const App = () => {
         if (userType === 'recrutador') {
           query = supabase
             .from('vagas')
-            .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao, recrutadores (nome), candidatos (nome)`)
+            .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao, recrutadores (nome)`)
             .eq('id_recrutador', userId)
             .limit(5);
         } else {
           // Se o usuário for candidato, buscar as vagas em que ele se inscreveu
           query = supabase
-            .from('vagas')
-            .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao, recrutadores (nome), candidatos (nome)`)
+            .from('solicitacoes_entrevista')
+            .select(`id_vaga, vagas (id, titulo, descricao, localizacao, requisitos, salario, data_criacao)`)
             .eq('id_candidato', userId)
             .limit(5);
         }
@@ -95,83 +96,123 @@ const App = () => {
       }
     };
 
+    const fetchCandidates = async (userId) => {
+      try {
+        let query;
+
+        // Se o usuário for recrutador, buscar os candidatos inscritos nas vagas que ele criou
+        if (userType === 'recrutador') {
+          query = supabase
+            .from('solicitacoes_entrevista')
+            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (titulo, localizacao, salario)`)
+            .eq('id_recrutador', userId)
+            .limit(5);
+        } else {
+          // Se o usuário for candidato, buscar as vagas em que ele se inscreveu
+          query = supabase
+            .from('solicitacoes_entrevista')
+            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (titulo, localizacao, salario)`)
+            .eq('id_candidato', userId)
+            .limit(5);
+        }
+
+        const { data: candidatesData, error: candidatesError } = await query;
+
+        if (candidatesError) throw candidatesError;
+
+        console.log('Candidatos encontrados:', candidatesData);
+        setCandidates(candidatesData); // Atualiza o estado para armazenar os candidatos
+      } catch (error) {
+        console.error('Erro ao buscar candidatos:', error);
+        setError('Erro ao buscar candidatos.');
+      }
+    };
+
     fetchProfile();
-  }, [userType]); // Adicionando userType como dependência
-
-
-  const data = {
-    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'],
-    datasets: [
-      {
-        data: [1, 2, 3, 4, 5, 7, 9],
-      },
-    ],
-  };
+  }, [userType]);
 
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
         <Animatable.View animation="zoomIn" duration={1000} style={styles.loaderContent}>
-          <ActivityIndicator size="large" color="#00008B" />
+          <ActivityIndicator size="large" color="#F07A26" />
           <Text>Carregando...</Text>
         </Animatable.View>
       </View>
     );
   }
 
+  const toggleExpand = (id) => {
+    setExpandedJobs((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.top}>
         {profileImage ? (
-          <Image
-            source={{ uri: profileImage }}
-            style={styles.profileImage}
-          />
+          <Image source={{ uri: profileImage }} style={styles.profileImage} />
         ) : (
-          <Image
-            source={require('../../assets/perfil.png')}
-            style={styles.profileImage}
-          />
+          <Image source={require('../../assets/perfil.png')} style={styles.profileImage} />
         )}
         <View style={styles.textContainer}>
           <Text style={styles.text}>Olá,</Text>
-          {userData.nome && (
-            <Text style={styles.text2}>{userData.nome}</Text>
-          )}
+          {userData.nome && <Text style={styles.text2}>{userData.nome}</Text>}
         </View>
         <StatusBar style="auto" />
       </View>
 
       <View style={styles.mid}>
-        <Text style={styles.textStyle}>
-          {userType === 'recrutador' ? 'Entrevistas Oferecidas' : 'Entrevistas Recebidas'}
+        <Text style={styles.text1}>
+          {userType === 'recrutador' ? 'Ofertas de Trabalho Disponíveis' : 'Entrevistas Oferecidas'}
         </Text>
-        <Animatable.View animation="fadeIn" duration={1000}>
-        {userType === 'recrutador' && (
-                <InterviewCountChart data={interviewCounts} /> // Passando os dados de contagem para o gráfico
-            )}
+        <Animatable.View animation="fadeIn" duration={1000} style={styles.chartContainer}>
+          {userType === 'recrutador' && <InterviewCountChart data={interviewCounts} />}
         </Animatable.View>
       </View>
 
       <Text style={styles.text1}>
-        {userType === 'recrutador' ? 'Vagas Criadas Recente ' : 'Últimas Inscrições'}
+        {userType === 'recrutador' ? 'Vagas Criadas Recentes' : 'Últimas Inscrições'}
       </Text>
+
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : jobOffers.length > 0 ? (
-        jobOffers.map((job) => (
+        jobOffers.map((job, index) => (
           <Animatable.View
             key={job.id}
-            style={styles.jobContainer}
+            style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]} // Alterna entre azul e laranja
             animation="bounceIn"
             duration={500}
           >
-            <Text style={styles.jobTitle}>{job.titulo}</Text>
-            <Text style={styles.jobLocation}>📍 {job.localizacao}</Text>
-            <Text style={styles.jobSalary}>💰 {job.salario}</Text>
-            <Text style={styles.jobRequirements}>📋 {job.requisitos}</Text>
-            <Text style={styles.jobDescription}>📄 {job.descricao}</Text>
-            <Text style={styles.jobDate}>🗓️ {new Date(job.data_criacao).toLocaleDateString()}</Text>
+            <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
+              <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+              <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
+            </TouchableOpacity>
+
+            {expandedJobs[job.id] && (
+              candidates.length > 0 ? (
+                candidates.map(candidate => (
+                  <View key={candidate.id} style={styles.candidateContainer}>
+                    <View style={styles.candidateDetails}>
+                      {candidate.candidatos.foto_perfil ? (
+                        <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
+                      ) : (
+                        <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                      )}
+                      <View style={styles.infoContainer}>
+                        <Text style={styles.name}>{candidate.candidatos.nome}</Text>
+                        <Text style={styles.email}>{candidate.candidatos.email}</Text>
+                        <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noCandidatesText}>Nenhum candidato inscrito.</Text>
+              )
+            )}
+
+
           </Animatable.View>
         ))
       ) : (
@@ -179,6 +220,7 @@ const App = () => {
       )}
     </ScrollView>
   );
+
 };
 
 const styles = StyleSheet.create({
@@ -187,6 +229,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'flex-start',
+  },
+  chartContainer: {
+    height: 300,
+    marginBottom: 8,
   },
   loaderContainer: {
     flex: 1,
@@ -229,10 +275,15 @@ const styles = StyleSheet.create({
     marginTop: 5
   },
   text1: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'left',
     color: 'black',
+  },
+  jobTitleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   mid: {
     justifyContent: 'center',
@@ -245,11 +296,13 @@ const styles = StyleSheet.create({
   },
   jobContainer: {
     width: '95%',
-    backgroundColor: '#f2f2f2',
+    borderBottomColor: '#ccc',
     borderRadius: 10,
     padding: 10,
     marginBottom: 10,
     elevation: 1,
+    marginTop: '4%',
+
   },
   jobTitle: {
     fontWeight: 'bold',
@@ -294,20 +347,50 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   text2: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'left',
     color: 'white',
     marginTop: 5
   },
-  textStyle: {
-    fontSize: 18,
+  candidateContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 15,
+    marginVertical: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  candidateDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  photo: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 10,
+  },
+  name: {
+    fontSize: 16,
     fontWeight: 'bold',
-    textAlign: 'left',
-    color: 'black',
-    width: '100%',
-    marginLeft: '-40%',
-  }
+  },
+  email: {
+    fontSize: 14,
+    color: '#555',
+  },
+  cpf: {
+    fontSize: 14,
+    color: '#555',
+  },
+  noCandidatesText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#F07A26',
+  },
 });
 
 export default App;
