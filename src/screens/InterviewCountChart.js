@@ -28,16 +28,13 @@ const InterviewCountChart = ({ data }) => {
     // Agrupa os dados por data completa, somando as ocorrências
     const groupedData = filteredData.reduce((acc, item) => {
         const itemDate = new Date(item.data_criacao);
-        // Use a data completa no formato YYYY-MM-DD
         const dateKey = itemDate.toISOString().split('T')[0];
 
-        // Se a data não existir no objeto, inicialize com 0
         if (!acc[dateKey]) {
             acc[dateKey] = 0;
         }
 
-        // Some a contagem de entrevistas para aquela data
-        acc[dateKey] += item.count; 
+        acc[dateKey] += item.count;
 
         return acc;
     }, {});
@@ -45,18 +42,18 @@ const InterviewCountChart = ({ data }) => {
     // Obtenha as chaves únicas e ordenadas
     const uniqueDays = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
 
-    // Prepare os dados do gráfico
+    // Crie um array para armazenar as contagens
+    const countsArray = uniqueDays.map(date => groupedData[date] || 0);
+
+    // Prepare os dados do gráfico usando o array de contagens
     const chartData = {
         labels: uniqueDays,
         datasets: [{
-            data: uniqueDays.map(day => groupedData[day]),
+            data: countsArray, // Use o array de contagens aqui
             color: () => `rgba(240, 122, 38, 1)`,
             strokeWidth: 1,
         }],
     };
-
-    // Obter os valores únicos e ordenados para o eixo Y
-    const uniqueYValues = [...new Set(chartData.datasets[0].data)].sort((a, b) => a - b);
 
     const [changingMonth, setChangingMonth] = useState(false);
 
@@ -68,7 +65,7 @@ const InterviewCountChart = ({ data }) => {
             setCurrentDate(newDate);
             setTimeout(() => {
                 setChangingMonth(false);
-            }, 500); // tempo de espera para evitar mudanças rápidas
+            }, 500);
         }
     };
 
@@ -100,9 +97,10 @@ const InterviewCountChart = ({ data }) => {
                                 backgroundGradientFrom: '#ffffff',
                                 backgroundGradientTo: '#ffffff',
                                 decimalPlaces: 0,
-                                yAxisInterval: 1,
-                                yAxisSuffix: '',
-                                yLabelsOffset: 10,
+                                yAxisLabel: '', // Remover o rótulo do eixo Y
+                                yAxisSuffix: '', // Remover o sufixo do eixo Y
+                                yAxisInterval: null, // Remover os intervalos do eixo Y
+                                formatYLabel: () => '', // Remover os valores do eixo Y
                                 color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                                 labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
                                 style: {
@@ -117,18 +115,28 @@ const InterviewCountChart = ({ data }) => {
                                     stroke: "#ffa726",
                                 },
                                 propsForBackgroundLines: {
-                                    strokeDasharray: "0", // remove linhas horizontais extras
+                                    strokeDasharray: "5,5", // Linhas horizontais pontilhadas
+                                    stroke: "#ccc", // Cor das linhas horizontais
                                 },
+                                // Esta parte garante que o eixo Y não seja visível
+                                withVerticalLines: false, // Para não mostrar linhas verticais
+                                withHorizontalLines: false, // Para não mostrar linhas horizontais
+                                // Remover linhas do eixo Y
+                                fromZero: true, // Começar do zero no eixo Y
+                                // Para garantir que o gráfico não mostre valores no eixo Y
+                                hideYAxis: true,
+                                hideLegend: true, // Se você não quiser a legenda do gráfico
                             }}
                             style={{
                                 marginVertical: 8,
                                 borderRadius: 16,
                             }}
-                            yAxisLabel=""
                             bezier
+                            hidePointsAtIndex={[]} // Remover as legendas dos valores do lado esquerdo
                         />
-                        <Text style={{ position: 'absolute', left: '50%', top: '90%', transform: [{ translateX: -50 }] }}>Dias do Mês</Text>
-                        <Text style={{ position: 'absolute', left: '1%', top: '20%', transform: [{ translateY: -50 }] }}>Contagem de Entrevistas</Text>
+                        <Text style={{ position: 'absolute', top: 10, left: 10, fontSize: 12 }}>
+                            {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        </Text>
                     </View>
                 </PanGestureHandler>
             </View>

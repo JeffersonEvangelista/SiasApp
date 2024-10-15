@@ -27,6 +27,7 @@ const App = () => {
   const [candidateStatus, setCandidateStatus] = useState({});
 
 
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -108,6 +109,7 @@ const App = () => {
       }
     };
 
+
     const fetchCandidates = async (userId) => {
       try {
         let query;
@@ -116,14 +118,14 @@ const App = () => {
         if (userType === 'recrutador') {
           query = supabase
             .from('solicitacoes_entrevista')
-            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (titulo, localizacao, salario)`)
+            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario)`)
             .eq('id_recrutador', userId)
             .limit(5);
         } else {
           // Se o usuário for candidato, buscar as vagas em que ele se inscreveu
           query = supabase
             .from('solicitacoes_entrevista')
-            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (titulo, localizacao, salario)`)
+            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario)`)
             .eq('id_candidato', userId)
             .limit(5);
         }
@@ -140,6 +142,7 @@ const App = () => {
       }
     };
 
+
     fetchProfile();
   }, [userType]);
 
@@ -154,27 +157,28 @@ const App = () => {
     );
   }
 
-  const toggleExpand = (id) => {
-    setExpandedJobs((prev) => ({ ...prev, [id]: !prev[id] }));
+  // Função para selecionar a vaga e alternar a expansão
+  const handleJobSelect = (jobId) => {
+    setSelectedJobId(jobId);
+    toggleExpand(jobId);
+    console.log('ID da vaga selecionada:', jobId);
   };
-  const handleCandidateDecision = (candidateId, decision) => {
-    setCandidateStatus(prevState => ({
+
+  // Função para alternar a expansão das vagas
+  const toggleExpand = (jobId) => {
+    setExpandedJobs(prevState => ({
       ...prevState,
-      [candidateId]: decision, // 'accepted' ou 'rejected'
+      [jobId]: !prevState[jobId], // Alterna entre verdadeiro e falso
     }));
   };
-  // Funções de manipulação e renderização
-  const openModal = (candidate: any, jobId: any) => {
-    setSelectedCandidate(candidate);
-    setSelectedJobId(jobId);
-    setModalVisible(true);
-  };
+
 
   const closeModal = () => {
     setModalVisible(false);
     setSelectedCandidate(null);
-    setDate(new Date());
-    setTime(new Date());
+    setLocation('');
+    setDate(null);
+    setTime(null);
   };
 
   const showDatePicker = () => {
@@ -185,8 +189,8 @@ const App = () => {
     setDatePickerVisibility(false);
   };
 
-  const handleConfirmDate = (selectedDate: any) => {
-    setDate(selectedDate);
+  const handleConfirmDate = (date) => {
+    setDate(date);
     hideDatePicker();
   };
 
@@ -198,28 +202,51 @@ const App = () => {
     setTimePickerVisibility(false);
   };
 
-  const handleConfirmTime = (selectedTime: any) => {
-    setTime(selectedTime);
+  const handleConfirmTime = (time) => {
+    setTime(time);
     hideTimePicker();
   };
+
+  const openModal = (candidate, jobId) => {
+    setSelectedCandidate(candidate);
+    setSelectedJobId(jobId);
+    setModalVisible(true);
+  };
+
   const handleSave = async () => {
     try {
       const { id: userId } = await getUserNameAndId();
       const id_recrutador = userId;
+
+      // Logs para depuração
+      console.log('Candidato selecionado:', selectedCandidate);
+      console.log('Candidatos:', selectedCandidate ? selectedCandidate.candidatos : null);
+      console.log('ID da vaga:', selectedJobId);
+
+      // Verifica se selectedCandidate e informações relevantes estão definidos
+      if (!selectedCandidate || !selectedCandidate.candidatos || !selectedJobId) {
+        alert('Selecione um candidato e uma vaga válidos.');
+        return;
+      }
+
       const id_candidato = selectedCandidate.candidatos.id;
-      const id_vaga = selectedCandidate.id_vaga;
+      const id_vaga = selectedJobId;
       const data_entrevista = date.toISOString().split('T')[0];
       const horario = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const local = location;
       const status = 'pendente';
+
+      // Adicione logs para depuração
+      console.log('userId:', userId);
+      console.log('id_candidato:', id_candidato);
+      console.log('id_vaga:', id_vaga);
 
       // Verificar se já existe uma solicitação para este candidato e vaga
       const existingRequestResponse = await supabase
         .from('solicitacoes_entrevista')
         .select('*')
         .eq('id_candidato', id_candidato)
-        .eq('id_vaga', id_vaga)
-        .single();
+        .eq('id_vaga', id_vaga);
 
       if (existingRequestResponse.error) {
         console.error('Erro ao buscar solicitação existente:', existingRequestResponse.error);
@@ -227,9 +254,10 @@ const App = () => {
         return;
       }
 
-      if (existingRequestResponse.data) {
+      if (existingRequestResponse.data && existingRequestResponse.data.length > 0) {
         // Se a solicitação já existe, verificar o status
-        if (existingRequestResponse.data.status === 'pendente') {
+        const existingRequest = existingRequestResponse.data[0];
+        if (existingRequest.status === 'pendente') {
           // Atualizar a solicitação existente
           const updateResponse = await supabase
             .from('solicitacoes_entrevista')
@@ -314,7 +342,7 @@ const App = () => {
         {userType === 'recrutador' ? 'Vagas Criadas Recentes' : 'Últimas Inscrições'}
       </Text>
 
-      
+
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : jobOffers.length > 0 ? (
