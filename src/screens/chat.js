@@ -74,7 +74,6 @@ export default function Chat() {
           </View>
             <View style={{flex: 1}}>
               <StatusBar style='light'/>
-              <ScrollView>
                 {
                   users.length>0? (
                     <ChatList currentUser={user} users={users} />
@@ -88,7 +87,6 @@ export default function Chat() {
                     </View>
                   )
                 }
-              </ScrollView>
             </View>
         </View>
     </SafeAreaView>
