@@ -118,14 +118,14 @@ const App = () => {
         if (userType === 'recrutador') {
           query = supabase
             .from('solicitacoes_entrevista')
-            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario)`)
+            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario),status`)
             .eq('id_recrutador', userId)
             .limit(5);
         } else {
           // Se o usuário for candidato, buscar as vagas em que ele se inscreveu
           query = supabase
             .from('solicitacoes_entrevista')
-            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario)`)
+            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario), status`)
             .eq('id_candidato', userId)
             .limit(5);
         }
@@ -371,22 +371,22 @@ const App = () => {
                             <Image source={require('../../assets/perfil.png')} style={styles.photo} />
                           )}
                           <View style={styles.infoContainer}>
+                            {/* Aqui adicionamos a lógica para mostrar o status */}
+                            {candidate.status === 'aceito' && (
+                              <Text style={styles.statusText}>✔️ Aceito</Text>
+                            )}
+                            {candidate.status === 'recusado' && (
+                              <Text style={styles.statusText}>❌ Recusado</Text>
+                            )}
+                            {candidate.status === 'pendente' && (
+                              <Text style={styles.statusText}>⏳ Pendente</Text>
+                            )}
                             <Text style={styles.name}>{candidate.candidatos.nome}</Text>
                             <Text style={styles.email}>{candidate.candidatos.email}</Text>
                             <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
-
-                            {/* Aqui adicionamos a lógica para mostrar o status */}
-                            {candidate.status === 'aceito' && (
-                              <Text style={styles.statusText}>✔️ Aceito</Text> // Ícone ou texto para aceito
-                            )}
-                            {candidate.status === 'recusado' && (
-                              <Text style={styles.statusText}>❌ Recusado</Text> // Ícone ou texto para recusado
-                            )}
-                            {candidate.status === 'pendente' && (
-                              <Text style={styles.statusText}>⏳ Pendente</Text> // Ícone ou texto para pendente
-                            )}
                           </View>
                         </View>
+
                       </TouchableOpacity>
                     </View>
                   ))
@@ -632,8 +632,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   candidateDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
   },
   photo: {
     width: 50,
@@ -641,17 +645,27 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginRight: 10,
   },
+  infoContainer: {
+    flex: 1, 
+  },
   name: {
     fontSize: 16,
     fontWeight: 'bold',
   },
   email: {
     fontSize: 14,
-    color: '#555',
+    color: '#666',
   },
   cpf: {
+    fontSize: 12,
+    color: '#666',
+  },
+  statusText: {
     fontSize: 14,
-    color: '#555',
+    fontWeight: 'bold',
+    position: 'absolute', 
+    right: '-5%', 
+    top: '-15%', 
   },
   noCandidatesText: {
     textAlign: 'center',
