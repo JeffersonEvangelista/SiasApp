@@ -59,17 +59,17 @@ export default function Chat() {
             paddingHorizontal:12,
             borderRadius:10,
             borderColor: "#ccc",
-            borderWidth: 1,
-            backgroundColor: '#fff',
+            borderWidth: 1
           }}>
-            <Ionicons name="search-outline" size={24} color="black" />
+            <Ionicons name="search-outline" size={24} color="#ff8c00" />
             <TextInput style={{
               width:"100%",
               height:"100%",
               marginHorizontal:12,
               fontSize: 18,
             }}
-            placeholder='Pesquisar'
+            placeholder='Pesquisar'            
+            placeholderTextColor={'#C0C0C0'}
             />
           </View>
             <View style={{flex: 1}}>

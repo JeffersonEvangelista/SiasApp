@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, sendEmailVerification, initializeAuth, updateEmail, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { collection, doc, getDoc, setDoc, getFirestore, Timestamp, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, getFirestore, Timestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRoomId } from '../utils/common';
 
@@ -74,6 +74,14 @@ export const UpdateUserProfileImg =  async (id:string, foto:string|null) => {
     };
 
     updateDoc(docRef, data)
+
+}
+
+export const DeleteUserDoc = async (id: string) => {
+
+  const docRef = doc(db, "users", id)
+
+  deleteDoc(docRef);
 
 }
 

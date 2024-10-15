@@ -5,7 +5,7 @@ import { supabase } from '../services/userService';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { getUserNameAndId } from '../services/userService';
-import { getCurrentUserData, logOutUser, UpdateUserProfileImg } from '../services/Firebase';
+import { DeleteUserDoc, getCurrentUserData, logOutUser, UpdateUserProfileImg } from '../services/Firebase';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../components/Header';
@@ -413,10 +413,10 @@ const Configuracoes: React.FC = () => {
         return; // Se a exclusão no Supabase falhar, não continuar.
       }
 
-      console.log('Usuário deletado no Supabase com sucesso!');
-
       // Agora tenta deletar o usuário no Firebase, somente se a deleção no Supabase foi bem-sucedida
-      await deleteUser(user);
+      await deleteUser(user);        
+      const userId = getCurrentUserData();
+      DeleteUserDoc(userId?.id!);
       console.log("Usuário deletado no Firebase com sucesso!");
 
       // Fecha o modal de senha e volta à tela inicial (ou navega para o login)

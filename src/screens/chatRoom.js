@@ -120,12 +120,13 @@ export default function ChatRoom({route, navigation}) {
               <MessagesList scrollViewRef={scrollViewRef} messages={messages} currentUser={user}/>
             </View>
               <View style={{flexDirection:'row', alignItems:'center', margin:10}}>
-                <View style={{flex: 1, flexDirection:"row", alignItems:"center", height:46, marginRight:10, paddingHorizontal:12, borderRadius:10, borderColor: "#ccc", borderWidth: 1, backgroundColor: '#fff'}}>
+                <View style={{flex: 1, flexDirection:"row", alignItems:"center", height:46, marginRight:10, paddingHorizontal:12, borderRadius:10, borderColor: "#ccc", borderWidth: 1}}>
                   <TextInput
                   ref={inputRef}
                   onChangeText={value=> textRef.current = value}
                   style={{fontSize: 18}}
                   placeholder='Digite sua mensagem'
+                  placeholderTextColor={'#C0C0C0'}
                   />
                 </View>
                 <TouchableOpacity 
