@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import ChatList from '../components/ChatList';
-import { ScrollView, TextInput, TouchableOpacity } from 'react-native-gesture-handler';
+import { TextInput, TouchableOpacity } from 'react-native-gesture-handler';
 import { getCurrentUserData, getCurrentUserEmail } from '../services/Firebase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
@@ -9,16 +9,15 @@ import { styles } from './Styles/styles';
 import { ActivityIndicator } from 'react-native-paper';
 import { query, where, getDocs } from 'firebase/firestore'
 import { usersRef } from '../services/Firebase'
-
 import { useColorScheme } from 'nativewind';
 
 export default function Chat() {
 
   const user = getCurrentUserData();
-
   const { colorScheme, toggleColorScheme } = useColorScheme(); // Dark Mode
-
   const [users, setUsers] = useState([]);
+  const [searchText, setSearchText] = useState(''); // Estado para o texto de busca
+
   useEffect(()=>{
     getUsers();
   }, [])
@@ -35,6 +34,10 @@ export default function Chat() {
     setUsers(data);
 
   }
+
+  const filteredUsers = users.filter((u) => 
+    u.username.toLowerCase().includes(searchText.toLowerCase())
+  );
 
   return (
     <SafeAreaView style={{flex: 1, ...(colorScheme === 'dark' ? { backgroundColor: '#1a1a1a' } : {})}}>
@@ -66,17 +69,19 @@ export default function Chat() {
               width:"100%",
               height:"100%",
               marginHorizontal:12,
-              fontSize: 18,
+              fontSize: 18
             }}
             placeholder='Pesquisar'            
             placeholderTextColor={'#C0C0C0'}
+            value={searchText} // Texto de busca
+            onChangeText={setSearchText} // Atualizando o estado ao digitar
             />
           </View>
             <View style={{flex: 1}}>
               <StatusBar style='light'/>
                 {
-                  users.length>0? (
-                    <ChatList currentUser={user} users={users} />
+                  filteredUsers.length>0? (
+                    <ChatList currentUser={user} users={filteredUsers} /> // Renderizando os usuários filtrados
                   ):(
                     <View style={{
                       flexDirection:"column",
