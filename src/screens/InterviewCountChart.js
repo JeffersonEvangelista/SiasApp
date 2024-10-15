@@ -1,61 +1,81 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const screenWidth = Dimensions.get('window').width;
 
 const InterviewCountChart = ({ data }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [viewMode, setViewMode] = useState('days'); // 'days' or 'months'
+    const [changingMonth, setChangingMonth] = useState(false);
 
     if (!data) {
         return <Text>Carregando dados...</Text>;
     }
 
-    // Filtra os dados para o mês e ano atuais
-    const filterDataByMonth = (data, date) => {
+    // Filtra os dados para o mês e ano atuais ou o ano atual, dependendo do modo de visualização
+    const filterData = (data, date, viewMode) => {
         const month = date.getMonth();
         const year = date.getFullYear();
+
         return data.filter(item => {
             const itemDate = new Date(item.data_criacao);
-            return itemDate.getMonth() === month && itemDate.getFullYear() === year;
+            if (viewMode === 'days') {
+                return itemDate.getMonth() === month && itemDate.getFullYear() === year;
+            } else {
+                return itemDate.getFullYear() === year;
+            }
         });
     };
 
-    const filteredData = filterDataByMonth(data, currentDate);
+    const filteredData = filterData(data, currentDate, viewMode);
 
-    // Agrupa os dados por data completa, somando as ocorrências
+    // Agrupa os dados por data (dia completo ou mês)
     const groupedData = filteredData.reduce((acc, item) => {
         const itemDate = new Date(item.data_criacao);
-        const dateKey = itemDate.toISOString().split('T')[0];
+        const dateKey = viewMode === 'days'
+            ? itemDate.toLocaleDateString('pt-BR') // Formato DD/MM/AAAA para o Brasil
+            : `${itemDate.getFullYear()}-${itemDate.getMonth() + 1}`; // Agrupa por mês
 
+        // Se a data não estiver no acumulador, inicialize com 0
         if (!acc[dateKey]) {
             acc[dateKey] = 0;
         }
 
-        acc[dateKey] += item.count;
-
+        // Verifique se o item.count está definido e some à contagem
+        if (item.count) {
+            acc[dateKey] += item.count; // Adiciona a contagem para o dia/mês
+        }
         return acc;
     }, {});
 
     // Obtenha as chaves únicas e ordenadas
-    const uniqueDays = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
+    const uniqueDaysOrMonths = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
 
     // Crie um array para armazenar as contagens
-    const countsArray = uniqueDays.map(date => groupedData[date] || 0);
+    const countsArray = uniqueDaysOrMonths.map(date => groupedData[date]);
 
-    // Prepare os dados do gráfico usando o array de contagens
+    // Prepare os dados do gráfico e formate as etiquetas de acordo com o modo de visualização
     const chartData = {
-        labels: uniqueDays,
+        labels: uniqueDaysOrMonths.map(date => {
+            if (viewMode === 'days') {
+                // Extrai apenas o número do dia para visualização por dias
+                const [day] = date.split('/');
+                return day;
+            } else {
+                // Mostra o mês/ano para visualização por meses
+                return date;
+            }
+        }),
         datasets: [{
-            data: countsArray, // Use o array de contagens aqui
+            data: countsArray,
             color: () => `rgba(240, 122, 38, 1)`,
             strokeWidth: 1,
         }],
     };
-
-    const [changingMonth, setChangingMonth] = useState(false);
 
     const changeMonth = (direction) => {
         if (!changingMonth) {
@@ -69,20 +89,54 @@ const InterviewCountChart = ({ data }) => {
         }
     };
 
+    const changeYear = (direction) => {
+        if (!changingMonth) {
+            setChangingMonth(true);
+            const newDate = new Date(currentDate);
+            newDate.setFullYear(currentDate.getFullYear() + direction);
+            setCurrentDate(newDate);
+            setTimeout(() => {
+                setChangingMonth(false);
+            }, 500);
+        }
+    };
+
     return (
         <GestureHandlerRootView>
-            <View>
-                <Text style={{ fontSize: 15, marginBottom: 10 }}>
-                    Solicitações de Entrevista - {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+            <View style={{ padding: 16 }}>
+                <Text style={{ fontSize: 16, marginBottom: 10, fontWeight: 'bold' }}>
+                    Solicitações de Entrevista - {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
                 </Text>
+                <TouchableOpacity
+                    style={{
+                        backgroundColor: '#F07A26',
+                        padding: 10,
+                        borderRadius: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 10,
+                    }}
+                    onPress={() => setViewMode(viewMode === 'days' ? 'months' : 'days')}
+                >
+                    <Icon
+                        name={viewMode === 'days' ? 'calendar-view-month' : 'calendar-today'}
+                        size={20}
+                        color="#fff"
+                        style={{ marginRight: 5 }}
+                    />
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                        Visualizar por {viewMode === 'days' ? 'meses' : 'dias'}
+                    </Text>
+                </TouchableOpacity>
                 <PanGestureHandler
                     onGestureEvent={(event) => {
                         const { translationX } = event.nativeEvent;
                         if (Math.abs(translationX) > 50) {
                             if (translationX > 0) {
-                                changeMonth(-1); // Mês anterior
+                                viewMode === 'days' ? changeMonth(-1) : changeYear(-1);
                             } else {
-                                changeMonth(1); // Próximo mês
+                                viewMode === 'days' ? changeMonth(1) : changeYear(1);
                             }
                         }
                     }}
@@ -90,18 +144,14 @@ const InterviewCountChart = ({ data }) => {
                     <View style={{ borderColor: '#1F1F3F', borderWidth: 5, borderRadius: 16, overflow: 'hidden' }}>
                         <LineChart
                             data={chartData}
-                            width={screenWidth - 16}
+                            width={screenWidth - 32}
                             height={220}
                             chartConfig={{
                                 backgroundColor: '#ffffff',
                                 backgroundGradientFrom: '#ffffff',
                                 backgroundGradientTo: '#ffffff',
                                 decimalPlaces: 0,
-                                yAxisLabel: '', // Remover o rótulo do eixo Y
-                                yAxisSuffix: '', // Remover o sufixo do eixo Y
-                                yAxisInterval: null, // Remover os intervalos do eixo Y
-                                formatYLabel: () => '', // Remover os valores do eixo Y
-                                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                                color: (opacity = 1) => `rgba(240, 122, 38, ${opacity})`,
                                 labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
                                 style: {
                                     borderRadius: 16,
@@ -115,28 +165,20 @@ const InterviewCountChart = ({ data }) => {
                                     stroke: "#ffa726",
                                 },
                                 propsForBackgroundLines: {
-                                    strokeDasharray: "5,5", // Linhas horizontais pontilhadas
-                                    stroke: "#ccc", // Cor das linhas horizontais
+                                    strokeDasharray: "5,5",
+                                    stroke: "#ccc",
                                 },
-                                // Esta parte garante que o eixo Y não seja visível
-                                withVerticalLines: false, // Para não mostrar linhas verticais
-                                withHorizontalLines: false, // Para não mostrar linhas horizontais
-                                // Remover linhas do eixo Y
-                                fromZero: true, // Começar do zero no eixo Y
-                                // Para garantir que o gráfico não mostre valores no eixo Y
-                                hideYAxis: true,
-                                hideLegend: true, // Se você não quiser a legenda do gráfico
+                                withVerticalLines: true,
+                                withHorizontalLines: true,
+                                fromZero: true,
+                                formatYLabel: (value) => `${value}`,
                             }}
                             style={{
                                 marginVertical: 8,
                                 borderRadius: 16,
                             }}
                             bezier
-                            hidePointsAtIndex={[]} // Remover as legendas dos valores do lado esquerdo
                         />
-                        <Text style={{ position: 'absolute', top: 10, left: 10, fontSize: 12 }}>
-                            {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                        </Text>
                     </View>
                 </PanGestureHandler>
             </View>

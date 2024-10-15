@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   chartContainer: {
-    height: 300,
+    height: 330,
     marginBottom: 8,
   },
   loaderContainer: {
