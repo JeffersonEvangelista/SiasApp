@@ -59,7 +59,7 @@
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-markdown-display": "^7.0.2",
-    "react-native-modal-datetime-picker": "^18.0.0",
+    "react-native-modal-datetime-picker": "^7.6.1",
     "react-native-navigation-bar-color": "^2.0.2",
     "react-native-paper": "^5.12.5",
     "react-native-reanimated": "^3.15.5",

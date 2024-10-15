@@ -77,14 +77,6 @@ export const UpdateUserProfileImg =  async (id:string, foto:string|null) => {
 
 }
 
-export const DeleteUserDoc = async (id: string) => {
-
-  const docRef = doc(db, "users", id)
-
-  deleteDoc(docRef);
-
-}
-
 // Função para obter os dados do usuário logado atualmente
 export const getCurrentUserData = () => {
     const user = auth.currentUser;
@@ -137,4 +129,10 @@ export const updateUserEmail = async (newEmail: string, password: string): Promi
     console.error('Erro ao atualizar o e-mail no Firebase:', error);
     return false;
   }
+};
+
+// Função para deletar documento do usuário
+export const deleteUserDocumentationInFirestore = async(userFirebaseId: string) => {
+  const userDoc = doc(db, "users", userFirebaseId);
+  await deleteDoc(userDoc);
 };

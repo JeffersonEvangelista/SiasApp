@@ -5,7 +5,7 @@ import { supabase } from '../services/userService';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { getUserNameAndId } from '../services/userService';
-import { DeleteUserDoc, getCurrentUserData, logOutUser, UpdateUserProfileImg } from '../services/Firebase';
+import { getCurrentUserData, logOutUser, UpdateUserProfileImg, deleteUserDocumentationInFirestore } from '../services/Firebase';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../components/Header';
@@ -112,7 +112,7 @@ const Configuracoes: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState(''); // Armazenar a senha atual
   const [newPassword, setNewPassword] = useState(''); // Armazenar a nova senha
 
-  const [actionType, setActionType] = useState<"updateEmail" | "deleteAccount" | null>(null); // Para lidar com estado da ação (Deletar Conta e Alterar Email)
+  const [actionType, setActionType] = useState<"updateEmail" | "deleteAccount">("updateEmail");
 
   const toggleNotificationsSwitch = async () => {
     try {
@@ -206,32 +206,46 @@ const Configuracoes: React.FC = () => {
     setModalVisible(false);
     setModalContent(''); // Limpa o conteúdo do modal ao fechar
   };
+
   const resolvePasswordRef = useRef<(password: string) => void>();
 
   // Função de abrir modal com ação específica
   const promptUserForPassword = (action: "updateEmail" | "deleteAccount"): Promise<string> => {
     return new Promise((resolve) => {
-      resolvePasswordRef.current = resolve; // Armazena a função resolve
-      setActionType(action); // Define qual ação será executada após a senha
-      setShowPasswordModal(true); // Exibe o modal
+      resolvePasswordRef.current = (password) => {
+        resolve(password); // Passa a senha quando o usuário submeter
+      };
+      setActionType(action); // Define a ação (neste caso 'deleteAccount')
+      setShowPasswordModal(true); // Abre o modal de senha
     });
   };
 
   // Função chamada ao submeter a senha
   const handlePasswordSubmit = async () => {
-    if (resolvePasswordRef.current) {
-      const password = passwordInput;
-      resolvePasswordRef.current(password); // Passa a senha para a Promise
-
-      if (actionType === "updateEmail") {
-        await handleUpdateProfile(); // Chama a função de atualização de perfil
-      } else if (actionType === "deleteAccount") {
-        await handleDeleteAccount(); // Chama a função de deletar conta
-      }
+    if (!passwordInput) {
+      Alert.alert("Erro", "A senha não pode estar vazia.");
+      return;
     }
-    setShowPasswordModal(false); // Fecha o modal
+
+    if (resolvePasswordRef.current) {
+      resolvePasswordRef.current(passwordInput); // Resolve a Promise com a senha
+      setPasswordInput(''); // Limpa o campo de senha
+      setShowPasswordModal(false); // Fecha o modal
+    }
+
+      // Processa a ação com base no actionType
+      if (actionType === "updateEmail") {
+        await handleUpdateProfile();
+      } else if (actionType === "deleteAccount") {
+        console.log("entrou no else if delete account")
+        await handleDeleteAccount(passwordInput);
+      } else {
+        console.error('ActionType está indefinido ou nulo!', actionType);
+      }
+
     setPasswordInput(''); // Limpa o campo de senha
-    setActionType(null); // Reseta a ação
+    setShowPasswordModal(false);
+    // setActionType(null); // Reseta o actionType após a submissão DEIXEI NULL DE PROPÓSITO
   };
 
   const handleChangePassword = async () => {
@@ -339,9 +353,10 @@ const Configuracoes: React.FC = () => {
         console.error('Erro ao atualizar dados no Supabase:', error);
         Alert.alert('Erro ao atualizar dados no Supabase.');
       } else {
-        Alert.alert('Dados atualizados com sucesso!');
+        Alert.alert('Dados atualizados com sucesso! Faça o login novamente!');
         loadUserData(); // Atualiza os dados do usuário
         setShowPasswordModal(false); // Fecha o modal, se estiver aberto
+        navigation.navigate('Auth', { screen: 'Login' });
       }
     } catch (error) {
       console.error('Erro ao salvar os dados:', error);
@@ -385,23 +400,19 @@ const Configuracoes: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = async (password: string) => {
     try {
       const user = auth.currentUser;
-
       if (!user) {
         Alert.alert('Você precisa estar logado para excluir sua conta.');
         return;
       }
 
-      // Solicita a senha agora para a ação 'deleteAccount'
-      const password = await promptUserForPassword("deleteAccount");
-
       // Reautentica o usuário com a senha fornecida
       const credential = EmailAuthProvider.credential(user.email, password);
       await reauthenticateWithCredential(user, credential);
 
-      // Primeiro tenta deletar o usuário no Supabase
+      // Exclui o usuário no Supabase
       const { error: supabaseError } = await supabase
         .from('candidatos')
         .delete()
@@ -410,24 +421,24 @@ const Configuracoes: React.FC = () => {
       if (supabaseError) {
         console.error('Erro ao deletar conta no Supabase:', supabaseError);
         Alert.alert('Erro ao deletar a conta no Supabase. Tente novamente mais tarde.');
-        return; // Se a exclusão no Supabase falhar, não continuar.
+        return;
       }
 
-      // Agora tenta deletar o usuário no Firebase, somente se a deleção no Supabase foi bem-sucedida
-      await deleteUser(user);        
-      const userId = getCurrentUserData();
-      DeleteUserDoc(userId?.id!);
-      console.log("Usuário deletado no Firebase com sucesso!");
+      // Exclui o usuário no Firebase
+      await deleteUser(user);
+      console.log('Usuário deletado com sucesso no firebase!');
 
-      // Fecha o modal de senha e volta à tela inicial (ou navega para o login)
-      setShowPasswordModal(false);
+      // Exclui o documento do respectivo usuário no Firestore
+      console.log('Deletando documento do usuário no Firestore...', user.uid);
+      await deleteUserDocumentationInFirestore(user.uid);
+      console.log('Documento do usuário deletado!')
+
       Alert.alert('Conta deletada com sucesso!');
-      closeModal();
       navigation.navigate('Auth', { screen: 'Login' });
 
     } catch (error) {
       console.error('Erro ao deletar conta:', error);
-      Alert.alert('Erro ao deletar a conta. Verifique sua senha e tente novamente.');
+      Alert.alert('Erro ao deletar a conta. Tente novamente.');
     }
   };
 
@@ -875,24 +886,7 @@ const Configuracoes: React.FC = () => {
                             </Text>
                         )}
 
-                      {/* Modal de confirmar senha */}
-                      <Modal visible={showPasswordModal} transparent={true} animationType="slide">
-                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                          <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10 }}>
-                            <Text>Digite sua senha para confirmar:</Text>
-                            <TextInput
-                              secureTextEntry
-                              style={{ borderWidth: 1, borderColor: 'gray', marginTop: 10, padding: 10 }}
-                              placeholder="Senha"
-                              value={passwordInput}
-                              onChangeText={setPasswordInput}
-                            />
-                            <TouchableOpacity onPress={handlePasswordSubmit} style={{ backgroundColor: '#ff8c00', padding: 10, marginTop: 10 }}>
-                              <Text style={{ color: 'white' }}>Confirmar</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </Modal>
+
 
                       {/* Botão Atualizar desabilitado se o e-mail não estiver verificado */}
                       <TouchableOpacity
@@ -1043,10 +1037,11 @@ const Configuracoes: React.FC = () => {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.exitButton}
-                        onPress={() => {
+                        onPress={async () => {
                           setActionType('deleteAccount'); // Define o actionType para deletar conta
-                          setShowPasswordModal(true); // Abre o modal de senha
-                        }} // Abre modal para digitar senha
+                          const password = await promptUserForPassword("deleteAccount"); // Chama prompt para a senha
+                          handleDeleteAccount(password); // Após obter a senha, chama a função de exclusão
+                        }}
                       >
                         <Text style={styles.buttonText}>Deletar</Text>
                       </TouchableOpacity>
@@ -1066,9 +1061,12 @@ const Configuracoes: React.FC = () => {
                 <TextInput
                   secureTextEntry
                   style={{ borderWidth: 1, borderColor: 'gray', marginTop: 10, padding: 10 }}
-                  placeholder="Senha"
+                  placeholder="Insira a Senha"
                   value={passwordInput}
-                  onChangeText={setPasswordInput}
+                  onChangeText={(text) => {
+                    console.log('Senha digitada:', text); // Log para verificar o valor digitado
+                    setPasswordInput(text);
+                  }}
                 />
                 <TouchableOpacity onPress={handlePasswordSubmit} style={{ backgroundColor: '#ff8c00', padding: 10, marginTop: 10 }}>
                   <Text style={{ color: 'white' }}>Confirmar</Text>
