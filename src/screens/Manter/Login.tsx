@@ -110,10 +110,10 @@ export default function Login() {
         navigation.navigate('Home'); 
       } catch (error) {
         console.error('Erro ao fazer login:', error.message);
-        setErrors({
-          ...errors,
-          error: 'Credenciais inválidas. Verifique seu e-mail e senha.'
-        });
+        setErrors({ 
+          senha: 'Credenciais inválidas. Verifique seu e-mail e senha',
+          email: 'Credenciais inválidas. Verifique seu e-mail e senha',
+        });        
       } finally {
         setLoading(false);
       }

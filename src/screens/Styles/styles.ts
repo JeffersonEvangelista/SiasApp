@@ -9,6 +9,8 @@ export const styles = StyleSheet.create({
     errorText: {
         color: 'red',
         fontSize: 12,
+        zIndex:2,
+    
     },
     container: {
         flex: 1,
@@ -80,7 +82,7 @@ export const styles = StyleSheet.create({
         marginTop: 20,
     },
     textInput: {
-        marginBottom: 16,
+        marginBottom: 6,
     },
     infoContainer: {
         flexDirection: 'row',
@@ -224,7 +226,7 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: -35,
+        marginTop: '1%',
     },
 
     checkboxContainer: {

@@ -334,7 +334,6 @@ const App = () => {
           {userType === 'recrutador' ? 'Ofertas de Trabalho Disponíveis' : 'Entrevistas Oferecidas'}
         </Text>
         <Animatable.View animation="fadeIn" duration={1000} style={styles.chartContainer}>
-          {userType === 'recrutador' && <InterviewCountChart data={interviewCounts} />}
         </Animatable.View>
       </View>
 
@@ -663,9 +662,9 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     fontWeight: 'bold',
-    position: 'absolute', 
-    right: '-5%', 
-    top: '-15%', 
+    position: 'absolute', // Permite posicionar o status no canto
+    right: 10, 
+    top: 10, 
   },
   noCandidatesText: {
     textAlign: 'center',
