@@ -313,181 +313,214 @@ const App = () => {
     }
   };
 
-
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.top}>
-        {userData.profileImage ? (
-          <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
-        ) : (
-          <Image source={require('../../assets/perfil.png')} style={styles.profileImage} />
-        )}
-        <View style={styles.textContainer}>
-          <Text style={styles.text}>Olá,</Text>
-          {userData.nome && <Text style={styles.text2}>{userData.nome}</Text>}
-        </View>
-        <StatusBar style="auto" />
-      </View>
-
-      <View style={styles.mid}>
-        <Text style={styles.text1}>
-          {userType === 'recrutador' ? 'Ofertas de Trabalho Disponíveis' : 'Entrevistas Oferecidas'}
-        </Text>
-        <Animatable.View animation="fadeIn" duration={1000} style={styles.chartContainer}>
-        </Animatable.View>
-      </View>
-
-      <Text style={styles.text1}>
-        {userType === 'recrutador' ? 'Vagas Criadas Recentes' : 'Últimas Inscrições'}
-      </Text>
-
-
-      {error ? (
-        <Text style={styles.errorText}>{error}</Text>
-      ) : jobOffers.length > 0 ? (
-        jobOffers.map((job, index) => (
-          <Animatable.View
-            key={job.id}
-            style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
-            animation="bounceIn"
-            duration={500}
-          >
-            <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
-              <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-              <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
-            </TouchableOpacity>
-
-            {expandedJobs[job.id] && (
-              candidates.length > 0 ? (
-                [...new Map(candidates.map(candidate => [candidate.candidatos.id, candidate])).values()]
-                  .map(candidate => (
-                    <View key={candidate.id} style={styles.candidateContainer}>
-                      <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
-                        <View style={styles.candidateDetails}>
-                          {candidate.candidatos.foto_perfil ? (
-                            <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
-                          ) : (
-                            <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                          )}
-                          <View style={styles.infoContainer}>
-                            {/* Aqui adicionamos a lógica para mostrar o status */}
-                            {candidate.status === 'aceito' && (
-                              <Text style={styles.statusText}>✔️ Aceito</Text>
-                            )}
-                            {candidate.status === 'recusado' && (
-                              <Text style={styles.statusText}>❌ Recusado</Text>
-                            )}
-                            {candidate.status === 'pendente' && (
-                              <Text style={styles.statusText}>⏳ Pendente</Text>
-                            )}
-                            <Text style={styles.name}>{candidate.candidatos.nome}</Text>
-                            <Text style={styles.email}>{candidate.candidatos.email}</Text>
-                            <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
-                          </View>
-                        </View>
-
-                      </TouchableOpacity>
-                    </View>
-                  ))
-              ) : (
-                <Text style={styles.noCandidatesText}>Nenhum candidato inscrito.</Text>
-              )
-            )}
-          </Animatable.View>
-        ))
-      ) : (
-        <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
-      )}
-
-
-      <View>
-        {/* Modal para informações do candidato */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={closeModal}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              {selectedCandidate && (
-                <>
-                  <Text style={styles.modalTitle}>Detalhes do Candidato</Text>
-                  <Text style={styles.modalText}>
-                    <Text style={styles.modalLabel}>Nome: </Text>
-                    {selectedCandidate.candidatos.nome || 'Nome não disponível'}
-                  </Text>
-                  <Text style={styles.modalText}>
-                    <Text style={styles.modalLabel}>Email: </Text>
-                    {selectedCandidate.candidatos.email || 'Email não disponível'}
-                  </Text>
-
-                  <TextInput
-                    style={{ borderColor: '#FF8C00', borderWidth: 1, height: 40, padding: 10 }}
-                    placeholder="Digite o local"
-                    value={location}
-                    onChangeText={(text) => setLocation(text)}
-                    placeholderTextColor="#888"
-                    selectionColor="#000"
-                    underlineColorAndroid="transparent"
-                  />
-                  {/* Input para selecionar Data */}
-                  <TouchableOpacity onPress={showDatePicker} style={styles.inputContainer}>
-                    <TextInput
-                      style={[styles.input, { color: '#000' }]}
-                      value={date ? date.toLocaleDateString() : ''}
-                      placeholder="Selecionar Data"
-                      editable={false}
-                      placeholderTextColor="#000"
-                    />
-                    <Icon name="calendar" size={20} color="#FF8C00" style={styles.icon} />
-                  </TouchableOpacity>
-
-                  {/* Input para selecionar Hora */}
-                  <TouchableOpacity onPress={showTimePicker} style={styles.inputContainer}>
-                    <TextInput
-                      style={[styles.input, { color: '#000' }]}
-                      value={time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                      placeholder="Selecionar Hora"
-                      editable={false}
-                      placeholderTextColor="#000"
-                    />
-                    <Icon name="clock-o" size={20} color="#FF8C00" style={styles.icon} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, styles.closeButton]} onPress={closeModal}>
-                    <Text style={styles.buttonText}>Fechar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
-                    <Text style={styles.buttonText}>Salvar</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
+  if (userType === 'recrutador') {
+    return (
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.top}>
+          {userData.profileImage ? (
+            <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
+          ) : (
+            <Image source={require('../../assets/perfil.png')} style={styles.profileImage} />
+          )}
+          <View style={styles.textContainer}>
+            <Text style={styles.text}>Olá,</Text>
+            {userData.nome && <Text style={styles.text2}>{userData.nome}</Text>}
           </View>
-        </Modal>
+          <StatusBar style="auto" />
+        </View>
 
-        {/* Seletor de Data */}
-        <DateTimePickerModal
-          isVisible={isDatePickerVisible}
-          mode="date"
-          onConfirm={handleConfirmDate}
-          onCancel={hideDatePicker}
-          minimumDate={new Date()} // Restringe a seleção de datas passadas
-        />
+        <View style={styles.mid}>
+          <Text style={styles.text1}>
+            Entrevistas Oferecidas
+          </Text>
+          <Animatable.View animation="fadeIn" duration={1000} style={styles.chartContainer}>
+            {/* Aqui você pode adicionar o conteúdo do gráfico */}
+          </Animatable.View>
+        </View>
 
-        {/* Seletor de Hora */}
-        <DateTimePickerModal
-          isVisible={isTimePickerVisible}
-          mode="time"
-          onConfirm={handleConfirmTime}
-          onCancel={hideTimePicker}
-        />
-      </View>
+        <Text style={styles.text1}>
+          Vagas Criadas Recentes
+        </Text>
 
-    </ScrollView>
-  );
 
-};
+        {error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : jobOffers.length > 0 ? (
+          jobOffers.map((job, index) => (
+            <Animatable.View
+              key={job.id}
+              style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
+              animation="bounceIn"
+              duration={500}
+            >
+              <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
+                <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
+              </TouchableOpacity>
+
+              {expandedJobs[job.id] && (
+                candidates.length > 0 ? (
+                  [...new Map(candidates.map(candidate => [candidate.candidatos.id, candidate])).values()]
+                    .map(candidate => (
+                      <View key={candidate.id} style={styles.candidateContainer}>
+                        <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
+                          <View style={styles.candidateDetails}>
+                            {candidate.candidatos.foto_perfil ? (
+                              <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
+                            ) : (
+                              <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                            )}
+                            <View style={styles.infoContainer}>
+                              {/* Aqui adicionamos a lógica para mostrar o status */}
+                              {candidate.status === 'aceito' && (
+                                <Text style={styles.statusText}>✔️ Aceito</Text>
+                              )}
+                              {candidate.status === 'recusado' && (
+                                <Text style={styles.statusText}>❌ Recusado</Text>
+                              )}
+                              {candidate.status === 'pendente' && (
+                                <Text style={styles.statusText}>⏳ Pendente</Text>
+                              )}
+                              <Text style={styles.name}>{candidate.candidatos.nome}</Text>
+                              <Text style={styles.email}>{candidate.candidatos.email}</Text>
+                              <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                            </View>
+                          </View>
+
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                ) : (
+                  <Text style={styles.noCandidatesText}>Nenhum candidato inscrito.</Text>
+                )
+              )}
+            </Animatable.View>
+          ))
+        ) : (
+          <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
+        )}
+
+
+        <View>
+          {/* Modal para informações do candidato */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={closeModal}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                {selectedCandidate && (
+                  <>
+                    <Text style={styles.modalTitle}>Detalhes do Candidato</Text>
+                    <Text style={styles.modalText}>
+                      <Text style={styles.modalLabel}>Nome: </Text>
+                      {selectedCandidate.candidatos.nome || 'Nome não disponível'}
+                    </Text>
+                    <Text style={styles.modalText}>
+                      <Text style={styles.modalLabel}>Email: </Text>
+                      {selectedCandidate.candidatos.email || 'Email não disponível'}
+                    </Text>
+
+                    <TextInput
+                      style={{ borderColor: '#FF8C00', borderWidth: 1, height: 40, padding: 10 }}
+                      placeholder="Digite o local"
+                      value={location}
+                      onChangeText={(text) => setLocation(text)}
+                      placeholderTextColor="#888"
+                      selectionColor="#000"
+                      underlineColorAndroid="transparent"
+                    />
+                    {/* Input para selecionar Data */}
+                    <TouchableOpacity onPress={showDatePicker} style={styles.inputContainer}>
+                      <TextInput
+                        style={[styles.input, { color: '#000' }]}
+                        value={date ? date.toLocaleDateString() : ''}
+                        placeholder="Selecionar Data"
+                        editable={false}
+                        placeholderTextColor="#000"
+                      />
+                      <Icon name="calendar" size={20} color="#FF8C00" style={styles.icon} />
+                    </TouchableOpacity>
+
+                    {/* Input para selecionar Hora */}
+                    <TouchableOpacity onPress={showTimePicker} style={styles.inputContainer}>
+                      <TextInput
+                        style={[styles.input, { color: '#000' }]}
+                        value={time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        placeholder="Selecionar Hora"
+                        editable={false}
+                        placeholderTextColor="#000"
+                      />
+                      <Icon name="clock-o" size={20} color="#FF8C00" style={styles.icon} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.closeButton]} onPress={closeModal}>
+                      <Text style={styles.buttonText}>Fechar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
+                      <Text style={styles.buttonText}>Salvar</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          </Modal>
+
+          {/* Seletor de Data */}
+          <DateTimePickerModal
+            isVisible={isDatePickerVisible}
+            mode="date"
+            onConfirm={handleConfirmDate}
+            onCancel={hideDatePicker}
+            minimumDate={new Date()} // Restringe a seleção de datas passadas
+          />
+
+          {/* Seletor de Hora */}
+          <DateTimePickerModal
+            isVisible={isTimePickerVisible}
+            mode="time"
+            onConfirm={handleConfirmTime}
+            onCancel={hideTimePicker}
+          />
+        </View>
+
+      </ScrollView>
+
+    );
+  } else {
+
+    return (
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.top}>
+          {userData.profileImage ? (
+            <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
+          ) : (
+            <Image source={require('../../assets/perfil.png')} style={styles.profileImage} />
+          )}
+          <View style={styles.textContainer}>
+            <Text style={styles.text}>Olá,</Text>
+            {userData.nome && <Text style={styles.text2}>{userData.nome}</Text>}
+          </View>
+          <StatusBar style="auto" />
+        </View>
+
+        <View style={styles.mid}>
+          <Text style={styles.text1}>
+            Quantidade de solicitacoes recebidas
+          </Text>
+          <Animatable.View animation="fadeIn" duration={1000} style={styles.chartContainer}>
+            {/* Aqui você pode adicionar o conteúdo do gráfico */}
+          </Animatable.View>
+        </View>
+
+        <Text style={styles.text1}>
+          Ultimas Inscrições
+        </Text>
+      </ScrollView>
+    );
+  };
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -631,8 +664,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   candidateDetails: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     padding: 10,
     borderBottomWidth: 1,
@@ -645,7 +678,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   infoContainer: {
-    flex: 1, 
+    flex: 1,
   },
   name: {
     fontSize: 16,
@@ -663,8 +696,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     position: 'absolute', // Permite posicionar o status no canto
-    right: 10, 
-    top: 10, 
+    right: 10,
+    top: 10,
   },
   noCandidatesText: {
     textAlign: 'center',
