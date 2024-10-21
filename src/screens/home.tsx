@@ -1,9 +1,9 @@
 // Importações do codigo 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions } from 'react-native';
+import { View, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions,Platform  } from 'react-native';
 import { getUserNameAndId, supabase, getInterviewCountByDate, getJobInscriptions } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LineChart } from 'react-native-chart-kit';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
@@ -23,8 +23,6 @@ const App = () => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [location, setLocation] = useState("");
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [candidateStatus, setCandidateStatus] = useState({});
@@ -37,6 +35,8 @@ const App = () => {
   const [changingMonth, setChangingMonth] = useState(false);
   const [userId, setUserId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
 
   //  Funções automáticas do código
   useEffect(() => {
@@ -329,7 +329,7 @@ const App = () => {
 
 
   //=========================================================  Funções do modal ======================================================= 
-  //  Função para fechar o modal
+  // Função para fechar o modal
   const closeModal = () => {
     setModalVisible(false);
     setSelectedCandidate(null);
@@ -348,30 +348,34 @@ const App = () => {
     setDatePickerVisibility(false);
   };
 
-  //  Função para selecionar a data
-  const handleConfirmDate = (date) => {
-    setDate(date);
+  // Função para selecionar a data
+  const handleConfirmDate = (event, selectedDate) => {
+    if (event.type === 'set') {
+      setDate(selectedDate);
+    }
     hideDatePicker();
   };
 
-  //  Função para selecionar a hora
+  // Função para selecionar a hora
   const showTimePicker = () => {
     setTimePickerVisibility(true);
   };
 
-  //  Função para fechar a hora
+  // Função para fechar a hora
   const hideTimePicker = () => {
     setTimePickerVisibility(false);
   };
 
-  //   Função para selecionar a hora
-  const handleConfirmTime = (time: any) => {
-    setTime(time);
+  // Função para selecionar a hora
+  const handleConfirmTime = (event, selectedTime) => {
+    if (event.type === 'set') {
+      setTime(selectedTime);
+    }
     hideTimePicker();
   };
 
-  // Função para abri o modal
-  const openModal = (candidate: any, jobId: any) => {
+  // Função para abrir o modal
+  const openModal = (candidate, jobId) => {
     setSelectedCandidate(candidate);
     setSelectedJobId(jobId);
     setModalVisible(true);
@@ -608,7 +612,7 @@ const App = () => {
                         editable={false}
                         placeholderTextColor="#000"
                       />
-                      <Icon name="calendar" size={20} color="#FF8C00" style={styles.icon} />
+                      <Icon name="event" size={20} color="#FF8C00" style={styles.icon} />
                     </TouchableOpacity>
 
                     {/* Input para selecionar Hora */}
@@ -620,7 +624,7 @@ const App = () => {
                         editable={false}
                         placeholderTextColor="#000"
                       />
-                      <Icon name="clock-o" size={20} color="#FF8C00" style={styles.icon} />
+                      <Icon name="access-time" size={20} color="#FF8C00" style={styles.icon} />
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.closeButton]} onPress={closeModal}>
                       <Text style={styles.buttonText}>Fechar</Text>
@@ -635,21 +639,25 @@ const App = () => {
           </Modal>
 
           {/* Seletor de Data */}
-          <DateTimePickerModal
-            isVisible={isDatePickerVisible}
-            mode="date"
-            onConfirm={handleConfirmDate}
-            onCancel={hideDatePicker}
-            minimumDate={new Date()} // Restringe a seleção de datas passadas
-          />
+          {isDatePickerVisible && (
+            <DateTimePicker
+              value={date || new Date()} // Usa a data atual se não houver data selecionada
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleConfirmDate}
+              minimumDate={new Date()} 
+            />
+          )}
 
           {/* Seletor de Hora */}
-          <DateTimePickerModal
-            isVisible={isTimePickerVisible}
-            mode="time"
-            onConfirm={handleConfirmTime}
-            onCancel={hideTimePicker}
-          />
+          {isTimePickerVisible && (
+            <DateTimePicker
+              value={time || new Date()}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleConfirmTime}
+            />
+          )}
         </View>
 
       </ScrollView>
