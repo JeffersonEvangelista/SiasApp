@@ -639,3 +639,29 @@ export const getInterviewCountByDate = async (recruiterId: string) => {
         return null; // Retorna null em caso de erro
     }
 };
+export const getJobInscriptions = async (userId:any) => {
+    try {
+        const { data, error } = await supabase
+            .from('inscricoes_vagas')
+            .select(`
+            *,
+            vagas (
+                titulo,
+                descricao,
+                localizacao,
+                requisitos,
+                salario
+            )
+        `)
+            .eq('id_candidato', userId);
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        return data;
+    } catch (err) {
+        console.error('Erro ao buscar inscrições:', err.message);
+        throw err;
+    }
+};
