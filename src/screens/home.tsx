@@ -9,6 +9,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
+import MapView, { Marker } from 'react-native-maps';
 
 const App = () => {
   //  Estados / Variáveis do código
@@ -48,7 +49,10 @@ const App = () => {
   const startDate = `${year}-01-01`;
   const endDate = `${year}-12-31`;
   const [showNoConnection, setShowNoConnection] = useState(false);
-
+  const [mapLocation, setMapLocation] = useState(null);
+  const [locationName, setLocationName] = useState('')
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   //  Funções automáticas do código
   useEffect(() => {
@@ -217,9 +221,9 @@ const App = () => {
         .lte('data_entrevista', endDate)
         .order('data_entrevista', { ascending: true });
 
-        console.log('Dados das entrevistas:', countsData);
-        console.log('Erro ao buscar entrevistas:', error);
-        
+      console.log('Dados das entrevistas:', countsData);
+      console.log('Erro ao buscar entrevistas:', error);
+
       if (error) {
         throw new Error(error.message);
       }
@@ -444,41 +448,28 @@ const App = () => {
   };
 
 
-  // Função para abrir o calendário 
-  const showDatePicker = () => {
-    setDatePickerVisibility(true);
+  // Função para exibir o seletor de data
+  const onChangeDate = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    setShowDatePicker(false);
+    setDate(currentDate);
   };
 
-  // Função para fechar o calendário
-  const hideDatePicker = () => {
-    setDatePickerVisibility(false);
+  // Função para exibir o seletor de hora
+  const onChangeTime = (event, selectedTime) => {
+    const currentTime = selectedTime || time;
+    setShowTimePicker(false);
+    setTime(currentTime);
   };
 
-  // Função para selecionar a data
-  const handleConfirmDate = (event, selectedDate) => {
-    if (event.type === 'set') {
-      setDate(selectedDate);
-    }
-    hideDatePicker();
+  const showDatePickerDialog = () => {
+    setShowDatePicker(true);
   };
 
-  // Função para selecionar a hora
-  const showTimePicker = () => {
-    setTimePickerVisibility(true);
+  const showTimePickerDialog = () => {
+    setShowTimePicker(true);
   };
 
-  // Função para fechar a hora
-  const hideTimePicker = () => {
-    setTimePickerVisibility(false);
-  };
-
-  // Função para selecionar a hora
-  const handleConfirmTime = (event, selectedTime) => {
-    if (event.type === 'set') {
-      setTime(selectedTime);
-    }
-    hideTimePicker();
-  };
 
   // Função para abrir o modal
   const openModal = async (candidate, jobId) => {
@@ -513,8 +504,80 @@ const App = () => {
       alert('Erro ao buscar informações da entrevista.');
     }
   };
+  // Função para obter o nome do local a partir das coordenadas
+  const getLocationName = async (latitude, longitude) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'siasapp/1.0',
+          'Accept-Language': 'pt-BR'
+        },
+      });
 
+      if (!response.ok) {
+        throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
+      }
 
+      const data = await response.json();
+      setLocation(data.display_name); // Atualiza o campo de input com o nome do local
+      setLocationName(data.display_name); // Para o marcador no mapa
+    } catch (error) {
+      console.error('Erro ao obter o nome do local:', error);
+      setLocation('Local não encontrado');
+    }
+  };
+
+  // Função para obter coordenadas a partir do nome do local
+
+  const getCoordinatesFromLocationName = async (locationName) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'siasapp/1.0',
+          'Accept-Language': 'pt-BR',
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
+      }
+  
+      const data = await response.json();
+      if (data.length > 0) {
+        return {
+          latitude: parseFloat(data[0].lat),
+          longitude: parseFloat(data[0].lon),
+        };
+      }
+    } catch (error) {
+      console.error('Erro ao obter as coordenadas:', error);
+    }
+    return null; // Retorna nulo se não encontrar as coordenadas
+  };
+  
+
+  // Handle ao mudar texto no input
+  const handleInputChange = async (text) => {
+    setLocation(text);
+
+    const coords = await getCoordinatesFromLocationName(text);
+    if (coords) {
+      setMapLocation(coords); // Atualiza a localização do mapa com as coordenadas obtidas
+      setLocationName(text); // Atualiza o nome do local para o marcador
+    } else {
+      setMapLocation(null); // Limpa o marcador se o endereço não for encontrado
+    }
+  };
+
+  // Função para lidar com o toque no mapa
+  const handleMapPress = async (event) => {
+    const { coordinate } = event.nativeEvent;
+    setMapLocation(coordinate); // Atualiza a localização do mapa
+    await getLocationName(coordinate.latitude, coordinate.longitude);
+    // O nome do local já está atualizado na função getLocationName
+  };
 
   // Função para salvar as informações do modal no banco de dados 
   const handleSave = async () => {
@@ -617,6 +680,8 @@ const App = () => {
       alert('Erro ao salvar solicitação de entrevista.');
     }
   };
+
+  //=================================================================================================================================================== 
 
 
   // Funcao para recarregar a pagina
@@ -836,17 +901,42 @@ const App = () => {
                       {selectedCandidate.candidatos.email || 'Email não disponível'}
                     </Text>
 
+
+                    {/* Campo de input para digitar o local */}
                     <TextInput
                       style={{ borderColor: '#FF8C00', borderWidth: 1, height: 40, padding: 10 }}
                       placeholder="Digite o local"
                       value={location}
-                      onChangeText={(text) => setLocation(text)}
+                      onChangeText={handleInputChange}
                       placeholderTextColor="#888"
                       selectionColor="#000"
                       underlineColorAndroid="transparent"
                     />
+
+                    {/* Mapa para seleção do local */}
+                    <View style={{ height: 300 }}>
+                      <MapView
+                        style={{ flex: 1 }}
+                        initialRegion={{
+                          latitude: -23.5505,
+                          longitude: -46.6333,
+                          latitudeDelta: 0.0922,
+                          longitudeDelta: 0.0421,
+                        }}
+                        onPress={handleMapPress}
+                      >
+                        {mapLocation && (
+                          <Marker
+                            coordinate={mapLocation}
+                            title={locationName}
+                            description={locationName}
+                          />
+                        )}
+                      </MapView>
+                    </View>
+
                     {/* Input para selecionar Data */}
-                    <TouchableOpacity onPress={showDatePicker} style={styles.inputContainer}>
+                    <TouchableOpacity onPress={showDatePickerDialog} style={styles.inputContainer}>
                       <TextInput
                         style={[styles.input, { color: '#000' }]}
                         value={date ? date.toLocaleDateString() : ''}
@@ -858,7 +948,7 @@ const App = () => {
                     </TouchableOpacity>
 
                     {/* Input para selecionar Hora */}
-                    <TouchableOpacity onPress={showTimePicker} style={styles.inputContainer}>
+                    <TouchableOpacity onPress={showTimePickerDialog} style={styles.inputContainer}>
                       <TextInput
                         style={[styles.input, { color: '#000' }]}
                         value={time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -868,6 +958,33 @@ const App = () => {
                       />
                       <Icon name="access-time" size={20} color="#FF8C00" style={styles.icon} />
                     </TouchableOpacity>
+
+                    {/* Seletor de Data */}
+                    {showDatePicker && (
+                      <DateTimePicker
+                        testID="dateTimePicker"
+                        value={date}
+                        mode="date"
+                        is24Hour={true}
+                        display="default"
+                        onChange={onChangeDate}
+                        minimumDate={new Date()}
+                      />
+                    )}
+
+                    {/* Seletor de Hora */}
+                    {showTimePicker && (
+                      <DateTimePicker
+                        testID="timePicker"
+                        value={time}
+                        mode="time"
+                        is24Hour={true}
+                        display="default"
+                        onChange={onChangeTime}
+                      />
+                    )}
+
+
                     <TouchableOpacity style={[styles.button, styles.closeButton]} onPress={closeModal}>
                       <Text style={styles.buttonText}>Fechar</Text>
                     </TouchableOpacity>
@@ -879,29 +996,7 @@ const App = () => {
               </View>
             </View>
           </Modal>
-
-          {/* Seletor de Data */}
-          {isDatePickerVisible && (
-            <DateTimePicker
-              value={date || new Date()} // Usa a data atual se não houver data selecionada
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleConfirmDate}
-              minimumDate={new Date()}
-            />
-          )}
-
-          {/* Seletor de Hora */}
-          {isTimePickerVisible && (
-            <DateTimePicker
-              value={time || new Date()}
-              mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleConfirmTime}
-            />
-          )}
         </View>
-
       </ScrollView>
 
     );
@@ -1290,12 +1385,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#F07A26',
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
+
   modalContent: {
     backgroundColor: 'white',
     padding: 20,
@@ -1323,11 +1413,6 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     paddingHorizontal: 10,
     backgroundColor: '#fff',
-  },
-  input: {
-    flex: 1,
-    height: 40,
-    fontSize: 16,
   },
   icon: {
     marginLeft: 10,
@@ -1395,7 +1480,36 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginTop: 20,
   },
-
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+  },
+  input: {
+    height: 40,
+    padding: 10,
+    flex: 1,
+    minHeight: "5%",
+    fontSize: 16,
+    textAlignVertical: 'center',
+    paddingVertical: 0,
+    paddingHorizontal: 10,
+  },
+  mapContainer: {
+    height: 200,
+    width: '100%',
+    marginBottom: 10,
+  },
+  map: {
+    flex: 1,
+  },
 });
 
 export default App;

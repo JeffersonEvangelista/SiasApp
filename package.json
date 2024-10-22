@@ -59,6 +59,7 @@
     "react-native-image-picker": "^7.1.2",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-linear-gradient": "^2.8.3",
+    "react-native-maps": "^1.18.2",
     "react-native-markdown-display": "^7.0.2",
     "react-native-modal-datetime-picker": "^7.6.1",
     "react-native-navigation-bar-color": "^2.0.2",
