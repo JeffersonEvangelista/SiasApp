@@ -1,13 +1,14 @@
 // Importações do codigo 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions,Platform  } from 'react-native';
+import { View, Button, RefreshControl, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, Platform } from 'react-native';
 import { getUserNameAndId, supabase, getInterviewCountByDate, getJobInscriptions } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LineChart } from 'react-native-chart-kit';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
-
+import NetInfo from '@react-native-community/netinfo';
+import LottieView from 'lottie-react-native';
 
 const App = () => {
   //  Estados / Variáveis do código
@@ -37,152 +38,172 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+  const currentMonth = currentDate.getMonth() + 1;
+  const year = currentDate.getFullYear();
+  const startDate = `${year}-01-01`;
+  const endDate = `${year}-12-31`;
+  const [showNoConnection, setShowNoConnection] = useState(false);
 
   //  Funções automáticas do código
   useEffect(() => {
 
-    //  Função que carrega os dados do usuário
-    const fetchProfile = async () => {
-      try {
-        const { id: userId } = await getUserNameAndId();
-        console.log('User ID:', userId);
-        setUserId(userId);
-
-        // Verificar se o usuário é recrutador
-        const { data: recruiterData } = await supabase
-          .from('recrutadores')
-          .select('id, nome, cnpj, foto_perfil')
-          .eq('id', userId)
-          .single();
-
-        if (recruiterData) {
-          setUserData(recruiterData);
-          setUserType('recrutador');
-          if (recruiterData.foto_perfil) {
-            setProfileImage(recruiterData.foto_perfil);
-          }
-        } else {
-          const { data: candidateData } = await supabase
-            .from('candidatos')
-            .select('id, nome, foto_perfil')
-            .eq('id', userId)
-            .single();
-
-          if (candidateData) {
-            setUserData(candidateData);
-            setUserType('candidato');
-            if (candidateData.foto_perfil) {
-              setProfileImage(candidateData.foto_perfil);
-            }
-            await fetchInscriptions(candidateData.id);
-          }
-        }
-
-        await fetchJobOffers(userId);
-        await fetchCandidates(userId);
-
-        if (userType) {
-          await fetchInterviewCounts(userId);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar perfil:', error);
-        setError('Erro ao buscar perfil.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    //  Funções auxiliares para buscar vagas  e candidatos
-    const fetchJobOffers = async (userId) => {
-      try {
-        let query;
-        if (userType === 'recrutador') {
-          query = supabase
-            .from('vagas')
-            .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao, recrutadores (nome)`)
-            .eq('id_recrutador', userId)
-            .limit(5);
-        } else {
-          query = supabase
-            .from('solicitacoes_entrevista')
-            .select(`id_vaga, vagas (id, titulo, descricao, localizacao, requisitos, salario, data_criacao)`)
-            .eq('id_candidato', userId)
-            .limit(5);
-        }
-
-        const { data: jobsData } = await query;
-        console.log('Vagas encontradas:', jobsData);
-        setJobOffers(jobsData);
-      } catch (error) {
-        console.error('Erro ao buscar vagas:', error);
-        setError('Erro ao buscar vagas.');
-      }
-    };
-
-    //   Funções auxiliares para buscar candidatos
-    const fetchCandidates = async (userId) => {
-      try {
-        let query;
-        if (userType === 'recrutador') {
-          query = supabase
-            .from('solicitacoes_entrevista')
-            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario), status`)
-            .eq('id_recrutador', userId)
-            .limit(5);
-        } else {
-          query = supabase
-            .from('solicitacoes_entrevista')
-            .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario), status`)
-            .eq('id_candidato', userId)
-            .limit(5);
-        }
-
-        const { data: candidatesData } = await query;
-        console.log('Candidatos encontrados:', candidatesData);
-        setCandidates(candidatesData);
-      } catch (error) {
-        console.error('Erro ao buscar candidatos:', error);
-        setError('Erro ao buscar candidatos.');
-      }
-    };
-
-    //    Funções auxiliares para buscar Inscrições
-    const fetchInscriptions = async (candidateId) => {
-      try {
-        const inscriptions = await getJobInscriptions(candidateId);
-        setInscriptions(inscriptions);
-      } catch (err) {
-        setError('Erro ao carregar as inscrições: ' + err.message);
-      }
-    };
-
     fetchProfile();
   }, [userType, currentDate]);
 
-  // Função do capeta, não mexer por tudo que é mais sagrado
-  const fetchInterviewCounts = async (userId) => {
+  //  Função que carrega os dados do usuário
+  const fetchProfile = async () => {
     try {
-      setIsLoading(true); // Ativa o loader
+      const { id: userId } = await getUserNameAndId();
+      console.log('User ID:', userId);
+      setUserId(userId);
 
-      // Extrai o mês e o ano da data atual
-      const currentMonth = currentDate.getMonth() + 1;
-      const year = currentDate.getFullYear();
+      // Verificar se o usuário é recrutador
+      const { data: recruiterData } = await supabase
+        .from('recrutadores')
+        .select('id, nome, cnpj, foto_perfil')
+        .eq('id', userId)
+        .single();
 
-      // Define a data de início e fim com base no modo de visualização
-      let startDate, endDate;
-
-      if (viewMode === 'months') {
-        // Modo de meses: busca entrevistas de todos os meses do ano
-        startDate = `${year}-01-01`; // Início do ano
-        endDate = `${year}-12-31`; // Fim do ano
+      if (recruiterData) {
+        setUserData(recruiterData);
+        setUserType('recrutador');
+        if (recruiterData.foto_perfil) {
+          setProfileImage(recruiterData.foto_perfil);
+        }
       } else {
-        // Modo de dias: busca entrevistas apenas para o mês atual
-        const lastDayOfMonth = new Date(year, currentMonth, 0).getDate();
-        startDate = `${year}-${currentMonth.toString().padStart(2, '0')}-01`;
-        endDate = `${year}-${currentMonth.toString().padStart(2, '0')}-${lastDayOfMonth}`;
+        const { data: candidateData } = await supabase
+          .from('candidatos')
+          .select('id, nome, foto_perfil')
+          .eq('id', userId)
+          .single();
+
+        if (candidateData) {
+          setUserData(candidateData);
+          setUserType('candidato');
+          if (candidateData.foto_perfil) {
+            setProfileImage(candidateData.foto_perfil);
+          }
+          await fetchInscriptions(candidateData.id);
+        }
       }
 
-      // Realiza a consulta ao Supabase
+      await fetchJobOffers(userId);
+      await fetchCandidates(userId);
+
+      if (userType) {
+        await fetchInterviewCounts(userId);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar perfil:', error);
+      setError('Erro ao buscar perfil.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  //  Funções auxiliares para buscar vagas  e candidatos
+  const fetchJobOffers = async (userId: any) => {
+    try {
+      let query;
+      if (userType === 'recrutador') {
+        query = supabase
+          .from('vagas')
+          .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao, recrutadores (nome)`)
+          .eq('id_recrutador', userId)
+          .limit(5);
+      } else {
+        query = supabase
+          .from('solicitacoes_entrevista')
+          .select(`id_vaga, vagas (id, titulo, descricao, localizacao, requisitos, salario, data_criacao)`)
+          .eq('id_candidato', userId)
+          .limit(5);
+      }
+
+      const { data: jobsData } = await query;
+      console.log('Vagas encontradas:', jobsData);
+      setJobOffers(jobsData);
+    } catch (error) {
+      console.error('Erro ao buscar vagas:', error);
+      setError('Erro ao buscar vagas.');
+    }
+  };
+
+  //   Funções auxiliares para buscar candidatos
+  const fetchCandidates = async (userId: any) => {
+    try {
+      let query;
+      if (userType === 'recrutador') {
+        query = supabase
+          .from('solicitacoes_entrevista')
+          .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario), status`)
+          .eq('id_recrutador', userId)
+          .limit(5);
+      } else {
+        query = supabase
+          .from('solicitacoes_entrevista')
+          .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario), status`)
+          .eq('id_candidato', userId)
+          .limit(5);
+      }
+
+      const { data: candidatesData } = await query;
+      console.log('Candidatos encontrados:', candidatesData);
+      setCandidates(candidatesData);
+    } catch (error) {
+      console.error('Erro ao buscar candidatos:', error);
+      setError('Erro ao buscar candidatos.');
+    }
+  };
+
+  //    Funções auxiliares para buscar Inscrições
+  const fetchInscriptions = async (candidateId: any) => {
+    try {
+      const inscriptions = await getJobInscriptions(candidateId);
+      console.log('Inscrições carregadas:', inscriptions); // Log para verificar os dados
+      setInscriptions(inscriptions);
+    } catch (err) {
+      setError('Erro ao carregar as inscrições: ' + err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, [userType, currentDate]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchInscriptions(userId);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (!state.isConnected) {
+        setError('Sem conexão com a internet. Verifique sua conexão.');
+        setShowNoConnection(true);
+      } else {
+        setError(null);
+        setShowNoConnection(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // ======================================================= Funções do Gráfico, Alterações nessa parte representam risco de porrada =====================================================
+
+  // Função do capeta, não mexer por tudo que é mais sagrado
+  const fetchInterviewCounts = async (userId) => {
+    setIsLoading(true);
+
+    try {
+      //  Buscar as solicitações de entrevista sera usado para o candidato e RH viu 
+
       const { data: countsData, error } = await supabase
         .from('solicitacoes_entrevista')
         .select('data_entrevista')
@@ -192,83 +213,155 @@ const App = () => {
         .order('data_entrevista', { ascending: true });
 
       if (error) {
-        console.error('Erro na consulta ao Supabase:', error.message);
-        setError('Erro ao buscar contagens de entrevistas.');
-        return;
+        throw new Error(error.message);
       }
 
-      // Inicializa o objeto para armazenar as contagens
-      const countsByDate = {};
+      // Processar dados para ambos os modos
+      const countsByMonth = {};
+      const countsByDay = {};
 
-      if (countsData && countsData.length > 0) {
-        // Processa os dados de contagem de entrevistas e formata-os para exibição
-        countsData.forEach((interview) => {
-          const date = new Date(interview.data_entrevista);
-          const month = (date.getMonth() + 1).toString().padStart(2, '0');
-          const yearString = date.getFullYear();
+      countsData.forEach((interview) => {
+        const date = new Date(interview.data_entrevista);
+        const month = date.getMonth();
+        const day = date.getDate();
 
-          if (viewMode === 'days') {
-            // Agrupando por dia no formato DD-MM
-            const day = date.getDate().toString().padStart(2, '0');
-            const dayMonth = `${day}-${month}`;
-            countsByDate[dayMonth] = (countsByDate[dayMonth] || 0) + 1; // Incrementa a contagem por dia
-          } else {
-            // Agrupando por mês
-            const yearMonth = `${month}-${yearString}`;
-            countsByDate[yearMonth] = (countsByDate[yearMonth] || 0) + 1; // Incrementa a contagem por mês
-          }
-        });
-      }
+        // Agrupando por mês
+        countsByMonth[monthNames[month]] = (countsByMonth[monthNames[month]] || 0) + 1;
 
-      // Prepara os dados para o gráfico
-      const labels = Object.keys(countsByDate);
-      const dataCounts = Object.values(countsByDate);
+        // Agrupando por dia
+        if (month + 1 === currentMonth) {
+          countsByDay[day] = (countsByDay[day] || 0) + 1;
+        }
+      });
 
-      // Se não houver dados, inicializa o gráfico com zero, caso o modo seja 'months'
-      if (viewMode === 'months' && labels.length === 0) {
-        setChartData({
-          labels: [],
-          datasets: [
-            {
-              label: 'Contagem de Solicitações',
-              data: [0],
-              borderColor: '#008080',
-              backgroundColor: 'rgba(0, 128, 128, 0.2)',
-              borderWidth: 2,
-              fill: true,
-            },
-          ],
-        });
+      // Armazenar os dados em cache para  evitar requisições desnecessárias e uma puta demora na troca de modos
+
+      setInterviewCounts({ days: countsByDay, months: countsByMonth });
+
+      // Renderizar gráfico com base no modo atual
+      if (viewMode === 'months') {
+        renderMonthlyChart(countsByMonth);
       } else {
-        // Cria os dados do gráfico com os dias ou meses e suas contagens
-        setChartData({
-          labels: labels,
-          datasets: [
-            {
-              label: 'Contagem de Solicitações',
-              data: dataCounts,
-              borderColor: '#008080',
-              backgroundColor: 'rgba(0, 128, 128, 0.2)',
-              borderWidth: 2,
-              fill: true,
-            },
-          ],
-        });
+        renderDailyChart(countsByDay);
       }
+
     } catch (error) {
       console.error('Erro ao buscar contagens de entrevistas:', error);
       setError('Erro ao buscar contagens de entrevistas.');
     } finally {
-      setIsLoading(false); // Desativa o loader
+      setIsLoading(false);
     }
   };
 
-  // Função para alternar entre os modos de visualização
+  // Rederizacao do modo mensal, ocorreu a separacao dos modos para uma facil manuntencao
+  const renderMonthlyChart = (countsByMonth) => {
+    const labels = Object.keys(countsByMonth);
+    const dataCounts = Object.values(countsByMonth);
+
+    // Se não houver dados, inicializa o gráfico com zero
+    if (labels.length === 0) {
+      setChartData({
+        labels: [],
+        datasets: [
+          {
+            label: 'Contagem de Solicitações',
+            data: [0],
+            borderColor: '#008080',
+            backgroundColor: 'rgba(0, 128, 128, 0.2)',
+            borderWidth: 2,
+            fill: true,
+          },
+        ],
+      });
+    } else {
+      // Cria os dados do gráfico com os nomes dos meses e suas contagens
+      setChartData({
+        labels: labels,
+        datasets: [
+          {
+            label: 'Contagem de Solicitações',
+            data: dataCounts,
+            borderColor: '#008080',
+            backgroundColor: 'rgba(0, 128, 128, 0.2)',
+            borderWidth: 2,
+            fill: true,
+          },
+        ],
+      });
+    }
+  };
+
+  //  Rederizacao do modo diario, ocorreu a separacao dos modos para uma facil manuntencao 
+  const renderDailyChart = (countsByDay) => {
+    const labels = Object.keys(countsByDay);
+    const dataCounts = Object.values(countsByDay);
+
+    // Se não houver dados, inicializa o gráfico com zero
+    if (labels.length === 0) {
+      setChartData({
+        labels: [],
+        datasets: [
+          {
+            label: 'Contagem de Solicitações',
+            data: [0],
+            borderColor: '#008080',
+            backgroundColor: 'rgba(0, 128, 128, 0.2)',
+            borderWidth: 2,
+            fill: true,
+          },
+        ],
+      });
+    } else {
+      // Cria os dados do gráfico com os dias e suas contagens
+      setChartData({
+        labels: labels.map((day) => day.toString()), // Converte os dias para strings
+        datasets: [
+          {
+            label: 'Contagem de Solicitações',
+            data: dataCounts,
+            borderColor: '#008080',
+            backgroundColor: 'rgba(0, 128, 128, 0.2)',
+            borderWidth: 2,
+            fill: true,
+          },
+        ],
+      });
+    }
+  };
+
+  // Funcao para a mudanca os modos diarios e mensais
   const toggleViewMode = () => {
     const newViewMode = viewMode === 'days' ? 'months' : 'days';
     setViewMode(newViewMode);
-    fetchInterviewCounts(userId);
+
+    // Verifica se os dados já foram buscados para o novo modo
+    if (interviewCounts[newViewMode]) {
+      // Atualiza o gráfico com os dados já buscados
+      if (newViewMode === 'months') {
+        renderMonthlyChart(interviewCounts[newViewMode]);
+      } else {
+        renderDailyChart(interviewCounts[newViewMode]);
+      }
+    } else {
+      // Busca os dados novamente para o novo modo
+      fetchInterviewCounts(userId);
+    }
   };
+
+  //  Funcao para a evitar muitas requisicoes do banco de dados
+  const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        func(...args);
+      }, delay);
+    };
+  };
+
+  const toggleViewModeDebounced = debounce(toggleViewMode, 300);
 
   // Função para mudar o mês
   const changeMonth = (direction) => {
@@ -300,6 +393,9 @@ const App = () => {
     }
   };
 
+  // =======================================================================================================================================
+
+
   // Função para carregamento da pagina
   if (loading) {
     return (
@@ -311,6 +407,7 @@ const App = () => {
       </View>
     );
   }
+
 
   // Função para selecionar a vaga e alternar a expansão
   const handleJobSelect = (jobId) => {
@@ -483,6 +580,25 @@ const App = () => {
     }
   };
 
+
+  // Funcao para recarregar a pagina
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await fetchInterviewCounts(userId);
+      await fetchInscriptions(userId);
+      await fetchJobOffers(userId);
+      await fetchCandidates(userId);
+      await fetchProfile();
+    } catch (error) {
+      console.error('Erro ao atualizar dados:', error);
+      setError('Erro ao atualizar os dados.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
     return (
@@ -645,7 +761,7 @@ const App = () => {
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={handleConfirmDate}
-              minimumDate={new Date()} 
+              minimumDate={new Date()}
             />
           )}
 
@@ -666,7 +782,13 @@ const App = () => {
   } else {
     // Se o usario for do tipo Candidato 
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+
         {/* Topo da pagina com a foto de perfil carregando, talvez mexerei no tamanho dela de forma geral */}
         <View style={styles.top}>
           <Image
@@ -693,11 +815,7 @@ const App = () => {
                 </Text>
                 <TouchableOpacity
                   style={styles.toggleButton}
-                  onPress={() => {
-                    const newViewMode = viewMode === 'days' ? 'months' : 'days';
-                    setViewMode(newViewMode);
-                    fetchInterviewCounts(userId);
-                  }}
+                  onPress={toggleViewMode}
                 >
                   <Icon
                     name={viewMode === 'days' ? 'calendar-view-month' : 'calendar-today'}
@@ -819,6 +937,27 @@ const App = () => {
         ) : (
           <Text style={styles.noInscriptionText}>Nenhuma inscrição encontrada.</Text>
         )}
+        {/* Animação de Conexão (Modal) */}
+        <Modal transparent={true} visible={showNoConnection}>
+          <View style={styles.modalBackground}>
+            <LottieView
+              source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+              autoPlay
+              loop
+              style={styles.lottieAnimation}
+            />
+            <TouchableOpacity
+              style={styles.customButton}
+              onPress={() => {
+                setShowNoConnection(false);
+                // Você pode adicionar lógica aqui para tentar recarregar os dados
+                fetchInterviewCounts(userId); // Tenta recarregar os dados
+              }}
+            >
+              <Text style={styles.buttonText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
       </ScrollView>
     );
   }
@@ -880,6 +1019,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'left',
     color: 'black',
+    marginTop: '13%'
   },
   jobTitleContainer: {
     flexDirection: 'row',
@@ -1097,6 +1237,37 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+  },
+  chartWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 2.5,
+    borderColor: '#FFA726',
+    overflow: 'hidden',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 8,
+    textAlign: 'center',
+    paddingBottom: 4,
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  lottieAnimation: {
+    width: 200,
+    height: 200,
+  },
+  customButton: {
+    backgroundColor: '#ffa726',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 20,
   },
 
 });
