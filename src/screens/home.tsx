@@ -49,6 +49,7 @@ const App = () => {
   const endDate = `${year}-12-31`;
   const [showNoConnection, setShowNoConnection] = useState(false);
 
+
   //  Funções automáticas do código
   useEffect(() => {
 
@@ -203,6 +204,10 @@ const App = () => {
 
     try {
       //  Buscar as solicitações de entrevista sera usado para o candidato e RH viu 
+      console.log('userId:', userId);
+      console.log('userType:', userType);
+      console.log('startDate:', startDate);
+      console.log('endDate:', endDate);
 
       const { data: countsData, error } = await supabase
         .from('solicitacoes_entrevista')
@@ -212,6 +217,9 @@ const App = () => {
         .lte('data_entrevista', endDate)
         .order('data_entrevista', { ascending: true });
 
+        console.log('Dados das entrevistas:', countsData);
+        console.log('Erro ao buscar entrevistas:', error);
+        
       if (error) {
         throw new Error(error.message);
       }
@@ -435,6 +443,7 @@ const App = () => {
     setTime(null);
   };
 
+
   // Função para abrir o calendário 
   const showDatePicker = () => {
     setDatePickerVisibility(true);
@@ -472,11 +481,40 @@ const App = () => {
   };
 
   // Função para abrir o modal
-  const openModal = (candidate, jobId) => {
+  const openModal = async (candidate, jobId) => {
+    console.log('Candidato selecionado para o modal:', candidate);
+    console.log('ID da vaga:', jobId);
+
     setSelectedCandidate(candidate);
     setSelectedJobId(jobId);
-    setModalVisible(true);
+
+    try {
+      // Buscar a solicitação de entrevista existente para o candidato e a vaga
+      const { data: existingRequest, error } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('local')
+        .eq('id_candidato', candidate.candidatos.id)
+        .eq('id_vaga', jobId)
+        .single();
+
+      console.log('Dados da solicitação de entrevista:', existingRequest);
+      console.log('Erro ao buscar a solicitação de entrevista:', error);
+      if (error) {
+        console.error('Erro ao buscar solicitação de entrevista:', error);
+      } else if (existingRequest) {
+        setLocation(existingRequest.local);
+      } else {
+        setLocation('Endereço padrão');
+      }
+
+      setModalVisible(true);
+    } catch (err) {
+      console.error('Erro ao buscar informações da entrevista:', err);
+      alert('Erro ao buscar informações da entrevista.');
+    }
   };
+
+
 
   // Função para salvar as informações do modal no banco de dados 
   const handleSave = async () => {
@@ -602,13 +640,17 @@ const App = () => {
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.top}>
-          {userData.profileImage ? (
-            <Image source={{ uri: userData.profileImage }} style={styles.profileImage} />
-          ) : (
-            <Image source={require('../../assets/perfil.png')} style={styles.profileImage} />
-          )}
+          <Image
+            source={profileImage ? { uri: profileImage } : require('../../assets/perfil.png')}
+            style={styles.profileImage}
+          />
           <View style={styles.textContainer}>
             <Text style={styles.text}>Olá,</Text>
             {userData.nome && <Text style={styles.text2}>{userData.nome}</Text>}
@@ -616,17 +658,101 @@ const App = () => {
           <StatusBar style="auto" />
         </View>
 
-        <View style={styles.mid}>
-          <Text style={styles.text1}>
-            Entrevistas Oferecidas
-          </Text>
-          <Animatable.View animation="fadeIn" duration={1000} style={styles.chartContainer}>
-            {/* Aqui você pode adicionar o conteúdo do gráfico */}
-          </Animatable.View>
+        <View style={styles.chartContainer}>
+          <Text style={styles.title}>Quantidade de entrevistas oferecidas</Text>
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#ffa726" />
+          ) : chartData.labels.length > 0 ? (
+            <GestureHandlerRootView>
+              <View style={{ padding: 16 }}>
+                <Text style={{ fontSize: 16, marginBottom: 10, fontWeight: 'bold' }}>
+                  Solicitações de Entrevista - {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                </Text>
+                <TouchableOpacity
+                  style={styles.toggleButton}
+                  onPress={toggleViewMode}
+                >
+                  <Icon
+                    name={viewMode === 'days' ? 'calendar-view-month' : 'calendar-today'}
+                    size={20}
+                    color="#fff"
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={styles.buttonText}>
+                    Visualizar por {viewMode === 'days' ? 'meses' : 'dias'}
+                  </Text>
+                </TouchableOpacity>
+
+                <PanGestureHandler
+                  onGestureEvent={(event) => {
+                    const { translationX } = event.nativeEvent;
+                    console.log('Translation X:', translationX);
+                    if (Math.abs(translationX) > 50) {
+                      viewMode === 'days'
+                        ? (translationX > 0 ? changeMonth(-1) : changeMonth(1))
+                        : (translationX > 0 ? changeYear(-1) : changeYear(1));
+                    }
+                  }}
+                >
+                  {/* Parte realmente do grafico, se mexer aqui faz uns 5 Pai nossos viu */}
+                  <View style={[styles.chartWrapper, { backgroundColor: '#FFFFFF', borderRadius: 16 }]}>
+                    <LineChart
+                      data={chartData}
+                      width={screenWidth - 32}
+                      height={220}
+                      chartConfig={{
+                        backgroundColor: '#FFFFFF',
+                        backgroundGradientFrom: '#FFFFFF',
+                        backgroundGradientTo: '#FFFFFF',
+                        decimalPlaces: 1,
+                        color: (opacity = 1) => `rgba(240, 122, 38, ${opacity})`,
+                        labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                        style: {
+                          borderRadius: 16,
+                        },
+                        propsForDots: {
+                          r: "4",
+                          strokeWidth: "2",
+                          stroke: "#ffa726",
+                        },
+                        propsForBackgroundLines: {
+                          strokeDasharray: "5,5",
+                          stroke: "#ccc",
+                        },
+                        withVerticalLines: true,
+                        withHorizontalLines: true,
+                        fromZero: true,
+                        formatYLabel: (value) => `${value}`,
+                      }}
+                      style={{ marginVertical: 8, borderRadius: 16 }}
+                      bezier
+                    />
+                  </View>
+                </PanGestureHandler>
+
+                {/* Exibindo informações de texto  apenas para melhor edicao do grafico e suas funcionalidades 
+                
+                <View style={{ marginTop: 16 }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Detalhes das Entrevistas:</Text>
+                  {chartData.labels.map((label, index) => (
+                    <Text key={index}>
+                      {label}: {chartData.datasets[0].data[index]} entrevistas
+                    </Text>
+                  ))}
+                </View>
+              
+                */}
+
+              </View>
+            </GestureHandlerRootView>
+          ) : (
+            <Text>Aguardando dados...</Text>
+          )}
         </View>
 
+
         <Text style={styles.text1}>
-          Vagas Criadas Recentes
+          Entrevistas Agendadas
         </Text>
 
 
