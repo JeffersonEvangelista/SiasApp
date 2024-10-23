@@ -1,6 +1,6 @@
 // Importações do codigo 
-import React, { useEffect, useState } from 'react';
-import { View, Button, RefreshControl, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, Platform } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Button, RefreshControl, Text, StatusBar, StyleSheet, Image,Easing , ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, Platform, Animated } from 'react-native';
 import { getUserNameAndId, supabase, getInterviewCountByDate, getJobInscriptions } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -10,6 +10,8 @@ import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
+import PulsingDots from '../components/PulsingDots';
+
 
 const App = () => {
   //  Estados / Variáveis do código
@@ -539,11 +541,11 @@ const App = () => {
           'Accept-Language': 'pt-BR',
         },
       });
-  
+
       if (!response.ok) {
         throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
       }
-  
+
       const data = await response.json();
       if (data.length > 0) {
         return {
@@ -556,7 +558,7 @@ const App = () => {
     }
     return null; // Retorna nulo se não encontrar as coordenadas
   };
-  
+
 
   // Handle ao mudar texto no input
   const handleInputChange = async (text) => {
@@ -733,10 +735,7 @@ const App = () => {
                 <Text style={{ fontSize: 16, marginBottom: 10, fontWeight: 'bold' }}>
                   Solicitações de Entrevista - {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
                 </Text>
-                <TouchableOpacity
-                  style={styles.toggleButton}
-                  onPress={toggleViewMode}
-                >
+                <TouchableOpacity style={styles.toggleButton} onPress={toggleViewMode}>
                   <Icon
                     name={viewMode === 'days' ? 'calendar-view-month' : 'calendar-today'}
                     size={20}
@@ -759,7 +758,6 @@ const App = () => {
                     }
                   }}
                 >
-                  {/* Parte realmente do grafico, se mexer aqui faz uns 5 Pai nossos viu */}
                   <View style={[styles.chartWrapper, { backgroundColor: '#FFFFFF', borderRadius: 16 }]}>
                     <LineChart
                       data={chartData}
@@ -795,25 +793,18 @@ const App = () => {
                   </View>
                 </PanGestureHandler>
 
-                {/* Exibindo informações de texto  apenas para melhor edicao do grafico e suas funcionalidades 
-                
-                <View style={{ marginTop: 16 }}>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Detalhes das Entrevistas:</Text>
-                  {chartData.labels.map((label, index) => (
-                    <Text key={index}>
-                      {label}: {chartData.datasets[0].data[index]} entrevistas
-                    </Text>
-                  ))}
-                </View>
-              
-                */}
+                {/* Exibindo informações de texto apenas para melhor edição do gráfico e suas funcionalidades */}
 
               </View>
             </GestureHandlerRootView>
           ) : (
-            <Text>Aguardando dados...</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text>Aguardando dados</Text>
+              <PulsingDots />
+            </View>
           )}
         </View>
+
 
 
         <Text style={styles.text1}>
@@ -823,22 +814,26 @@ const App = () => {
 
         {error ? (
           <Text style={styles.errorText}>{error}</Text>
-        ) : jobOffers.length > 0 ? (
-          jobOffers.map((job, index) => (
-            <Animatable.View
-              key={job.id}
-              style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
-              animation="bounceIn"
-              duration={500}
-            >
-              <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
-                <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-                <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
-              </TouchableOpacity>
+        ) : jobOffers
+          .filter(job => candidates.some(candidate => candidate.vaga_id === job.id))
+          .length > 0 ? (
+          jobOffers
+            .filter(job => candidates.some(candidate => candidate.vaga_id === job.id))
+            .map((job, index) => (
+              <Animatable.View
+                key={job.id}
+                style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
+                animation="bounceIn"
+                duration={500}
+              >
+                <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
+                  <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                  <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
+                </TouchableOpacity>
 
-              {expandedJobs[job.id] && (
-                candidates.length > 0 ? (
-                  [...new Map(candidates.map(candidate => [candidate.candidatos.id, candidate])).values()]
+                {expandedJobs[job.id] && (
+                  candidates
+                    .filter(candidate => candidate.vaga_id === job.id)
                     .map(candidate => (
                       <View key={candidate.id} style={styles.candidateContainer}>
                         <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
@@ -849,7 +844,6 @@ const App = () => {
                               <Image source={require('../../assets/perfil.png')} style={styles.photo} />
                             )}
                             <View style={styles.infoContainer}>
-                              {/* Aqui adicionamos a lógica para mostrar o status */}
                               {candidate.status === 'aceito' && (
                                 <Text style={styles.statusText}>✔️ Aceito</Text>
                               )}
@@ -864,19 +858,16 @@ const App = () => {
                               <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
                             </View>
                           </View>
-
                         </TouchableOpacity>
                       </View>
                     ))
-                ) : (
-                  <Text style={styles.noCandidatesText}>Nenhum candidato inscrito.</Text>
-                )
-              )}
-            </Animatable.View>
-          ))
+                )}
+              </Animatable.View>
+            ))
         ) : (
           <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
         )}
+
 
 
         <View>
