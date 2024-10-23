@@ -23,56 +23,6 @@ const App = () => {
   const animatedValue = useRef(new Animated.Value(0)).current;
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return Math.abs(gestureState.dx) > 20;
-      },
-      onPanResponderGrant: () => {
-        setFeedbackVisible(true);
-      },
-      onPanResponderMove: (evt, gestureState) => {
-        animatedValue.setValue(gestureState.dx); // Atualiza o valor da animação
-
-        // Atualiza o feedback baseado na direção do movimento
-        if (gestureState.dx > 20) {
-          setFeedbackMessage('Aceito');
-        } else if (gestureState.dx < -20) {
-          setFeedbackMessage('Recursado');
-        }
-      },
-      onPanResponderRelease: (evt, gestureState, job, candidato) => {
-        if (gestureState.dx > 120) {
-          Animated.spring(animatedValue, {
-            toValue: 500, // Move para fora da tela à direita
-            useNativeDriver: true,
-          }).start(() => {
-            animatedValue.setValue(0);
-            setFeedbackVisible(false);
-          });
-        } else if (gestureState.dx < -120) {
-          handleRecusar(job, candidato); // Passa a vaga e o candidato para a função
-
-          Animated.spring(animatedValue, {
-            toValue: -500, // Move para fora da tela à esquerda
-            useNativeDriver: true,
-          }).start(() => {
-            animatedValue.setValue(0);
-            setFeedbackVisible(false);
-          });
-        } else {
-          // Se não arrastou o suficiente, volta para a posição original
-          Animated.spring(animatedValue, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start(() => {
-            setFeedbackVisible(false);
-          });
-        }
-      },
-    })
-  ).current;
-
   const [userData, setUserData] = useState({ nome: '', cnpj: null });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
@@ -117,9 +67,26 @@ const App = () => {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [modalVisible1, setModalVisible1] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [animatedValues, setAnimatedValues] = useState({});
+  const [panResponders, setPanResponders] = useState({});
 
-
-
+  useEffect(() => {
+    const newAnimatedValues = {};
+    const newPanResponders = {};
+  
+    jobOffersWithCandidates.forEach((job) => {
+      job.inscricoes_vagas.forEach((inscricao) => {
+        const { id_candidato } = inscricao;
+        const { animatedValue, panResponder } = createPanResponderForCandidate(job.id, id_candidato);
+  
+        newAnimatedValues[id_candidato] = animatedValue;
+        newPanResponders[id_candidato] = panResponder;
+      });
+    });
+  
+    setAnimatedValues(newAnimatedValues);
+    setPanResponders(newPanResponders);
+  }, [jobOffersWithCandidates]);
 
   useEffect(() => {
     fetchProfile();
@@ -245,15 +212,19 @@ const App = () => {
   };
 
 
-
   const handleRecusar = (vaga, candidato) => {
-
-    console.log("O item foi recursado!");
+    console.log("O item foi recusado!");
     console.log("Vaga recusada:", vaga);
     console.log("Candidato recusado:", candidato);
     // Adicione aqui o que você precisar, como atualizar o estado, enviar uma requisição, etc.
   };
 
+  const handleAceitar = (vaga, candidato) => {
+    console.log("O item foi aceito!");
+    console.log("Vaga aceita:", vaga);
+    console.log("Candidato aceito:", candidato);
+    // Adicione aqui o que você precisar, como atualizar o estado, enviar uma requisição, etc.
+  };
 
   // Função para buscar vagas e candidatos inscritos
   const fetchJobOffersWithCandidates = async (userId) => {
@@ -261,8 +232,7 @@ const App = () => {
       // Buscar as vagas do recrutador
       const { data: jobOffers } = await supabase
         .from('vagas')
-        .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao,
-           inscricoes_vagas (id_candidato, candidatos (id, nome, email, foto_perfil, cpf))`)
+        .select('id, titulo, descricao, localizacao, requisitos, salario, data_criacao, inscricoes_vagas (id_candidato, candidatos (id, nome, email, foto_perfil, cpf))')
         .eq('id_recrutador', userId);
 
       console.log('Vagas com candidatos inscritos:', JSON.stringify(jobOffers, null, 2));
@@ -282,6 +252,57 @@ const App = () => {
       console.error('Erro ao buscar vagas e candidatos:', error);
       setError('Erro ao buscar vagas e candidatos.');
     }
+  };
+
+  const createPanResponderForCandidate = (jobId, candidateId) => {
+    const animatedValue = new Animated.Value(0);
+  
+    const panResponder = PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 20;
+      },
+      onPanResponderGrant: () => {
+        setFeedbackVisible(true);
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        animatedValue.setValue(gestureState.dx);
+  
+        if (gestureState.dx > 20) {
+          setFeedbackMessage('Aceito');
+        } else if (gestureState.dx < -20) {
+          setFeedbackMessage('Recusado');
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 120) {
+          Animated.spring(animatedValue, {
+            toValue: 500,
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+            setFeedbackVisible(false);
+          });
+        } else if (gestureState.dx < -120) {
+          handleRecusar(jobId, candidateId);
+          Animated.spring(animatedValue, {
+            toValue: -500,
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+            setFeedbackVisible(false);
+          });
+        } else {
+          Animated.spring(animatedValue, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start(() => {
+            setFeedbackVisible(false);
+          });
+        }
+      },
+    });
+  
+    return { animatedValue, panResponder };
   };
 
   useEffect(() => {
@@ -996,7 +1017,6 @@ const App = () => {
 
 
         <Text style={styles.text1}>Suas Ofertas de Trabalho:</Text>
-
         {jobOffersWithCandidates.length > 0 ? (
   jobOffersWithCandidates.map((job, index) => (
     <Animatable.View
@@ -1016,17 +1036,19 @@ const App = () => {
           {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
             job.inscricoes_vagas.map((inscricao) => {
               const candidato = inscricao.candidatos;
-
               if (!candidato) {
                 console.warn('Inscrição sem candidatos:', inscricao);
                 return null;
               }
 
+              const animatedValue = animatedValues[inscricao.id_candidato];
+              const panResponder = panResponders[inscricao.id_candidato];
+
               return (
                 <Animated.View
                   key={inscricao.id_candidato}
                   style={[styles.candidateContainer, { transform: [{ translateX: animatedValue }] }]}
-                  {...panResponder.panHandlers}
+                  {...(panResponder ? panResponder.panHandlers : {})}
                 >
                   <TouchableOpacity onPress={() => {
                     openModal1(candidato);
@@ -1048,23 +1070,13 @@ const App = () => {
                       </View>
                     </View>
                   </TouchableOpacity>
-
-                  {/* Coloque o onPanResponderRelease aqui para passar os parâmetros */}
-                  <TouchableWithoutFeedback onPressIn={() => {
-                    // Cria uma referência ao panResponder
-                    panResponder.current.onPanResponderRelease(evt, gestureState, job, candidato);
-                  }}>
-                    <View>
-                      {/* Feedback abaixo do candidato */}
-                      {feedbackVisible && (
-                        <View style={[styles.feedbackContainer, { alignItems: feedbackMessage === 'Certo' ? 'flex-start' : 'flex-end' }]}>
-                          <Text style={feedbackMessage === 'Certo' ? styles.correct : styles.wrong}>
-                            {feedbackMessage}
-                          </Text>
-                        </View>
-                      )}
+                  {feedbackVisible && (
+                    <View style={[styles.feedbackContainer, { alignItems: feedbackMessage === 'Aceito' ? 'flex-start' : 'flex-end' }]}>
+                      <Text style={feedbackMessage === 'Aceito' ? styles.correct : styles.wrong}>
+                        {feedbackMessage}
+                      </Text>
                     </View>
-                  </TouchableWithoutFeedback>
+                  )}
                 </Animated.View>
               );
             })
@@ -1078,8 +1090,6 @@ const App = () => {
 ) : (
   <Text>Nenhuma vaga disponível.</Text>
 )}
-
-
 
 
 
