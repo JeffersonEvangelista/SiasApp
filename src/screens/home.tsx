@@ -1,6 +1,6 @@
 // Importações do codigo 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Button, RefreshControl, Text, StatusBar, StyleSheet, Image,Easing , ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, Platform, Animated } from 'react-native';
+import { View, SafeAreaView, FlatList, Animated, Button, RefreshControl, Text, StatusBar, StyleSheet, Image, Easing, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, Platform, PanResponder } from 'react-native';
 import { getUserNameAndId, supabase, getInterviewCountByDate, getJobInscriptions } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -12,19 +12,76 @@ import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
 import PulsingDots from '../components/PulsingDots';
 
+interface Candidate {
+  nome: string;
+  email: string;
+  foto_perfil?: string;
+}
+
 
 const App = () => {
-  //  Estados / Variáveis do código
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 20;
+      },
+      onPanResponderGrant: () => {
+        setFeedbackVisible(true);
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        animatedValue.setValue(gestureState.dx); // Atualiza o valor da animação
+
+        // Atualiza o feedback baseado na direção do movimento
+        if (gestureState.dx > 20) {
+          setFeedbackMessage('Aceito');
+        } else if (gestureState.dx < -20) {
+          setFeedbackMessage('Recursado');
+        }
+      },
+      onPanResponderRelease: (evt, gestureState, job, candidato) => {
+        if (gestureState.dx > 120) {
+          Animated.spring(animatedValue, {
+            toValue: 500, // Move para fora da tela à direita
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+            setFeedbackVisible(false);
+          });
+        } else if (gestureState.dx < -120) {
+          handleRecusar(job, candidato); // Passa a vaga e o candidato para a função
+
+          Animated.spring(animatedValue, {
+            toValue: -500, // Move para fora da tela à esquerda
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+            setFeedbackVisible(false);
+          });
+        } else {
+          // Se não arrastou o suficiente, volta para a posição original
+          Animated.spring(animatedValue, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start(() => {
+            setFeedbackVisible(false);
+          });
+        }
+      },
+    })
+  ).current;
+
   const [userData, setUserData] = useState({ nome: '', cnpj: null });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
-  const [jobOffers, setJobOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState([]);
   const [expandedJobs, setExpandedJobs] = useState({});
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [modalVisibleInfo, setModalVisibleInfo] = useState(false);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [location, setLocation] = useState("");
@@ -55,12 +112,19 @@ const App = () => {
   const [locationName, setLocationName] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [jobOffers, setJobOffers] = useState([]);
+  const [jobOffersWithCandidates, setJobOffersWithCandidates] = useState([]);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [modalVisible1, setModalVisible1] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
 
-  //  Funções automáticas do código
+
+
+
   useEffect(() => {
-
     fetchProfile();
   }, [userType, currentDate]);
+
 
   //  Função que carrega os dados do usuário
   const fetchProfile = async () => {
@@ -82,6 +146,8 @@ const App = () => {
         if (recruiterData.foto_perfil) {
           setProfileImage(recruiterData.foto_perfil);
         }
+        // Chamar a função para buscar vagas e candidatos inscritos
+        await fetchJobOffersWithCandidates(recruiterData.id);
       } else {
         const { data: candidateData } = await supabase
           .from('candidatos')
@@ -175,6 +241,46 @@ const App = () => {
       setInscriptions(inscriptions);
     } catch (err) {
       setError('Erro ao carregar as inscrições: ' + err.message);
+    }
+  };
+
+
+
+  const handleRecusar = (vaga, candidato) => {
+
+    console.log("O item foi recursado!");
+    console.log("Vaga recusada:", vaga);
+    console.log("Candidato recusado:", candidato);
+    // Adicione aqui o que você precisar, como atualizar o estado, enviar uma requisição, etc.
+  };
+
+
+  // Função para buscar vagas e candidatos inscritos
+  const fetchJobOffersWithCandidates = async (userId) => {
+    try {
+      // Buscar as vagas do recrutador
+      const { data: jobOffers } = await supabase
+        .from('vagas')
+        .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao,
+           inscricoes_vagas (id_candidato, candidatos (id, nome, email, foto_perfil, cpf))`)
+        .eq('id_recrutador', userId);
+
+      console.log('Vagas com candidatos inscritos:', JSON.stringify(jobOffers, null, 2));
+
+      // Verificação e validação dos dados recebidos
+      if (!jobOffers || !Array.isArray(jobOffers)) {
+        console.warn('Nenhuma vaga encontrada ou formato inválido:', jobOffers);
+        setJobOffersWithCandidates([]);
+        return;
+      }
+
+      // Salvar as vagas e candidatos no estado
+      setJobOffersWithCandidates(jobOffers);
+      console.log('Estado atualizado com as vagas e candidatos:', jobOffers);
+
+    } catch (error) {
+      console.error('Erro ao buscar vagas e candidatos:', error);
+      setError('Erro ao buscar vagas e candidatos.');
     }
   };
 
@@ -449,6 +555,16 @@ const App = () => {
     setTime(null);
   };
 
+  const handleCandidatePress = (candidato) => {
+    setSelectedCandidate(candidato);
+    setModalVisible(true); // Abre o modal ao clicar no candidato
+  };
+
+  const handleInterviewRequest = () => {
+    // Aqui você pode implementar a lógica para enviar a solicitação de entrevista
+    console.log(`Solicitação de entrevista enviada para ${selectedCandidate.nome}`);
+    setModalVisible(false); // Fecha o modal após enviar a solicitação
+  };
 
   // Função para exibir o seletor de data
   const onChangeDate = (event, selectedDate) => {
@@ -472,14 +588,19 @@ const App = () => {
     setShowTimePicker(true);
   };
 
+  const openModal1 = (candidato) => {
+    console.log('Candidato selecionado:', candidato);
+    setSelectedCandidate(candidato);
+  };
 
   // Função para abrir o modal
-  const openModal = async (candidate, jobId) => {
+  const openModal = async (candidate, jobId, type) => {
     console.log('Candidato selecionado para o modal:', candidate);
     console.log('ID da vaga:', jobId);
 
     setSelectedCandidate(candidate);
     setSelectedJobId(jobId);
+    setModalType(type); // Define o tipo do modal
 
     try {
       // Buscar a solicitação de entrevista existente para o candidato e a vaga
@@ -492,12 +613,14 @@ const App = () => {
 
       console.log('Dados da solicitação de entrevista:', existingRequest);
       console.log('Erro ao buscar a solicitação de entrevista:', error);
+
       if (error) {
         console.error('Erro ao buscar solicitação de entrevista:', error);
+        setLocation(''); // Reset the location if there's an error
       } else if (existingRequest) {
         setLocation(existingRequest.local);
       } else {
-        setLocation('Endereço padrão');
+        setLocation('Endereço padrão'); // Define um endereço padrão se não houver solicitação
       }
 
       setModalVisible(true);
@@ -506,6 +629,8 @@ const App = () => {
       alert('Erro ao buscar informações da entrevista.');
     }
   };
+
+
   // Função para obter o nome do local a partir das coordenadas
   const getLocationName = async (latitude, longitude) => {
     try {
@@ -531,7 +656,6 @@ const App = () => {
   };
 
   // Função para obter coordenadas a partir do nome do local
-
   const getCoordinatesFromLocationName = async (locationName) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`, {
@@ -800,7 +924,8 @@ const App = () => {
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text>Aguardando dados</Text>
-              <PulsingDots />
+              {/*     <PulsingDots />    */}
+
             </View>
           )}
         </View>
@@ -867,6 +992,94 @@ const App = () => {
         ) : (
           <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
         )}
+
+
+
+        <Text style={styles.text1}>Suas Ofertas de Trabalho:</Text>
+
+        {jobOffersWithCandidates.length > 0 ? (
+  jobOffersWithCandidates.map((job, index) => (
+    <Animatable.View
+      key={job.id}
+      style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
+      animation="bounceIn"
+      duration={500}
+    >
+      <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
+        <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+        <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
+      </TouchableOpacity>
+
+      {expandedJobs[job.id] && (
+        <View>
+          <Text style={{ fontWeight: 'bold', color: '#FFFFFF' }}>Inscritos:</Text>
+          {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
+            job.inscricoes_vagas.map((inscricao) => {
+              const candidato = inscricao.candidatos;
+
+              if (!candidato) {
+                console.warn('Inscrição sem candidatos:', inscricao);
+                return null;
+              }
+
+              return (
+                <Animated.View
+                  key={inscricao.id_candidato}
+                  style={[styles.candidateContainer, { transform: [{ translateX: animatedValue }] }]}
+                  {...panResponder.panHandlers}
+                >
+                  <TouchableOpacity onPress={() => {
+                    openModal1(candidato);
+                    setFeedbackVisible(true);
+                    setFeedbackMessage('Candidato selecionado com sucesso!');
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {candidato.foto_perfil ? (
+                        <Image source={{ uri: candidato.foto_perfil }} style={styles.photo} />
+                      ) : (
+                        <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                      )}
+                      <View style={{ marginLeft: 10 }}>
+                        <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
+                        <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
+                        {candidato.cpf && (
+                          <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Coloque o onPanResponderRelease aqui para passar os parâmetros */}
+                  <TouchableWithoutFeedback onPressIn={() => {
+                    // Cria uma referência ao panResponder
+                    panResponder.current.onPanResponderRelease(evt, gestureState, job, candidato);
+                  }}>
+                    <View>
+                      {/* Feedback abaixo do candidato */}
+                      {feedbackVisible && (
+                        <View style={[styles.feedbackContainer, { alignItems: feedbackMessage === 'Certo' ? 'flex-start' : 'flex-end' }]}>
+                          <Text style={feedbackMessage === 'Certo' ? styles.correct : styles.wrong}>
+                            {feedbackMessage}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableWithoutFeedback>
+                </Animated.View>
+              );
+            })
+          ) : (
+            <Text>Nenhum candidato inscrito nesta vaga.</Text>
+          )}
+        </View>
+      )}
+    </Animatable.View>
+  ))
+) : (
+  <Text>Nenhuma vaga disponível.</Text>
+)}
+
+
 
 
 
@@ -1374,7 +1587,7 @@ const styles = StyleSheet.create({
   noCandidatesText: {
     textAlign: 'center',
     fontSize: 16,
-    color: '#F07A26',
+    color: '#fff',
   },
 
   modalContent: {
@@ -1500,6 +1713,34 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+
+  image: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginTop: 5,
+  },
+  feedbackContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 10,
+    shadowColor: 'black',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+    zIndex: 55
+  },
+  correct: {
+    color: 'green',
+    fontSize: 18,
+  },
+  wrong: {
+    color: 'red',
+    fontSize: 18,
   },
 });
 

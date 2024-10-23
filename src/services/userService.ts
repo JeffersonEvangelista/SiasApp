@@ -665,3 +665,5 @@ export const getJobInscriptions = async (userId:any) => {
         throw err;
     }
 };
+
+
