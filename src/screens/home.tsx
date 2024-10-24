@@ -11,6 +11,7 @@ import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
 import PulsingDots from '../components/PulsingDots';
+import { styles } from './Styles/stylesHome';
 
 interface Candidate {
   nome: string;
@@ -69,6 +70,8 @@ const App = () => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [animatedValues, setAnimatedValues] = useState({});
   const [panResponders, setPanResponders] = useState({});
+  const [feedbackVisibleByCandidate, setFeedbackVisibleByCandidate] = useState({});
+  const [feedbackMessageByCandidate, setFeedbackMessageByCandidate] = useState({});
 
   useEffect(() => {
     const newAnimatedValues = {};
@@ -212,47 +215,156 @@ const App = () => {
   };
 
 
-  const handleRecusar = (vaga, candidato) => {
+  const handleRecusar = async (vaga, candidato) => {
     console.log("O item foi recusado!");
     console.log("Vaga recusada:", vaga);
     console.log("Candidato recusado:", candidato);
-    // Adicione aqui o que você precisar, como atualizar o estado, enviar uma requisição, etc.
-  };
+  
+    // Verifique se o ID da vaga e do candidato estão definidos
+    if (!vaga || !candidato) {
+      console.error("ID da vaga ou do candidato não estão definidos.");
+      return;
+    }
+  
+    try {
+      const { data, error } = await supabase
+        .from('inscricoes_vagas')
+        .update({ status: 'recusada' }) 
+        .match({ id_vaga: vaga, id_candidato: candidato }); 
+  
+      if (error) {
+        console.error("Erro ao atualizar a vaga:", error);
+        return;
+      }
+  
+      console.log("Vaga atualizada com sucesso:", data);
+      
 
-  const handleAceitar = (vaga, candidato) => {
-    console.log("O item foi aceito!");
-    console.log("Vaga aceita:", vaga);
-    console.log("Candidato aceito:", candidato);
-    // Adicione aqui o que você precisar, como atualizar o estado, enviar uma requisição, etc.
+    fetchJobOffersWithCandidates(userId); 
+    } catch (err) {
+      console.error("Erro ao tentar recusar candidato:", err);
+    }
+  };
+  
+
+  const handleAcceptCandidate = async (jobId, candidateId, userId) => {
+    // Defina os detalhes da entrevista
+    const dataAtual = new Date();
+    const dataEntrevista = new Date(dataAtual.getTime() + 10 * 24 * 60 * 60 * 1000);
+    
+    const dia = dataEntrevista.getDate().toString().padStart(2, '0');
+    const mes = (dataEntrevista.getMonth() + 1).toString().padStart(2, '0');
+    const ano = dataEntrevista.getFullYear();
+    
+    const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`;    const horario = '10:00:00'; 
+    const local = 'Sala de Reuniões 1'; // Local da entrevista
+    
+    // Verifique se o ID da vaga e do candidato estão definidos
+    if (!jobId || !candidateId) {
+      console.error("ID da vaga ou do candidato não estão definidos.");
+      return;
+    }
+  
+    try {
+      // Atualiza o status do candidato
+      const { data: updateData, error: updateError } = await supabase
+        .from('inscricoes_vagas')
+        .update({ status: 'aceita' }) 
+        .match({ id_vaga: jobId, id_candidato: candidateId });
+  
+      if (updateError) {
+        console.error("Erro ao atualizar a vaga:", updateError);
+        return;
+      }
+  
+      console.log("Vaga atualizada com sucesso:", updateData);
+      fetchJobOffersWithCandidates(userId); 
+  
+      // Inserir na tabela solicitacoes_entrevista
+      const { data: interviewData, error: interviewError } = await supabase
+        .from('solicitacoes_entrevista')
+        .insert([
+          {
+            id_recrutador: userId,
+            id_candidato: candidateId,
+            id_vaga: jobId,
+            data_entrevista: dataEntrevista,
+            horario: horario,
+            local: local,
+            status: 'pendente', 
+          },
+        ]);
+  
+      if (interviewError) {
+        throw interviewError;
+      }
+  
+      alert('Candidato aceito com sucesso!');
+      console.log('Solicitação de entrevista criada com sucesso:', interviewData);
+      fetchJobOffers(userId);
+  
+    } catch (error) {
+      console.error('Erro ao processar a aceitação do candidato:', error);
+      // Aqui você pode lidar com erros, como exibir uma mensagem de erro
+    }
   };
 
   // Função para buscar vagas e candidatos inscritos
   const fetchJobOffersWithCandidates = async (userId) => {
     try {
       // Buscar as vagas do recrutador
-      const { data: jobOffers } = await supabase
+      const { data: jobOffers, error } = await supabase
         .from('vagas')
-        .select('id, titulo, descricao, localizacao, requisitos, salario, data_criacao, inscricoes_vagas (id_candidato, candidatos (id, nome, email, foto_perfil, cpf))')
+        .select(`
+          id, 
+          titulo, 
+          descricao, 
+          localizacao, 
+          requisitos, 
+          salario, 
+          data_criacao, 
+          inscricoes_vagas (
+            id_candidato, 
+            status,
+            candidatos (id, nome, email, foto_perfil, cpf)
+          )
+        `)
         .eq('id_recrutador', userId);
-
+  
+      if (error) {
+        console.error('Erro ao buscar vagas:', error);
+        setJobOffersWithCandidates([]);
+        return;
+      }
+  
       console.log('Vagas com candidatos inscritos:', JSON.stringify(jobOffers, null, 2));
-
+  
       // Verificação e validação dos dados recebidos
       if (!jobOffers || !Array.isArray(jobOffers)) {
         console.warn('Nenhuma vaga encontrada ou formato inválido:', jobOffers);
         setJobOffersWithCandidates([]);
         return;
       }
-
+  
+      // Filtrar as inscrições recusadas
+      const filteredJobOffers = jobOffers.map((job) => {
+        return {
+          ...job,
+          inscricoes_vagas: job.inscricoes_vagas.filter(inscricao => 
+            inscricao.status !== 'recusada' && inscricao.status !== 'aceita'
+          )        };
+      })
+  
       // Salvar as vagas e candidatos no estado
-      setJobOffersWithCandidates(jobOffers);
-      console.log('Estado atualizado com as vagas e candidatos:', jobOffers);
-
+      setJobOffersWithCandidates(filteredJobOffers);
+      console.log('Estado atualizado com as vagas e candidatos filtrados:', filteredJobOffers);
+  
     } catch (error) {
       console.error('Erro ao buscar vagas e candidatos:', error);
       setError('Erro ao buscar vagas e candidatos.');
     }
   };
+  
 
   const createPanResponderForCandidate = (jobId, candidateId) => {
     const animatedValue = new Animated.Value(0);
@@ -262,25 +374,31 @@ const App = () => {
         return Math.abs(gestureState.dx) > 20;
       },
       onPanResponderGrant: () => {
-        setFeedbackVisible(true);
+        setFeedbackVisibleByCandidate((prev) => ({
+          ...prev,
+          [candidateId]: true,
+        }));
       },
       onPanResponderMove: (evt, gestureState) => {
         animatedValue.setValue(gestureState.dx);
   
-        if (gestureState.dx > 20) {
-          setFeedbackMessage('Aceito');
-        } else if (gestureState.dx < -20) {
-          setFeedbackMessage('Recusado');
-        }
+        setFeedbackMessageByCandidate((prev) => ({
+          ...prev,
+          [candidateId]: gestureState.dx > 20 ? 'Aceito' : 'Recusado',
+        }));
       },
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > 120) {
+          handleAcceptCandidate (jobId, candidateId, userId);
           Animated.spring(animatedValue, {
             toValue: 500,
             useNativeDriver: true,
           }).start(() => {
             animatedValue.setValue(0);
-            setFeedbackVisible(false);
+            setFeedbackVisibleByCandidate((prev) => ({
+              ...prev,
+              [candidateId]: false,
+            }));
           });
         } else if (gestureState.dx < -120) {
           handleRecusar(jobId, candidateId);
@@ -289,14 +407,20 @@ const App = () => {
             useNativeDriver: true,
           }).start(() => {
             animatedValue.setValue(0);
-            setFeedbackVisible(false);
+            setFeedbackVisibleByCandidate((prev) => ({
+              ...prev,
+              [candidateId]: false,
+            }));
           });
         } else {
           Animated.spring(animatedValue, {
             toValue: 0,
             useNativeDriver: true,
           }).start(() => {
-            setFeedbackVisible(false);
+            setFeedbackVisibleByCandidate((prev) => ({
+              ...prev,
+              [candidateId]: false,
+            }));
           });
         }
       },
@@ -609,72 +733,65 @@ const App = () => {
     setShowTimePicker(true);
   };
 
-  const openModal1 = (candidato) => {
-    console.log('Candidato selecionado:', candidato);
-    setSelectedCandidate(candidato);
-  };
+// Função para abrir o modal
+const openModal = async (candidate, jobId) => {
+  console.log('Candidato selecionado para o modal:', candidate);
+  console.log('ID da vaga:', jobId);
 
-  // Função para abrir o modal
-  const openModal = async (candidate, jobId, type) => {
-    console.log('Candidato selecionado para o modal:', candidate);
-    console.log('ID da vaga:', jobId);
+  setSelectedCandidate(candidate);
+  setSelectedJobId(jobId);
 
-    setSelectedCandidate(candidate);
-    setSelectedJobId(jobId);
-    setModalType(type); // Define o tipo do modal
+  try {
+    // Buscar a solicitação de entrevista existente para o candidato e a vaga
+    const { data: existingRequest, error } = await supabase
+      .from('solicitacoes_entrevista')
+      .select('local')
+      .eq('id_candidato', candidate.candidatos.id)
+      .eq('id_vaga', jobId)
+      .single();
 
-    try {
-      // Buscar a solicitação de entrevista existente para o candidato e a vaga
-      const { data: existingRequest, error } = await supabase
-        .from('solicitacoes_entrevista')
-        .select('local')
-        .eq('id_candidato', candidate.candidatos.id)
-        .eq('id_vaga', jobId)
-        .single();
-
-      console.log('Dados da solicitação de entrevista:', existingRequest);
-      console.log('Erro ao buscar a solicitação de entrevista:', error);
-
-      if (error) {
-        console.error('Erro ao buscar solicitação de entrevista:', error);
-        setLocation(''); // Reset the location if there's an error
-      } else if (existingRequest) {
-        setLocation(existingRequest.local);
-      } else {
-        setLocation('Endereço padrão'); // Define um endereço padrão se não houver solicitação
-      }
-
-      setModalVisible(true);
-    } catch (err) {
-      console.error('Erro ao buscar informações da entrevista:', err);
-      alert('Erro ao buscar informações da entrevista.');
+    console.log('Dados da solicitação de entrevista:', existingRequest);
+    console.log('Erro ao buscar a solicitação de entrevista:', error);
+    if (error) {
+      console.error('Erro ao buscar solicitação de entrevista:', error);
+    } else if (existingRequest) {
+      setLocation(existingRequest.local);
+    } else {
+      setLocation('Endereço padrão');
     }
-  };
 
+    setModalVisible(true);
+  } catch (err) {
+    console.error('Erro ao buscar informações da entrevista:', err);
+    alert('Erro ao buscar informações da entrevista.');
+  }
+};
+// Função para obter o nome do local a partir das coordenadas
+const getLocationName = async (latitude, longitude) => {
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'siasapp/1.0',
+        'Accept-Language': 'pt-BR'
+      },
+    });
 
-  // Função para obter o nome do local a partir das coordenadas
-  const getLocationName = async (latitude, longitude) => {
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'siasapp/1.0',
-          'Accept-Language': 'pt-BR'
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setLocation(data.display_name); // Atualiza o campo de input com o nome do local
-      setLocationName(data.display_name); // Para o marcador no mapa
-    } catch (error) {
-      console.error('Erro ao obter o nome do local:', error);
-      setLocation('Local não encontrado');
+    if (!response.ok) {
+      throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
     }
-  };
+
+    const data = await response.json();
+    setLocation(data.display_name); // Atualiza o campo de input com o nome do local
+    setLocationName(data.display_name); // Para o marcador no mapa
+  } catch (error) {
+    console.error('Erro ao obter o nome do local:', error);
+    setLocation('Local não encontrado');
+  }
+};
+
+
+  // Função para obter o nome do local a partir das coordenad
 
   // Função para obter coordenadas a partir do nome do local
   const getCoordinatesFromLocationName = async (locationName) => {
@@ -711,8 +828,8 @@ const App = () => {
 
     const coords = await getCoordinatesFromLocationName(text);
     if (coords) {
-      setMapLocation(coords); // Atualiza a localização do mapa com as coordenadas obtidas
-      setLocationName(text); // Atualiza o nome do local para o marcador
+      setMapLocation(coords);
+      setLocationName(text); 
     } else {
       setMapLocation(null); // Limpa o marcador se o endereço não for encontrado
     }
@@ -952,67 +1069,66 @@ const App = () => {
         </View>
 
 
-
         <Text style={styles.text1}>
-          Entrevistas Agendadas
-        </Text>
+  Entrevistas Agendadas
+</Text>
+{error ? (
+  <Text style={styles.errorText}>{error.message || 'Erro desconhecido'}</Text>
+) : (
+  <>
+    {console.log('Job Offers:', jobOffers)}
+    {console.log('Candidates:', candidates)}
 
+    {jobOffers.filter(job => candidates.some(candidate => candidate.vagas.id === job.id)).length > 0 ? (
+      jobOffers
+        .filter(job => candidates.some(candidate => candidate.vagas.id === job.id))
+        .map((job, index) => (
+          <Animatable.View
+            key={job.id}
+            style={[
+              styles.jobContainer,
+              { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+            ]}
+            animation="bounceIn"
+            duration={500}
+          >
+            <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
+              <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+              <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
+            </TouchableOpacity>
 
-        {error ? (
-          <Text style={styles.errorText}>{error}</Text>
-        ) : jobOffers
-          .filter(job => candidates.some(candidate => candidate.vaga_id === job.id))
-          .length > 0 ? (
-          jobOffers
-            .filter(job => candidates.some(candidate => candidate.vaga_id === job.id))
-            .map((job, index) => (
-              <Animatable.View
-                key={job.id}
-                style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
-                animation="bounceIn"
-                duration={500}
-              >
-                <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
-                  <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-                  <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
-                </TouchableOpacity>
-
-                {expandedJobs[job.id] && (
-                  candidates
-                    .filter(candidate => candidate.vaga_id === job.id)
-                    .map(candidate => (
-                      <View key={candidate.id} style={styles.candidateContainer}>
-                        <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
-                          <View style={styles.candidateDetails}>
-                            {candidate.candidatos.foto_perfil ? (
-                              <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
-                            ) : (
-                              <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                            )}
-                            <View style={styles.infoContainer}>
-                              {candidate.status === 'aceito' && (
-                                <Text style={styles.statusText}>✔️ Aceito</Text>
-                              )}
-                              {candidate.status === 'recusado' && (
-                                <Text style={styles.statusText}>❌ Recusado</Text>
-                              )}
-                              {candidate.status === 'pendente' && (
-                                <Text style={styles.statusText}>⏳ Pendente</Text>
-                              )}
-                              <Text style={styles.name}>{candidate.candidatos.nome}</Text>
-                              <Text style={styles.email}>{candidate.candidatos.email}</Text>
-                              <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
+            {expandedJobs[job.id] && (
+              candidates
+                .filter(candidate => candidate.vagas.id === job.id)
+                .map(candidate => (
+                  <View key={candidate.id} style={styles.candidateContainer}>
+                    <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
+                      <View style={styles.candidateDetails}>
+                        {candidate.candidatos.foto_perfil ? (
+                          <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
+                        ) : (
+                          <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                        )}
+                        <View style={styles.infoContainer}>
+                          {candidate.status === 'aceito' && <Text style={styles.statusText}>✔️ Aceito</Text>}
+                          {candidate.status === 'recusado' && <Text style={styles.statusText}>❌ Recusado</Text>}
+                          {candidate.status === 'pendente' && <Text style={styles.statusText}>⏳ Pendente</Text>}
+                          <Text style={styles.name}>{candidate.candidatos.nome}</Text>
+                          <Text style={styles.email}>{candidate.candidatos.email}</Text>
+                          <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                        </View>
                       </View>
-                    ))
-                )}
-              </Animatable.View>
-            ))
-        ) : (
-          <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
-        )}
+                    </TouchableOpacity>
+                  </View>
+                ))
+            )}
+          </Animatable.View>
+        ))
+    ) : (
+      <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
+    )}
+  </>
+)}
 
 
 
@@ -1043,6 +1159,8 @@ const App = () => {
 
               const animatedValue = animatedValues[inscricao.id_candidato];
               const panResponder = panResponders[inscricao.id_candidato];
+              const feedbackVisible = feedbackVisibleByCandidate[inscricao.id_candidato];
+              const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
 
               return (
                 <Animated.View
@@ -1052,8 +1170,14 @@ const App = () => {
                 >
                   <TouchableOpacity onPress={() => {
                     openModal1(candidato);
-                    setFeedbackVisible(true);
-                    setFeedbackMessage('Candidato selecionado com sucesso!');
+                    setFeedbackVisibleByCandidate((prev) => ({
+                      ...prev,
+                      [inscricao.id_candidato]: true,
+                    }));
+                    setFeedbackMessageByCandidate((prev) => ({
+                      ...prev,
+                      [inscricao.id_candidato]: 'Candidato selecionado com sucesso!',
+                    }));
                   }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       {candidato.foto_perfil ? (
@@ -1398,360 +1522,5 @@ const App = () => {
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  chartContainer: {
-    height: 330,
-    marginBottom: 8,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-  },
-  loaderContent: {
-    alignItems: 'center',
-  },
-  top: {
-    backgroundColor: '#ff8c00',
-    height: 160,
-    width: '100%',
-    borderWidth: 2,
-    borderColor: '#ff8c00',
-    borderRadius: 0,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 0,
-    paddingHorizontal: 15,
-  },
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  textContainer: {
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  text: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'left',
-    color: 'white',
-    marginTop: 5
-  },
-  text1: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'left',
-    color: 'black',
-    marginTop: '13%'
-  },
-  jobTitleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  mid: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-  },
-  jobContainer: {
-    width: '95%',
-    borderBottomColor: '#ccc',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-    elevation: 1,
-    marginTop: '4%',
-
-  },
-  jobTitle: {
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  jobCompany: {
-    fontSize: 14,
-    color: 'gray',
-  },
-  jobLocation: {
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: '2%',
-
-    padding: 5,
-  },
-  jobSalary: {
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: '2%',
-
-    padding: 5,
-  },
-  jobRequirements: {
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: '2%',
-
-    padding: 5,
-  },
-  jobDescription: {
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: '2%',
-    padding: 5,
-  },
-  jobDate: {
-    fontSize: 12,
-    padding: 5,
-    marginLeft: '2%',
-
-    color: 'gray',
-  },
-  noJobsContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  noJobsText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'red',
-    marginTop: 50,
-  },
-  forte: {
-    fontWeight: 'bold',
-  },
-  noJobsImage: {
-    width: 50,
-    height: 50,
-    marginTop: 10,
-  },
-  text2: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'left',
-    color: 'white',
-    marginTop: 5
-  },
-  candidateContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 15,
-    marginVertical: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
-    elevation: 2,
-  },
-  candidateDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  photo: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  infoContainer: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  email: {
-    fontSize: 14,
-    color: '#666',
-  },
-  cpf: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    position: 'absolute',
-    right: 10,
-    top: 10,
-  },
-  noCandidatesText: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: '#fff',
-  },
-
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    width: '90%',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  modalText: {
-    fontSize: 16,
-    marginVertical: 5,
-  },
-  modalLabel: {
-    fontWeight: 'bold',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FF8C00',
-    borderRadius: 5,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-  },
-  icon: {
-    marginLeft: 10,
-  },
-  button: {
-    backgroundColor: '#FF8C00',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    backgroundColor: '#888',
-  },
-  iconMargin: {
-    marginRight: 8,
-  },
-  toggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF8C00',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  chartWrapper: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 2.5,
-    borderColor: '#FFA726',
-    overflow: 'hidden',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 8,
-    textAlign: 'center',
-    paddingBottom: 4,
-  },
-  modalBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  lottieAnimation: {
-    width: 200,
-    height: 200,
-  },
-  customButton: {
-    backgroundColor: '#ffa726',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 20,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-  },
-  input: {
-    height: 40,
-    padding: 10,
-    flex: 1,
-    minHeight: "5%",
-    fontSize: 16,
-    textAlignVertical: 'center',
-    paddingVertical: 0,
-    paddingHorizontal: 10,
-  },
-  mapContainer: {
-    height: 200,
-    width: '100%',
-    marginBottom: 10,
-  },
-  map: {
-    flex: 1,
-  },
-
-  image: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginTop: 5,
-  },
-  feedbackContainer: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: 'white',
-    padding: 10,
-    borderRadius: 10,
-    shadowColor: 'black',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
-    zIndex: 55
-  },
-  correct: {
-    color: 'green',
-    fontSize: 18,
-  },
-  wrong: {
-    color: 'red',
-    fontSize: 18,
-  },
-});
 
 export default App;
