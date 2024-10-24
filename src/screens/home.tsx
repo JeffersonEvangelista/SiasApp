@@ -1170,7 +1170,7 @@ const App = () => {
               animation="bounceIn"
               duration={500}
             >
-                  <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpandInfo(job.id)}>
+                  <TouchableOpacity style={styles.jobTitleContainer} onPress={() => handleToggleExpand(job.id)}>
                   <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
                 <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
               </TouchableOpacity>
