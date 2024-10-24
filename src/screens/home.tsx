@@ -1,7 +1,7 @@
 // Importações do codigo 
 import React, { useEffect, useState, useRef } from 'react';
 import { View, SafeAreaView, FlatList, Animated, Button, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
-import { getUserNameAndId, supabase, getJobInscriptions } from '../services/userService';
+import { getUserNameAndId, supabase, getJobInscriptions,countSolicitacoes } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -11,6 +11,8 @@ import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { styles } from './Styles/stylesHome';
+import AppState  from '../components/globalVars';
+
 
 interface Candidate {
   nome: string;
@@ -136,7 +138,8 @@ const App = () => {
           await fetchInscriptions(candidateData.id);
         }
       }
-
+      const solicitacoesCount = await countSolicitacoes(userId) || 0; 
+      AppState.solicitacoesCount = solicitacoesCount;     
       await fetchJobOffers(userId);
       await fetchCandidates(userId);
 
@@ -177,7 +180,6 @@ const App = () => {
       setError('Erro ao buscar vagas.');
     }
   };
-
   //   Funções auxiliares para buscar candidatos
   const fetchCandidates = async (userId: any) => {
     try {
@@ -1552,3 +1554,4 @@ const App = () => {
 
 
 export default App;
+
