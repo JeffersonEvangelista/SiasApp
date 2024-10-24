@@ -1,7 +1,7 @@
 // Importações do codigo 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, SafeAreaView, FlatList, Animated, Button, RefreshControl, Text, StatusBar, StyleSheet, Image, Easing, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, Platform, PanResponder } from 'react-native';
-import { getUserNameAndId, supabase, getInterviewCountByDate, getJobInscriptions } from '../services/userService';
+import { View, SafeAreaView, FlatList, Animated, Button, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
+import { getUserNameAndId, supabase, getJobInscriptions } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -10,7 +10,6 @@ import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
-import PulsingDots from '../components/PulsingDots';
 import { styles } from './Styles/stylesHome';
 
 interface Candidate {
@@ -31,7 +30,8 @@ const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState([]);
   const [expandedJobs, setExpandedJobs] = useState({});
-  const [modalVisible, setModalVisible] = useState(false);
+  const [toggleExpandInfo, settoggleExpandInfo] = useState({});
+    const [modalVisible, setModalVisible] = useState(false);
   const [modalVisibleInfo, setModalVisibleInfo] = useState(false);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
@@ -72,21 +72,23 @@ const App = () => {
   const [panResponders, setPanResponders] = useState({});
   const [feedbackVisibleByCandidate, setFeedbackVisibleByCandidate] = useState({});
   const [feedbackMessageByCandidate, setFeedbackMessageByCandidate] = useState({});
+  const mapRef = useRef(null);
+  const [typingTimeout, setTypingTimeout] = useState(null);
 
   useEffect(() => {
     const newAnimatedValues = {};
     const newPanResponders = {};
-  
+
     jobOffersWithCandidates.forEach((job) => {
       job.inscricoes_vagas.forEach((inscricao) => {
         const { id_candidato } = inscricao;
         const { animatedValue, panResponder } = createPanResponderForCandidate(job.id, id_candidato);
-  
+
         newAnimatedValues[id_candidato] = animatedValue;
         newPanResponders[id_candidato] = panResponder;
       });
     });
-  
+
     setAnimatedValues(newAnimatedValues);
     setPanResponders(newPanResponders);
   }, [jobOffersWithCandidates]);
@@ -219,67 +221,67 @@ const App = () => {
     console.log("O item foi recusado!");
     console.log("Vaga recusada:", vaga);
     console.log("Candidato recusado:", candidato);
-  
+
     // Verifique se o ID da vaga e do candidato estão definidos
     if (!vaga || !candidato) {
       console.error("ID da vaga ou do candidato não estão definidos.");
       return;
     }
-  
+
     try {
       const { data, error } = await supabase
         .from('inscricoes_vagas')
-        .update({ status: 'recusada' }) 
-        .match({ id_vaga: vaga, id_candidato: candidato }); 
-  
+        .update({ status: 'recusada' })
+        .match({ id_vaga: vaga, id_candidato: candidato });
+
       if (error) {
         console.error("Erro ao atualizar a vaga:", error);
         return;
       }
-  
-      console.log("Vaga atualizada com sucesso:", data);
-      
 
-    fetchJobOffersWithCandidates(userId); 
+      console.log("Vaga atualizada com sucesso:", data);
+
+
+      fetchJobOffersWithCandidates(userId);
     } catch (err) {
       console.error("Erro ao tentar recusar candidato:", err);
     }
   };
-  
+
 
   const handleAcceptCandidate = async (jobId, candidateId, userId) => {
     // Defina os detalhes da entrevista
     const dataAtual = new Date();
     const dataEntrevista = new Date(dataAtual.getTime() + 10 * 24 * 60 * 60 * 1000);
-    
+
     const dia = dataEntrevista.getDate().toString().padStart(2, '0');
     const mes = (dataEntrevista.getMonth() + 1).toString().padStart(2, '0');
     const ano = dataEntrevista.getFullYear();
-    
-    const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`;    const horario = '10:00:00'; 
+
+    const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`; const horario = '10:00:00';
     const local = 'Sala de Reuniões 1'; // Local da entrevista
-    
+
     // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
       console.error("ID da vaga ou do candidato não estão definidos.");
       return;
     }
-  
+
     try {
       // Atualiza o status do candidato
       const { data: updateData, error: updateError } = await supabase
         .from('inscricoes_vagas')
-        .update({ status: 'aceita' }) 
+        .update({ status: 'aceita' })
         .match({ id_vaga: jobId, id_candidato: candidateId });
-  
+
       if (updateError) {
         console.error("Erro ao atualizar a vaga:", updateError);
         return;
       }
-  
+
       console.log("Vaga atualizada com sucesso:", updateData);
-      fetchJobOffersWithCandidates(userId); 
-  
+      fetchJobOffersWithCandidates(userId);
+
       // Inserir na tabela solicitacoes_entrevista
       const { data: interviewData, error: interviewError } = await supabase
         .from('solicitacoes_entrevista')
@@ -291,18 +293,18 @@ const App = () => {
             data_entrevista: dataEntrevista,
             horario: horario,
             local: local,
-            status: 'pendente', 
+            status: 'pendente',
           },
         ]);
-  
+
       if (interviewError) {
         throw interviewError;
       }
-  
+
       alert('Candidato aceito com sucesso!');
       console.log('Solicitação de entrevista criada com sucesso:', interviewData);
       fetchJobOffers(userId);
-  
+
     } catch (error) {
       console.error('Erro ao processar a aceitação do candidato:', error);
       // Aqui você pode lidar com erros, como exibir uma mensagem de erro
@@ -330,45 +332,46 @@ const App = () => {
           )
         `)
         .eq('id_recrutador', userId);
-  
+
       if (error) {
         console.error('Erro ao buscar vagas:', error);
         setJobOffersWithCandidates([]);
         return;
       }
-  
+
       console.log('Vagas com candidatos inscritos:', JSON.stringify(jobOffers, null, 2));
-  
+
       // Verificação e validação dos dados recebidos
       if (!jobOffers || !Array.isArray(jobOffers)) {
         console.warn('Nenhuma vaga encontrada ou formato inválido:', jobOffers);
         setJobOffersWithCandidates([]);
         return;
       }
-  
+
       // Filtrar as inscrições recusadas
       const filteredJobOffers = jobOffers.map((job) => {
         return {
           ...job,
-          inscricoes_vagas: job.inscricoes_vagas.filter(inscricao => 
+          inscricoes_vagas: job.inscricoes_vagas.filter(inscricao =>
             inscricao.status !== 'recusada' && inscricao.status !== 'aceita'
-          )        };
+          )
+        };
       })
-  
+
       // Salvar as vagas e candidatos no estado
       setJobOffersWithCandidates(filteredJobOffers);
       console.log('Estado atualizado com as vagas e candidatos filtrados:', filteredJobOffers);
-  
+
     } catch (error) {
       console.error('Erro ao buscar vagas e candidatos:', error);
       setError('Erro ao buscar vagas e candidatos.');
     }
   };
-  
+
 
   const createPanResponderForCandidate = (jobId, candidateId) => {
     const animatedValue = new Animated.Value(0);
-  
+
     const panResponder = PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
         return Math.abs(gestureState.dx) > 20;
@@ -381,7 +384,7 @@ const App = () => {
       },
       onPanResponderMove: (evt, gestureState) => {
         animatedValue.setValue(gestureState.dx);
-  
+
         setFeedbackMessageByCandidate((prev) => ({
           ...prev,
           [candidateId]: gestureState.dx > 20 ? 'Aceito' : 'Recusado',
@@ -389,7 +392,7 @@ const App = () => {
       },
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > 120) {
-          handleAcceptCandidate (jobId, candidateId, userId);
+          handleAcceptCandidate(jobId, candidateId, userId);
           Animated.spring(animatedValue, {
             toValue: 500,
             useNativeDriver: true,
@@ -425,7 +428,7 @@ const App = () => {
         }
       },
     });
-  
+
     return { animatedValue, panResponder };
   };
 
@@ -683,9 +686,19 @@ const App = () => {
 
   // Função para alternar a expansão das vagas
   const toggleExpand = (jobId) => {
-    setExpandedJobs(prevState => ({
-      ...prevState,
-      [jobId]: !prevState[jobId],
+    // Toggle individual do estado de expansão
+    setExpandedJobs(prev => ({
+      ...prev,
+      [jobId]: !prev[jobId],
+    }));
+  };
+
+
+  const handleToggleExpand = (jobId) => {
+    // Toggle individual do estado de expansão
+    settoggleExpandInfo(prev => ({
+      ...prev,
+      [jobId]: !prev[jobId],
     }));
   };
 
@@ -694,21 +707,17 @@ const App = () => {
   // Função para fechar o modal
   const closeModal = () => {
     setModalVisible(false);
-    setSelectedCandidate(null);
-    setLocation('');
-    setDate(null);
-    setTime(null);
   };
 
   const handleCandidatePress = (candidato) => {
     setSelectedCandidate(candidato);
-    setModalVisible(true); // Abre o modal ao clicar no candidato
+    setModalVisible(true);
   };
 
   const handleInterviewRequest = () => {
     // Aqui você pode implementar a lógica para enviar a solicitação de entrevista
     console.log(`Solicitação de entrevista enviada para ${selectedCandidate.nome}`);
-    setModalVisible(false); // Fecha o modal após enviar a solicitação
+    setModalVisible(false);
   };
 
   // Função para exibir o seletor de data
@@ -733,65 +742,62 @@ const App = () => {
     setShowTimePicker(true);
   };
 
-// Função para abrir o modal
-const openModal = async (candidate, jobId) => {
-  console.log('Candidato selecionado para o modal:', candidate);
-  console.log('ID da vaga:', jobId);
+  // Função para abrir o modal
+  const openModal = async (candidate, jobId) => {
+    console.log('Candidato selecionado para o modal:', candidate);
+    console.log('ID da vaga:', jobId);
 
-  setSelectedCandidate(candidate);
-  setSelectedJobId(jobId);
+    setSelectedCandidate(candidate);
+    setSelectedJobId(jobId);
 
-  try {
-    // Buscar a solicitação de entrevista existente para o candidato e a vaga
-    const { data: existingRequest, error } = await supabase
-      .from('solicitacoes_entrevista')
-      .select('local')
-      .eq('id_candidato', candidate.candidatos.id)
-      .eq('id_vaga', jobId)
-      .single();
+    try {
+      // Buscar a solicitação de entrevista existente para o candidato e a vaga
+      const { data: existingRequest, error } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('local')
+        .eq('id_candidato', candidate.candidatos.id)
+        .eq('id_vaga', jobId)
+        .single();
 
-    console.log('Dados da solicitação de entrevista:', existingRequest);
-    console.log('Erro ao buscar a solicitação de entrevista:', error);
-    if (error) {
-      console.error('Erro ao buscar solicitação de entrevista:', error);
-    } else if (existingRequest) {
-      setLocation(existingRequest.local);
-    } else {
-      setLocation('Endereço padrão');
+      console.log('Dados da solicitação de entrevista:', existingRequest);
+      console.log('Erro ao buscar a solicitação de entrevista:', error);
+      if (error) {
+        console.error('Erro ao buscar solicitação de entrevista:', error);
+      } else if (existingRequest) {
+        setLocation(existingRequest.local);
+      } else {
+        setLocation('Endereço padrão');
+      }
+
+      setModalVisible(true);
+    } catch (err) {
+      console.error('Erro ao buscar informações da entrevista:', err);
+      alert('Erro ao buscar informações da entrevista.');
     }
+  };
+  // Função para obter o nome do local a partir das coordenadas
+  const getLocationName = async (latitude, longitude) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'siasapp/1.0',
+          'Accept-Language': 'pt-BR'
+        },
+      });
 
-    setModalVisible(true);
-  } catch (err) {
-    console.error('Erro ao buscar informações da entrevista:', err);
-    alert('Erro ao buscar informações da entrevista.');
-  }
-};
-// Função para obter o nome do local a partir das coordenadas
-const getLocationName = async (latitude, longitude) => {
-  try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'siasapp/1.0',
-        'Accept-Language': 'pt-BR'
-      },
-    });
+      if (!response.ok) {
+        throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
+      }
 
-    if (!response.ok) {
-      throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
+      const data = await response.json();
+      setLocation(data.display_name); // Atualiza o campo de input com o nome do local
+      setLocationName(data.display_name); // Para o marcador no mapa
+    } catch (error) {
+      console.error('Erro ao obter o nome do local:', error);
+      setLocation('Local não encontrado');
     }
-
-    const data = await response.json();
-    setLocation(data.display_name); // Atualiza o campo de input com o nome do local
-    setLocationName(data.display_name); // Para o marcador no mapa
-  } catch (error) {
-    console.error('Erro ao obter o nome do local:', error);
-    setLocation('Local não encontrado');
-  }
-};
-
-
-  // Função para obter o nome do local a partir das coordenad
+  };
 
   // Função para obter coordenadas a partir do nome do local
   const getCoordinatesFromLocationName = async (locationName) => {
@@ -821,26 +827,49 @@ const getLocationName = async (latitude, longitude) => {
     return null; // Retorna nulo se não encontrar as coordenadas
   };
 
-
-  // Handle ao mudar texto no input
+  // Função para lidar com a mudança de texto no input de endereço
   const handleInputChange = async (text) => {
     setLocation(text);
 
-    const coords = await getCoordinatesFromLocationName(text);
-    if (coords) {
-      setMapLocation(coords);
-      setLocationName(text); 
-    } else {
-      setMapLocation(null); // Limpa o marcador se o endereço não for encontrado
+    // Limpar o timeout anterior, se houver
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
     }
+
+    // Definir um novo timeout
+    const newTimeout = setTimeout(async () => {
+      const coords = await getCoordinatesFromLocationName(text);
+
+      if (coords) {
+        setMapLocation(coords);
+        console.log('Coordenadas obtidas:', coords);
+
+        // Centraliza o mapa nas coordenadas encontradas
+        mapRef.current?.animateToRegion({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        }, 2000);
+      } else {
+        setMapLocation(null);
+      }
+    }, 500);
+
+    // Atualiza o estado do timeout
+    setTypingTimeout(newTimeout);
   };
+
+
+
+
 
   // Função para lidar com o toque no mapa
   const handleMapPress = async (event) => {
     const { coordinate } = event.nativeEvent;
-    setMapLocation(coordinate); // Atualiza a localização do mapa
+    setMapLocation(coordinate);
     await getLocationName(coordinate.latitude, coordinate.longitude);
-    // O nome do local já está atualizado na função getLocationName
+
   };
 
   // Função para salvar as informações do modal no banco de dados 
@@ -1070,150 +1099,150 @@ const getLocationName = async (latitude, longitude) => {
 
 
         <Text style={styles.text1}>
-  Entrevistas Agendadas
-</Text>
-{error ? (
-  <Text style={styles.errorText}>{error.message || 'Erro desconhecido'}</Text>
-) : (
-  <>
-    {console.log('Job Offers:', jobOffers)}
-    {console.log('Candidates:', candidates)}
+          Entrevistas Agendadas
+        </Text>
+        {error ? (
+          <Text style={styles.errorText}>{error.message || 'Erro desconhecido'}</Text>
+        ) : (
+          <>
+            {console.log('Job Offers:', jobOffers)}
+            {console.log('Candidates:', candidates)}
 
-    {jobOffers.filter(job => candidates.some(candidate => candidate.vagas.id === job.id)).length > 0 ? (
-      jobOffers
-        .filter(job => candidates.some(candidate => candidate.vagas.id === job.id))
-        .map((job, index) => (
-          <Animatable.View
-            key={job.id}
-            style={[
-              styles.jobContainer,
-              { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
-            ]}
-            animation="bounceIn"
-            duration={500}
-          >
-            <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
-              <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-              <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
-            </TouchableOpacity>
-
-            {expandedJobs[job.id] && (
-              candidates
-                .filter(candidate => candidate.vagas.id === job.id)
-                .map(candidate => (
-                  <View key={candidate.id} style={styles.candidateContainer}>
-                    <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
-                      <View style={styles.candidateDetails}>
-                        {candidate.candidatos.foto_perfil ? (
-                          <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
-                        ) : (
-                          <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                        )}
-                        <View style={styles.infoContainer}>
-                          {candidate.status === 'aceito' && <Text style={styles.statusText}>✔️ Aceito</Text>}
-                          {candidate.status === 'recusado' && <Text style={styles.statusText}>❌ Recusado</Text>}
-                          {candidate.status === 'pendente' && <Text style={styles.statusText}>⏳ Pendente</Text>}
-                          <Text style={styles.name}>{candidate.candidatos.nome}</Text>
-                          <Text style={styles.email}>{candidate.candidatos.email}</Text>
-                          <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
-                        </View>
-                      </View>
+            {jobOffers.filter(job => candidates.some(candidate => candidate.vagas.id === job.id)).length > 0 ? (
+              jobOffers
+                .filter(job => candidates.some(candidate => candidate.vagas.id === job.id))
+                .map((job, index) => (
+                  <Animatable.View
+                    key={job.id}
+                    style={[
+                      styles.jobContainer,
+                      { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+                    ]}
+                    animation="bounceIn"
+                    duration={500}
+                  >
+                    <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
+                      <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                      <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
                     </TouchableOpacity>
-                  </View>
+
+                    {expandedJobs[job.id] && (
+                      candidates
+                        .filter(candidate => candidate.vagas.id === job.id)
+                        .map(candidate => (
+                          <View key={candidate.id} style={styles.candidateContainer}>
+                            <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
+                              <View style={styles.candidateDetails}>
+                                {candidate.candidatos.foto_perfil ? (
+                                  <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
+                                ) : (
+                                  <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                                )}
+                                <View style={styles.infoContainer}>
+                                  {candidate.status === 'aceito' && <Text style={styles.statusText}>✔️ Aceito</Text>}
+                                  {candidate.status === 'recusado' && <Text style={styles.statusText}>❌ Recusado</Text>}
+                                  {candidate.status === 'pendente' && <Text style={styles.statusText}>⏳ Pendente</Text>}
+                                  <Text style={styles.name}>{candidate.candidatos.nome}</Text>
+                                  <Text style={styles.email}>{candidate.candidatos.email}</Text>
+                                  <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                                </View>
+                              </View>
+                            </TouchableOpacity>
+                          </View>
+                        ))
+                    )}
+                  </Animatable.View>
                 ))
+            ) : (
+              <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
             )}
-          </Animatable.View>
-        ))
-    ) : (
-      <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
-    )}
-  </>
-)}
+          </>
+        )}
 
 
 
         <Text style={styles.text1}>Suas Ofertas de Trabalho:</Text>
         {jobOffersWithCandidates.length > 0 ? (
-  jobOffersWithCandidates.map((job, index) => (
-    <Animatable.View
-      key={job.id}
-      style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
-      animation="bounceIn"
-      duration={500}
-    >
-      <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
-        <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-        <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
-      </TouchableOpacity>
+          jobOffersWithCandidates.map((job, index) => (
+            <Animatable.View
+              key={job.id}
+              style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
+              animation="bounceIn"
+              duration={500}
+            >
+                  <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpandInfo(job.id)}>
+                  <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
+              </TouchableOpacity>
 
-      {expandedJobs[job.id] && (
-        <View>
-          <Text style={{ fontWeight: 'bold', color: '#FFFFFF' }}>Inscritos:</Text>
-          {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
-            job.inscricoes_vagas.map((inscricao) => {
-              const candidato = inscricao.candidatos;
-              if (!candidato) {
-                console.warn('Inscrição sem candidatos:', inscricao);
-                return null;
-              }
+              {toggleExpandInfo[job.id] && (
+                <View>
+                  <Text style={{ fontWeight: 'bold', color: '#FFFFFF' }}>Inscritos:</Text>
+                  {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
+                    job.inscricoes_vagas.map((inscricao) => {
+                      const candidato = inscricao.candidatos;
+                      if (!candidato) {
+                        console.warn('Inscrição sem candidatos:', inscricao);
+                        return null;
+                      }
 
-              const animatedValue = animatedValues[inscricao.id_candidato];
-              const panResponder = panResponders[inscricao.id_candidato];
-              const feedbackVisible = feedbackVisibleByCandidate[inscricao.id_candidato];
-              const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
+                      const animatedValue = animatedValues[inscricao.id_candidato];
+                      const panResponder = panResponders[inscricao.id_candidato];
+                      const feedbackVisible = feedbackVisibleByCandidate[inscricao.id_candidato];
+                      const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
 
-              return (
-                <Animated.View
-                  key={inscricao.id_candidato}
-                  style={[styles.candidateContainer, { transform: [{ translateX: animatedValue }] }]}
-                  {...(panResponder ? panResponder.panHandlers : {})}
-                >
-                  <TouchableOpacity onPress={() => {
-                    openModal1(candidato);
-                    setFeedbackVisibleByCandidate((prev) => ({
-                      ...prev,
-                      [inscricao.id_candidato]: true,
-                    }));
-                    setFeedbackMessageByCandidate((prev) => ({
-                      ...prev,
-                      [inscricao.id_candidato]: 'Candidato selecionado com sucesso!',
-                    }));
-                  }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      {candidato.foto_perfil ? (
-                        <Image source={{ uri: candidato.foto_perfil }} style={styles.photo} />
-                      ) : (
-                        <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                      )}
-                      <View style={{ marginLeft: 10 }}>
-                        <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
-                        <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
-                        {candidato.cpf && (
-                          <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                  {feedbackVisible && (
-                    <View style={[styles.feedbackContainer, { alignItems: feedbackMessage === 'Aceito' ? 'flex-start' : 'flex-end' }]}>
-                      <Text style={feedbackMessage === 'Aceito' ? styles.correct : styles.wrong}>
-                        {feedbackMessage}
-                      </Text>
-                    </View>
+                      return (
+                        <Animated.View
+                          key={inscricao.id_candidato}
+                          style={[styles.candidateContainer, { transform: [{ translateX: animatedValue }] }]}
+                          {...(panResponder ? panResponder.panHandlers : {})}
+                        >
+                          <TouchableOpacity onPress={() => {
+                            openModal1(candidato);
+                            setFeedbackVisibleByCandidate((prev) => ({
+                              ...prev,
+                              [inscricao.id_candidato]: true,
+                            }));
+                            setFeedbackMessageByCandidate((prev) => ({
+                              ...prev,
+                              [inscricao.id_candidato]: 'Candidato selecionado com sucesso!',
+                            }));
+                          }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              {candidato.foto_perfil ? (
+                                <Image source={{ uri: candidato.foto_perfil }} style={styles.photo} />
+                              ) : (
+                                <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                              )}
+                              <View style={{ marginLeft: 10 }}>
+                                <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
+                                <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
+                                {candidato.cpf && (
+                                  <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                                )}
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                          {feedbackVisible && (
+                            <View style={[styles.feedbackContainer, { alignItems: feedbackMessage === 'Aceito' ? 'flex-start' : 'flex-end' }]}>
+                              <Text style={feedbackMessage === 'Aceito' ? styles.correct : styles.wrong}>
+                                {feedbackMessage}
+                              </Text>
+                            </View>
+                          )}
+                        </Animated.View>
+                      );
+                    })
+                  ) : (
+                    <Text>Nenhum candidato inscrito nesta vaga.</Text>
                   )}
-                </Animated.View>
-              );
-            })
-          ) : (
-            <Text>Nenhum candidato inscrito nesta vaga.</Text>
-          )}
-        </View>
-      )}
-    </Animatable.View>
-  ))
-) : (
-  <Text>Nenhuma vaga disponível.</Text>
-)}
+                </View>
+              )}
+            </Animatable.View>
+          ))
+        ) : (
+          <Text>Nenhuma vaga disponível.</Text>
+        )}
 
 
 
@@ -1254,20 +1283,19 @@ const getLocationName = async (latitude, longitude) => {
                     {/* Mapa para seleção do local */}
                     <View style={{ height: 300 }}>
                       <MapView
+                        ref={mapRef} // Usando a referência corretamente
                         style={{ flex: 1 }}
                         initialRegion={{
-                          latitude: -23.5505,
-                          longitude: -46.6333,
-                          latitudeDelta: 0.0922,
-                          longitudeDelta: 0.0421,
+                          latitude: -23.55052,
+                          longitude: -46.633308,
+                          latitudeDelta: 0.05,
+                          longitudeDelta: 0.05,
                         }}
-                        onPress={handleMapPress}
                       >
                         {mapLocation && (
                           <Marker
-                            coordinate={mapLocation}
-                            title={locationName}
-                            description={locationName}
+                            coordinate={mapLocation} // Adicione a propriedade coordinate aqui
+                            title={location} // Você pode personalizar o título do marcador
                           />
                         )}
                       </MapView>

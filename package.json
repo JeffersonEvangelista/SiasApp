@@ -78,6 +78,7 @@
   "devDependencies": {
     "@babel/core": "^7.24.0",
     "@types/react": "~18.2.79",
+    "@types/react-native-maps": "^0.24.1",
     "typescript": "~5.3.3"
   },
   "private": true
