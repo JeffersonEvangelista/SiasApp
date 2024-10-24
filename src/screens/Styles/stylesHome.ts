@@ -12,6 +12,7 @@ export const styles = StyleSheet.create({
     chartContainer: {
         height: 330,
         marginBottom: 8,
+        marginTop: '3%',
     },
     loaderContainer: {
         flex: 1,
@@ -24,7 +25,7 @@ export const styles = StyleSheet.create({
     },
     top: {
         backgroundColor: '#ff8c00',
-        height: 160,
+        height: '14%',
         width: '100%',
         borderWidth: 2,
         borderColor: '#ff8c00',
@@ -36,12 +37,14 @@ export const styles = StyleSheet.create({
         marginTop: 0,
         paddingHorizontal: 15,
     },
+    
     profileImage: {
-        width: 50,
-        height: 50,
+        width: 60,
+        height: 60,
         borderRadius: 25,
         marginRight: 10,
     },
+    
     textContainer: {
         justifyContent: 'center',
         alignItems: 'flex-start',
@@ -58,7 +61,8 @@ export const styles = StyleSheet.create({
         fontWeight: 'bold',
         textAlign: 'left',
         color: 'black',
-        marginTop: '13%'
+        marginTop: '13%',
+        
     },
     jobTitleContainer: {
         flexDirection: 'row',
@@ -145,7 +149,7 @@ export const styles = StyleSheet.create({
         marginTop: 10,
     },
     text2: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
         textAlign: 'left',
         color: 'white',

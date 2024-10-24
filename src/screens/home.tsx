@@ -12,6 +12,7 @@ import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { styles } from './Styles/stylesHome';
 import AppState  from '../components/globalVars';
+import PulsingDots from '../components/PulsingDots';
 
 
 interface Candidate {
@@ -33,7 +34,7 @@ const App = () => {
   const [candidates, setCandidates] = useState([]);
   const [expandedJobs, setExpandedJobs] = useState({});
   const [toggleExpandInfo, settoggleExpandInfo] = useState({});
-    const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [modalVisibleInfo, setModalVisibleInfo] = useState(false);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
@@ -862,10 +863,6 @@ const App = () => {
     setTypingTimeout(newTimeout);
   };
 
-
-
-
-
   // Função para lidar com o toque no mapa
   const handleMapPress = async (event) => {
     const { coordinate } = event.nativeEvent;
@@ -1086,15 +1083,13 @@ const App = () => {
                   </View>
                 </PanGestureHandler>
 
-                {/* Exibindo informações de texto apenas para melhor edição do gráfico e suas funcionalidades */}
-
               </View>
             </GestureHandlerRootView>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text>Aguardando dados</Text>
               {/*     <PulsingDots />    */}
-
+              <PulsingDots />
             </View>
           )}
         </View>
@@ -1200,7 +1195,6 @@ const App = () => {
                           {...(panResponder ? panResponder.panHandlers : {})}
                         >
                           <TouchableOpacity onPress={() => {
-                            openModal1(candidato);
                             setFeedbackVisibleByCandidate((prev) => ({
                               ...prev,
                               [inscricao.id_candidato]: true,
@@ -1249,6 +1243,28 @@ const App = () => {
 
 
         <View>
+                  {/* Animação de Conexão (Modal) */}
+        <Modal transparent={true} visible={showNoConnection}>
+          <View style={styles.modalBackground}>
+            <LottieView
+              source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+              autoPlay
+              loop
+              style={styles.lottieAnimation}
+            />
+            <TouchableOpacity
+              style={styles.customButton}
+              onPress={() => {
+                setShowNoConnection(false);
+                // Você pode adicionar lógica aqui para tentar recarregar os dados
+                fetchInterviewCounts(userId); // Tenta recarregar os dados
+              }}
+            >
+              <Text style={styles.buttonText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+        
           {/* Modal para informações do candidato */}
           <Modal
             animationType="slide"
@@ -1281,23 +1297,24 @@ const App = () => {
                       selectionColor="#000"
                       underlineColorAndroid="transparent"
                     />
-
+ 
                     {/* Mapa para seleção do local */}
                     <View style={{ height: 300 }}>
-                      <MapView
-                        ref={mapRef} // Usando a referência corretamente
+                    <MapView
+                        ref={mapRef}
                         style={{ flex: 1 }}
                         initialRegion={{
-                          latitude: -23.55052,
-                          longitude: -46.633308,
-                          latitudeDelta: 0.05,
-                          longitudeDelta: 0.05,
+                          latitude: -23.5505,
+                          longitude: -46.6333,
+                          latitudeDelta: 0.0922,
+                          longitudeDelta: 0.0421,
                         }}
+                        onPress={handleMapPress}
                       >
                         {mapLocation && (
                           <Marker
-                            coordinate={mapLocation} // Adicione a propriedade coordinate aqui
-                            title={location} // Você pode personalizar o título do marcador
+                            coordinate={mapLocation}
+                            title={location} 
                           />
                         )}
                       </MapView>
@@ -1554,4 +1571,3 @@ const App = () => {
 
 
 export default App;
-
