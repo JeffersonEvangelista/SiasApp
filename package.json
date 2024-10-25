@@ -41,6 +41,7 @@
     "expo-router": "~3.5.23",
     "expo-status-bar": "~1.12.1",
     "firebase": "^10.13.1",
+    "geolib": "^3.3.4",
     "lottie-ios": "^3.1.8",
     "lottie-react-native": "6.7.0",
     "nativewind": "^2.0.11",

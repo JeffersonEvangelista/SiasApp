@@ -191,5 +191,22 @@ export const styles = StyleSheet.create({
         color: '#555',
         marginBottom: '-5 %'
     },
-
+    acceptAction: {
+        backgroundColor: 'green',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
+        height: '100%',
+    },
+    rejectAction: {
+        backgroundColor: 'red',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
+        height: '100%',
+    },
+    actionText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
 });

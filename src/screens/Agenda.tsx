@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { getUserNameAndId, supabase } from "../services/userService";
 import { styles } from "./Styles/stylesAgenda";
 import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { getDistance } from 'geolib';
 
 
 
@@ -32,8 +34,31 @@ export default function Agenda() {
     dayNamesShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
     today: 'Hoje'
   };
-
   LocaleConfig.defaultLocale = 'pt';
+
+
+
+  useEffect(() => {
+    const getUserLocation = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const userLocation = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          latitude: userLocation.coords.latitude,
+          longitude: userLocation.coords.longitude,
+        });
+      } else {
+        console.log('Permissão de localização não concedida');
+      }
+    };
+
+    getUserLocation();
+    fetchProfile();
+  }, [userType]);
+
+
+
+
 
   useEffect(() => {
     fetchProfile();
@@ -213,6 +238,13 @@ export default function Agenda() {
 
   const openModal = (interview) => {
     setSelectedInterview(interview);
+    if (userLocation && interview.coordinates) {
+      const distance = getDistance(
+        { latitude: userLocation.latitude, longitude: userLocation.longitude },
+        { latitude: interview.coordinates.latitude, longitude: interview.coordinates.longitude }
+      );
+      setDistance(distance); // Distância em metros
+    }
     setModalVisible(true);
   };
 
@@ -353,6 +385,9 @@ export default function Agenda() {
                   <Text style={styles.modalText}>Localização não disponível.</Text>
                 )}
 
+                <Text style={styles.modalText}>
+                  Distância da vaga: {distance ? `${(distance / 1000).toFixed(2)} km` : 'Indisponível'}
+                </Text>
                 <TouchableOpacity
                   style={styles.buttonClose}
                   onPress={() => setModalVisible(false)}
