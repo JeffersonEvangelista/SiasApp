@@ -35,8 +35,9 @@ export default function Agenda() {
     today: 'Hoje'
   };
   LocaleConfig.defaultLocale = 'pt';
-
-
+  const truncateText = (text, maxLength) => {
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
 
   useEffect(() => {
     const getUserLocation = async () => {
@@ -190,7 +191,7 @@ export default function Agenda() {
 
 
   // Função para dar animação na questão da entrevista
-  const createPanResponderForInterview = (animatedValue, interview) => {
+  const createPanResponderForInterview = (animatedValue, interview, userId) => {
     return PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
         return Math.abs(gestureState.dx) > 20;
@@ -200,7 +201,7 @@ export default function Agenda() {
       },
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > 120) {
-          handleAcceptCandidate(interview);
+          handleAcceptCandidate(interview, userId); // Passando userId aqui
           Animated.spring(animatedValue, {
             toValue: 500,
             useNativeDriver: true,
@@ -208,7 +209,7 @@ export default function Agenda() {
             animatedValue.setValue(0);
           });
         } else if (gestureState.dx < -120) {
-          handleRecusar(interview);
+          handleRecusar(interview, userId); // Passando userId aqui
           Animated.spring(animatedValue, {
             toValue: -500,
             useNativeDriver: true,
@@ -227,17 +228,117 @@ export default function Agenda() {
     });
   };
 
-// Função para aceitar o entrevista
-const handleAcceptCandidate = (interview) => {
-  console.log(`Candidato aceito:`, interview);
-  
-};
+  // Função para aceitar o entrevista
+  const handleAcceptCandidate = async (interview, userId) => {
+    console.log('Candidate ID:', userId);
+    try {
 
-// Função para recusar a entrevista
-const handleRecusar = (interviewId) => {
-  console.log(`Candidato recusado: ${interviewId}`);
-};
 
+      console.log(`Candidato aceito:`, interview);
+
+
+
+      // Atualizar o status da solicitação de entrevista
+      const { error: updateError } = await supabase
+        .from('solicitacoes_entrevista')
+        .update({ status: 'aceita' })
+        .eq('id', interview.id);
+
+      if (updateError) {
+        console.error('Erro ao atualizar status da entrevista:', updateError);
+        return;
+      }
+
+      console.log('Status da entrevista atualizado para "aceita"');
+
+      // Verificar se já existe uma resposta para a solicitação e candidato
+      const { data: existingResponse, error: fetchError } = await supabase
+        .from('respostas_candidatos')
+        .select('*')
+        .eq('id_solicitacao', interview.id)
+        .eq('id_candidato', userId);
+
+      if (fetchError) {
+        console.error('Erro ao buscar resposta existente:', fetchError);
+        return;
+      }
+
+      // Se não houver resposta existente, insira uma nova
+      if (existingResponse.length === 0) {
+        const { data, error: insertError } = await supabase
+          .from('respostas_candidatos')
+          .insert({
+            id_solicitacao: interview.id,
+            id_candidato: userId,
+            resposta: 'aceita',
+          });
+
+        if (insertError) {
+          console.error('Erro ao inserir resposta do candidato:', insertError);
+        } else {
+          console.log('Resposta do candidato inserida com sucesso:', data);
+          fetchProfile()
+        }
+      } else {
+        console.log('Já existe uma resposta para essa solicitação e candidato.');
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+    }
+  };
+
+  // Função para recusar a entrevista
+  const handleRecusar = async (interview, userId) => {
+    try {
+      console.log(`Candidato recusado:`, interview);
+
+      // Atualizar o status da solicitação de entrevista
+      const { error: updateError } = await supabase
+        .from('solicitacoes_entrevista')
+        .update({ status: 'recusada' })
+        .eq('id', interview.id);
+
+      if (updateError) {
+        console.error('Erro ao atualizar status da entrevista:', updateError);
+        return;
+      }
+
+      console.log('Status da entrevista atualizado para "recusada"');
+      // Verificar se já existe uma resposta para a solicitação e candidato
+      const { data: existingResponse, error: fetchError } = await supabase
+        .from('respostas_candidatos')
+        .select('*')
+        .eq('id_solicitacao', interview.id)
+        .eq('id_candidato', userId);
+
+      if (fetchError) {
+        console.error('Erro ao buscar resposta existente:', fetchError);
+        return;
+      }
+
+      // Se não houver resposta existente, insira uma nova
+      if (existingResponse.length === 0) {
+        const { data, error: insertError } = await supabase
+          .from('respostas_candidatos')
+          .insert({
+            id_solicitacao: interview.id,
+            id_candidato: userId,
+            resposta: 'recusada',
+          });
+
+        if (insertError) {
+          console.error('Erro ao inserir resposta do candidato:', insertError);
+        } else {
+          console.log('Resposta do candidato inserida com sucesso:', data);
+          fetchProfile()
+        }
+      } else {
+        console.log('Já existe uma resposta para essa solicitação e candidato.');
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+    }
+  };
 
   // Função para lidar com entrevistas pendentes cujo prazo já passou
   const handleExpiredInterview = async (interview, candidateId) => {
@@ -292,8 +393,6 @@ const handleRecusar = (interviewId) => {
     }
   };
 
-
-
   // Função para obter coordenadas a partir do nome do local
   const getCoordinatesFromLocationName = async (locationName) => {
     try {
@@ -340,6 +439,7 @@ const handleRecusar = (interviewId) => {
         return { color: 'gray', borderColor: 'black', borderWidth: 1, borderRadius: 5, width: 12, height: 12 };
     }
   };
+
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -416,7 +516,8 @@ const handleRecusar = (interviewId) => {
           <View style={styles.header}>
             <Text style={styles.headerText}>Agenda</Text>
           </View>
-          {/* Necessário arrumar essa questão pois o calendário esta afetando o reload da pagina  */}
+          {/* Necessário arrumar essa questão pois o calendário esta afetando o reload da pagina  
+          */}
           {renderCalendar()}
 
 
@@ -458,18 +559,19 @@ const handleRecusar = (interviewId) => {
                 keyExtractor={item => item.id.toString()}
                 renderItem={({ item }) => {
                   const animatedValue = new Animated.Value(0);
-                  const panResponder = createPanResponderForInterview(animatedValue, item);
+                  // Passando o userId para a função panResponder
+                  const panResponder = createPanResponderForInterview(animatedValue, item, userId);
 
                   const backgroundColor = animatedValue.interpolate({
                     inputRange: [-500, 0, 500],
-                    outputRange: ['lightcoral', 'white', 'lightgreen'],
+                    outputRange: ['lightcoral', '#ffffff', 'lightgreen'],
                     extrapolate: 'clamp',
                   });
 
                   return (
                     <Animated.View {...panResponder.panHandlers} style={{ transform: [{ translateX: animatedValue }] }}>
                       <TouchableOpacity onPress={() => openModal(item)}>
-                        <Animated.View style={[styles.interviewItem, { backgroundColor }]}>
+                        <Animated.View style={[styles.interviewItemPedentes, { backgroundColor }]}>
                           <View style={styles.dateContainer}>
                             <View style={styles.dateBar} />
                             <View style={styles.dateTextContainer}>
@@ -482,12 +584,14 @@ const handleRecusar = (interviewId) => {
                             </View>
                           </View>
                           <View style={styles.detailsContainer}>
-                            <Text style={styles.interviewTitle}>{item.title}</Text>
+                            <Text style={styles.interviewTitle}>
+                              {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
+                            </Text>
                             <Text style={styles.interviewRecruiter}>
-                              Empresa: {item.recruiter}
+                              Empresa: {truncateText(item.recruiter, 20)}
                             </Text>
                             <Text style={styles.interviewLocation}>
-                              Local: {item.location}
+                              Local: {truncateText(item.location, 20)}
                             </Text>
                           </View>
                         </Animated.View>
@@ -502,6 +606,7 @@ const handleRecusar = (interviewId) => {
 
 
 
+
             {/* Seção para entrevistas aceitas */}
             <Text style={styles.monthTitle}>Entrevistas aceitas</Text>
             {interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
@@ -509,28 +614,33 @@ const handleRecusar = (interviewId) => {
                 data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita')}
                 keyExtractor={item => item.id.toString()}
                 renderItem={({ item }) => (
-                  <View style={styles.interviewItem}>
-                    <View style={styles.dateContainer}>
-                      <View style={styles.dateBar} />
-                      <View style={styles.dateTextContainer}>
-                        <Text style={styles.interviewDateDay}>
-                          {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                  <TouchableOpacity onPress={() => openModal(item)}>
+
+                    <View style={styles.interviewItem}>
+                      <View style={styles.dateContainer}>
+                        <View style={styles.dateBarAceita} />
+                        <View style={styles.dateTextAceita}>
+                          <Text style={styles.interviewDateDayAceita}>
+                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                          </Text>
+                          <Text style={styles.interviewDateMonthAceita}>
+                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.detailsContainer}>
+                        <Text style={styles.interviewTitleAceita}>
+                          {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
                         </Text>
-                        <Text style={styles.interviewDateMonth}>
-                          {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                        <Text style={styles.interviewRecruiter}>
+                          Empresa: {truncateText(item.recruiter, 20)}
+                        </Text>
+                        <Text style={styles.interviewLocation}>
+                          Local: {truncateText(item.location, 20)}
                         </Text>
                       </View>
                     </View>
-                    <View style={styles.detailsContainer}>
-                      <Text style={styles.interviewTitle}>{item.title}</Text>
-                      <Text style={styles.interviewRecruiter}>
-                        Empresa: {item.recruiter}
-                      </Text>
-                      <Text style={styles.interviewLocation}>
-                        Local: {item.location}
-                      </Text>
-                    </View>
-                  </View>
+                  </TouchableOpacity>
                 )}
               />
             ) : (
@@ -557,12 +667,14 @@ const handleRecusar = (interviewId) => {
                       </View>
                     </View>
                     <View style={styles.detailsContainer}>
-                      <Text style={styles.interviewTitleRecursada}>{item.title}</Text>
+                      <Text style={styles.interviewTitleRecursada}>
+                        {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
+                      </Text>
                       <Text style={styles.interviewRecruiter}>
-                        Empresa: {item.recruiter}
+                        Empresa: {truncateText(item.recruiter, 20)}
                       </Text>
                       <Text style={styles.interviewLocation}>
-                        Local: {item.location}
+                        Local: {truncateText(item.location, 20)}
                       </Text>
                     </View>
                   </View>
@@ -612,9 +724,15 @@ const handleRecusar = (interviewId) => {
                     <Text style={styles.modalText}>Localização não disponível.</Text>
                   )}
 
-                  <Text style={styles.modalText}>
-                    Distância da vaga: {distance ? `${(distance / 1000).toFixed(2)} km` : 'Indisponível'}
-                  </Text>
+                  {distance !== undefined ? (
+                    <Text style={styles.modalText}>
+                      Distância da vaga: {(distance / 1000).toFixed(2)} km
+                    </Text>
+                  ) : (
+                    <Text style={styles.modalText}>
+                      Distância da vaga: Indisponível
+                    </Text>
+                  )}
                   <TouchableOpacity
                     style={styles.buttonClose}
                     onPress={() => setModalVisible(false)}
