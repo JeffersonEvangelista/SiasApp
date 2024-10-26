@@ -29,13 +29,13 @@ export const styles = StyleSheet.create({
         justifyContent: 'space-between',
         padding: 15,
         backgroundColor: '#ffffff',
-        borderRadius: 10, // cantos arredondados
+        borderRadius: 10, 
         marginVertical: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
-        elevation: 5, // sombra leve para Android
+        elevation: 5, 
     },
     interviewType: {
         color: '#666',
@@ -50,12 +50,12 @@ export const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fundo escurecido
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', 
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalView: {
-        width: '80%', // Ajuste conforme necessário
+        width: '80%', 
         backgroundColor: 'white',
         borderRadius: 10,
         padding: 20,
@@ -147,6 +147,12 @@ export const styles = StyleSheet.create({
         marginTop: '-6%',
         marginBottom: '3%'
     },
+    interviewTitleRecursada: {
+        fontSize: 20,
+        color: '#a30000',
+        marginTop: '-6%',
+        marginBottom: '3%'
+    },
     interviewRecruiter: {
         fontSize: 12,
         color: '#666',
@@ -161,6 +167,21 @@ export const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: '#ff8c00',
         marginRight: 10,
+    },
+    dateBarRecursada: {
+        width: 4,
+        height: '100%',
+        backgroundColor: '#a30000',
+        marginRight: 10,
+    },
+    interviewDateDayRecursada: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#a30000'
+    },
+    interviewDateMonthRecursada: {
+        fontSize: 18,
+        color: '#a30000'
     },
     dateTextContainer: {
         alignItems: 'center',
