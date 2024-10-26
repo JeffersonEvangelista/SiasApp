@@ -1,20 +1,21 @@
 import { StatusBar } from "expo-status-bar";
-import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, Modal, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, Modal, FlatList, Animated, PanResponder } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { ScrollView } from "react-native-gesture-handler";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getUserNameAndId, supabase, countSolicitacoes } from "../services/userService";
 import { styles } from "./Styles/stylesAgenda";
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { getDistance } from 'geolib';
 import AppState from '../components/globalVars';
+import { Swipeable } from 'react-native-gesture-handler';
 
 
 
 export default function Agenda() {
-
+  const pan = useRef(new Animated.ValueXY()).current;
   const [userId, setUserId] = useState(null);
   const [userType, setUserType] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -103,20 +104,20 @@ export default function Agenda() {
       const { data: interviewRequests, error } = await supabase
         .from('solicitacoes_entrevista')
         .select(`
+      id,
+      data_entrevista,
+      horario,
+      local,
+      status,
+      vagas (
         id,
-        data_entrevista,
-        horario,
-        local,
-        status,
-        vagas (
+        titulo,
+        recrutadores (
           id,
-          titulo,
-          recrutadores (
-            id,
-            nome
-          )
+          nome
         )
-      `)
+      )
+    `)
         .eq('id_candidato', candidateId);
 
       console.log('Dados de solicitações de entrevista:', interviewRequests);
@@ -139,7 +140,7 @@ export default function Agenda() {
           const dotStyle = getDotStyle(request.status);
 
           if (request.status.toLowerCase() === 'pendente' && interviewDate < today) {
-            handleExpiredInterview(request, candidateId); 
+            handleExpiredInterview(request, candidateId);
 
           }
 
@@ -187,58 +188,109 @@ export default function Agenda() {
     }
   };
 
-// Função para lidar com entrevistas pendentes cujo prazo já passou
-const handleExpiredInterview = async (interview, candidateId) => {
-  console.log('Entrevista pendente com data já passada:', interview);
+
+  // Função para dar animação na questão da entrevista
+  const createPanResponderForInterview = (animatedValue, interview) => {
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 20;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        animatedValue.setValue(gestureState.dx);
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 120) {
+          handleAcceptCandidate(interview);
+          Animated.spring(animatedValue, {
+            toValue: 500,
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+          });
+        } else if (gestureState.dx < -120) {
+          handleRecusar(interview);
+          Animated.spring(animatedValue, {
+            toValue: -500,
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+          });
+        } else {
+          Animated.spring(animatedValue, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+          });
+        }
+      },
+    });
+  };
+
+// Função para aceitar o entrevista
+const handleAcceptCandidate = (interview) => {
+  console.log(`Candidato aceito:`, interview);
   
-  try {
-    // Atualizar o status da solicitação de entrevista
-    const { error: updateError } = await supabase
-      .from('solicitacoes_entrevista')
-      .update({ status: 'recusada' })
-      .eq('id', interview.id);
-
-    if (updateError) {
-      console.error('Erro ao atualizar status da entrevista:', updateError);
-      return;
-    }
-
-    console.log('Status da entrevista atualizado para "recusada"');
-
-    // Verificar se já existe uma resposta para essa solicitação e candidato
-    const { data: existingResponse, error: fetchError } = await supabase
-      .from('respostas_candidatos')
-      .select('*')
-      .eq('id_solicitacao', interview.id)
-      .eq('id_candidato', candidateId);
-
-    if (fetchError) {
-      console.error('Erro ao buscar resposta existente:', fetchError);
-      return;
-    }
-
-    // Se não houver resposta existente, insira uma nova
-    if (existingResponse.length === 0) {
-      const { data, error: insertError } = await supabase
-        .from('respostas_candidatos')
-        .insert({
-          id_solicitacao: interview.id,
-          id_candidato: candidateId, // Usa o ID do candidato passado
-          resposta: 'recusada',
-        });
-
-      if (insertError) {
-        console.error('Erro ao inserir resposta do candidato:', insertError);
-      } else {
-        console.log('Resposta do candidato inserida com sucesso:', data);
-      }
-    } else {
-      console.log('Já existe uma resposta para essa solicitação e candidato.');
-    }
-  } catch (error) {
-    console.error('Erro inesperado:', error);
-  }
 };
+
+// Função para recusar a entrevista
+const handleRecusar = (interviewId) => {
+  console.log(`Candidato recusado: ${interviewId}`);
+};
+
+
+  // Função para lidar com entrevistas pendentes cujo prazo já passou
+  const handleExpiredInterview = async (interview, candidateId) => {
+    console.log('Entrevista pendente com data já passada:', interview);
+
+    try {
+      // Atualizar o status da solicitação de entrevista
+      const { error: updateError } = await supabase
+        .from('solicitacoes_entrevista')
+        .update({ status: 'recusada' })
+        .eq('id', interview.id);
+
+      if (updateError) {
+        console.error('Erro ao atualizar status da entrevista:', updateError);
+        return;
+      }
+
+      console.log('Status da entrevista atualizado para "recusada"');
+
+      // Verificar se já existe uma resposta para essa solicitação e candidato
+      const { data: existingResponse, error: fetchError } = await supabase
+        .from('respostas_candidatos')
+        .select('*')
+        .eq('id_solicitacao', interview.id)
+        .eq('id_candidato', candidateId);
+
+      if (fetchError) {
+        console.error('Erro ao buscar resposta existente:', fetchError);
+        return;
+      }
+
+      // Se não houver resposta existente, insira uma nova
+      if (existingResponse.length === 0) {
+        const { data, error: insertError } = await supabase
+          .from('respostas_candidatos')
+          .insert({
+            id_solicitacao: interview.id,
+            id_candidato: candidateId, // Usa o ID do candidato passado
+            resposta: 'recusada',
+          });
+
+        if (insertError) {
+          console.error('Erro ao inserir resposta do candidato:', insertError);
+        } else {
+          console.log('Resposta do candidato inserida com sucesso:', data);
+        }
+      } else {
+        console.log('Já existe uma resposta para essa solicitação e candidato.');
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+    }
+  };
 
 
 
@@ -289,19 +341,37 @@ const handleExpiredInterview = async (interview, candidateId) => {
     }
   };
 
-  // Função para recarregar a página
   const onRefresh = async () => {
-    setRefreshing(true); // Inicia o efeito de loading do RefreshControl
+    setRefreshing(true);
+    console.log('Atualizando dados...');
 
-    try {
-      await fetchProfile(); // Substitua fetchProfile() pela função que atualiza seus dados
-    } catch (error) {
-      console.error('Erro ao atualizar dados:', error);
-    } finally {
-      setRefreshing(false); // Encerra o efeito de loading do RefreshControl
-    }
+    await fetchProfile();
+    setRefreshing(false);
   };
 
+
+  // Função que retorna o componente Calendar
+  const renderCalendar = () => {
+    return (
+      <Calendar
+        style={{ flex: 1 }}
+        theme={{
+          backgroundColor: '#ffffff',
+          calendarBackground: '#ffffff',
+          textSectionTitleColor: '#b6c1cd',
+          selectedDayTextColor: '#ffffff',
+          todayTextColor: '#00adf5',
+          dayTextColor: '#2d4150',
+          textDisabledColor: '#d77906',
+          arrowColor: '#d77906',
+        }}
+        markedDates={markedDates}
+        onDayPress={(day) => {
+          console.log('Selected day', day);
+        }}
+      />
+    );
+  };
 
   const openModal = (interview) => {
     setSelectedInterview(interview);
@@ -318,6 +388,7 @@ const handleExpiredInterview = async (interview, candidateId) => {
   const toggleLegend = () => {
     setShowLegend(!showLegend);
   };
+
 
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
@@ -345,28 +416,9 @@ const handleExpiredInterview = async (interview, candidateId) => {
           <View style={styles.header}>
             <Text style={styles.headerText}>Agenda</Text>
           </View>
-          <Calendar
-            style={{
-              borderWidth: 1,
-              borderColor: 'gray',
-              height: 350,
-            }}
-            theme={{
-              backgroundColor: '#ffffff',
-              calendarBackground: '#ffffff',
-              textSectionTitleColor: '#b6c1cd',
-              selectedDayTextColor: '#ffffff',
-              todayTextColor: '#00adf5',
-              dayTextColor: '#2d4150',
-              textDisabledColor: '#d77906',
-              arrowColor: '#d77906',
-            }}
-            markedDates={markedDates}
-            // Remove o onDayPress para desabilitar a seleção de datas
-            onDayPress={(day) => {
-              console.log('Selected day', day);
-            }}
-          />
+          {/* Necessário arrumar essa questão pois o calendário esta afetando o reload da pagina  */}
+          {renderCalendar()}
+
 
 
           <TouchableOpacity style={styles.toggleButton} onPress={toggleLegend}>
@@ -397,7 +449,6 @@ const handleExpiredInterview = async (interview, candidateId) => {
               </View>
             </View>
           )}
-
           <View style={styles.interviewListContainer}>
             {/* Seção para entrevistas pendentes */}
             <Text style={styles.monthTitle}>Entrevistas a serem confirmadas</Text>
@@ -405,36 +456,51 @@ const handleExpiredInterview = async (interview, candidateId) => {
               <FlatList
                 data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente')}
                 keyExtractor={item => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity onPress={() => openModal(item)}>
-                    <View style={styles.interviewItem}>
-                      <View style={styles.dateContainer}>
-                        <View style={styles.dateBar} />
-                        <View style={styles.dateTextContainer}>
-                          <Text style={styles.interviewDateDay}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
-                          </Text>
-                          <Text style={styles.interviewDateMonth}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={styles.detailsContainer}>
-                        <Text style={styles.interviewTitle}>{item.title}</Text>
-                        <Text style={styles.interviewRecruiter}>
-                          Empresa: {item.recruiter}
-                        </Text>
-                        <Text style={styles.interviewLocation}>
-                          Local: {item.location}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+                  const animatedValue = new Animated.Value(0);
+                  const panResponder = createPanResponderForInterview(animatedValue, item);
+
+                  const backgroundColor = animatedValue.interpolate({
+                    inputRange: [-500, 0, 500],
+                    outputRange: ['lightcoral', 'white', 'lightgreen'],
+                    extrapolate: 'clamp',
+                  });
+
+                  return (
+                    <Animated.View {...panResponder.panHandlers} style={{ transform: [{ translateX: animatedValue }] }}>
+                      <TouchableOpacity onPress={() => openModal(item)}>
+                        <Animated.View style={[styles.interviewItem, { backgroundColor }]}>
+                          <View style={styles.dateContainer}>
+                            <View style={styles.dateBar} />
+                            <View style={styles.dateTextContainer}>
+                              <Text style={styles.interviewDateDay}>
+                                {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                              </Text>
+                              <Text style={styles.interviewDateMonth}>
+                                {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.detailsContainer}>
+                            <Text style={styles.interviewTitle}>{item.title}</Text>
+                            <Text style={styles.interviewRecruiter}>
+                              Empresa: {item.recruiter}
+                            </Text>
+                            <Text style={styles.interviewLocation}>
+                              Local: {item.location}
+                            </Text>
+                          </View>
+                        </Animated.View>
+                      </TouchableOpacity>
+                    </Animated.View>
+                  );
+                }}
               />
             ) : (
               <Text style={styles.noInterviewsMessage}>Nenhuma entrevista pendente.</Text>
             )}
+
+
 
             {/* Seção para entrevistas aceitas */}
             <Text style={styles.monthTitle}>Entrevistas aceitas</Text>
