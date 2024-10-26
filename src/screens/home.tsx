@@ -1,6 +1,6 @@
 // Importações do codigo 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, SafeAreaView, FlatList, Animated, Button, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
+import { View, Alert, FlatList, Animated, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
 import { getUserNameAndId, supabase, getJobInscriptions, countSolicitacoes } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -12,8 +12,6 @@ import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { styles } from './Styles/stylesHome';
 import AppState from '../components/globalVars';
-import PulsingDots from '../components/PulsingDots';
-
 
 interface Candidate {
   nome: string;
@@ -77,6 +75,18 @@ const App = () => {
   const [feedbackMessageByCandidate, setFeedbackMessageByCandidate] = useState({});
   const mapRef = useRef(null);
   const [typingTimeout, setTypingTimeout] = useState(null);
+  const [shakeCandidateIndex, setShakeCandidateIndex] = useState(0);
+  const isCandidateAcceptedOrRejected = selectedCandidate?.status === 'aceita' || selectedCandidate?.status === 'recusada';
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setShakeCandidateIndex(prevIndex => (prevIndex === 0 ? 1 : 0));
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const newAnimatedValues = {};
@@ -100,6 +110,29 @@ const App = () => {
     fetchProfile();
   }, [userType, currentDate]);
 
+  useEffect(() => {
+    fetchProfile();
+  }, [userType, currentDate]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchInscriptions(userId);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (!state.isConnected) {
+        setError('Sem conexão com a internet. Verifique sua conexão.');
+        setShowNoConnection(true);
+      } else {
+        setError(null);
+        setShowNoConnection(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   //  Função que carrega os dados do usuário
   const fetchProfile = async () => {
@@ -208,7 +241,7 @@ const App = () => {
     }
   };
 
-  //    Funções auxiliares para buscar Inscrições
+  // Funções auxiliares para buscar Inscrições
   const fetchInscriptions = async (candidateId: any) => {
     try {
       const inscriptions = await getJobInscriptions(candidateId);
@@ -219,7 +252,7 @@ const App = () => {
     }
   };
 
-
+  // Funções para recursar um candidato
   const handleRecusar = async (vaga, candidato) => {
     console.log("O item foi recusado!");
     console.log("Vaga recusada:", vaga);
@@ -251,7 +284,7 @@ const App = () => {
     }
   };
 
-
+  // Função para aceitar um candidato 
   const handleAcceptCandidate = async (jobId, candidateId, userId) => {
     // Defina os detalhes da entrevista
     const dataAtual = new Date();
@@ -262,7 +295,7 @@ const App = () => {
     const ano = dataEntrevista.getFullYear();
 
     const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`; const horario = '10:00:00';
-    const local = 'Sala de Reuniões 1'; // Local da entrevista
+    const local = '';
 
     // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
@@ -304,7 +337,8 @@ const App = () => {
         throw interviewError;
       }
 
-      alert('Candidato aceito com sucesso!');
+      alert('Candidato aceito com sucesso, você pode editar os detalhes logo acima!');
+      fetchProfile();
       console.log('Solicitação de entrevista criada com sucesso:', interviewData);
       fetchJobOffers(userId);
 
@@ -371,7 +405,7 @@ const App = () => {
     }
   };
 
-
+  // Funcao para controlar questao de arrastar o candidato 
   const createPanResponderForCandidate = (jobId, candidateId) => {
     const animatedValue = new Animated.Value(0);
 
@@ -434,30 +468,6 @@ const App = () => {
 
     return { animatedValue, panResponder };
   };
-
-  useEffect(() => {
-    fetchProfile();
-  }, [userType, currentDate]);
-
-  useEffect(() => {
-    if (userId) {
-      fetchInscriptions(userId);
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      if (!state.isConnected) {
-        setError('Sem conexão com a internet. Verifique sua conexão.');
-        setShowNoConnection(true);
-      } else {
-        setError(null);
-        setShowNoConnection(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   // ======================================================= Funções do Gráfico, Alterações nessa parte representam risco de porrada =====================================================
 
@@ -679,14 +689,6 @@ const App = () => {
     );
   }
 
-
-  // Função para selecionar a vaga e alternar a expansão
-  const handleJobSelect = (jobId) => {
-    setSelectedJobId(jobId);
-    toggleExpand(jobId);
-    console.log('ID da vaga selecionada:', jobId);
-  };
-
   // Função para alternar a expansão das vagas
   const toggleExpand = (jobId) => {
     // Toggle individual do estado de expansão
@@ -695,7 +697,6 @@ const App = () => {
       [jobId]: !prev[jobId],
     }));
   };
-
 
   const handleToggleExpand = (jobId) => {
     // Toggle individual do estado de expansão
@@ -709,17 +710,6 @@ const App = () => {
   //=========================================================  Funções do modal ======================================================= 
   // Função para fechar o modal
   const closeModal = () => {
-    setModalVisible(false);
-  };
-
-  const handleCandidatePress = (candidato) => {
-    setSelectedCandidate(candidato);
-    setModalVisible(true);
-  };
-
-  const handleInterviewRequest = () => {
-    // Aqui você pode implementar a lógica para enviar a solicitação de entrevista
-    console.log(`Solicitação de entrevista enviada para ${selectedCandidate.nome}`);
     setModalVisible(false);
   };
 
@@ -778,6 +768,7 @@ const App = () => {
       alert('Erro ao buscar informações da entrevista.');
     }
   };
+
   // Função para obter o nome do local a partir das coordenadas
   const getLocationName = async (latitude, longitude) => {
     try {
@@ -935,7 +926,7 @@ const App = () => {
             alert('Erro ao atualizar solicitação de entrevista.');
           } else {
             console.log('Solicitação de entrevista atualizada com sucesso!');
-            alert('Solicitação de entrevista atualizada com sucesso!');
+            handleSuccess();
             closeModal();
           }
         } else {
@@ -972,6 +963,15 @@ const App = () => {
       alert('Erro ao salvar solicitação de entrevista.');
     }
   };
+
+  const handleSuccess = () => {
+    Alert.alert(
+      'Sucesso', // Título do alerta
+      'Solicitação de entrevista atualizada com sucesso!', // Mensagem do alerta
+      [{ text: 'OK' }] // Botões do alerta
+    );
+  };
+
 
   //=================================================================================================================================================== 
 
@@ -1155,95 +1155,109 @@ const App = () => {
           </>
         )}
 
-
-
         <Text style={styles.text1}>Suas Ofertas de Trabalho:</Text>
         {jobOffersWithCandidates.length > 0 ? (
-          jobOffersWithCandidates.map((job, index) => (
-            <Animatable.View
-              key={job.id}
-              style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
-              animation="bounceIn"
-              duration={500}
-            >
-              <TouchableOpacity style={styles.jobTitleContainer} onPress={() => handleToggleExpand(job.id)}>
-                <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-                <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
-              </TouchableOpacity>
+          <>
+            {/* Renderiza as instruções apenas se a lista estiver expandida */}
+            {Object.keys(toggleExpandInfo).some(jobId => toggleExpandInfo[jobId]) && (
+              <View style={styles.instructionContainer}>
+                <Text style={styles.instructionText}>
+                  👉 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.acceptText}>aceitar</Text>.
+                </Text>
+                <Text style={styles.instructionText}>
+                  👈 Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.rejectText}>recusar</Text>.
+                </Text>
+              </View>
+            )}
 
-              {toggleExpandInfo[job.id] && (
-                <View>
-                  <Text style={{ fontWeight: 'bold', color: '#FFFFFF' }}>Inscritos:</Text>
-                  {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
-                    job.inscricoes_vagas.map((inscricao) => {
-                      const candidato = inscricao.candidatos;
-                      if (!candidato) {
-                        console.warn('Inscrição sem candidatos:', inscricao);
-                        return null;
-                      }
+            {jobOffersWithCandidates.map((job, index) => (
+              <Animatable.View
+                key={job.id}
+                style={[
+                  styles.jobContainer,
+                  { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+                ]}
+                animation="bounceIn"
+                duration={500}
+              >
+                <TouchableOpacity style={styles.jobTitleContainer} onPress={() => handleToggleExpand(job.id)}>
+                  <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                  <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{toggleExpandInfo[job.id] ? '▼' : '▲'}</Text>
+                </TouchableOpacity>
 
-                      const animatedValue = animatedValues[inscricao.id_candidato];
-                      const panResponder = panResponders[inscricao.id_candidato];
-                      const feedbackVisible = feedbackVisibleByCandidate[inscricao.id_candidato];
-                      const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
+                {toggleExpandInfo[job.id] && (
+                  <View>
+                    <Text style={{ fontWeight: 'bold', color: '#FFFFFF' }}>Inscritos:</Text>
+                    {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
+                      job.inscricoes_vagas.map((inscricao, candidateIndex) => {
+                        const candidato = inscricao.candidatos;
+                        if (!candidato) {
+                          console.warn('Inscrição sem candidatos:', inscricao);
+                          return null;
+                        }
 
-                      return (
-                        <Animated.View
-                          key={inscricao.id_candidato}
-                          style={[
-                            styles.candidateContainer,
-                            {
-                              transform: [{ translateX: animatedValue }],
-                              backgroundColor: animatedValue.__getValue() === 0
-                                ? 'white' 
-                                : feedbackMessage === 'Aceito'
-                                  ? 'lightgreen'
-                                  : feedbackMessage === 'Recusado'
-                                    ? 'lightcoral'
-                                    : 'white' 
-                            }
-                          ]}
-                          {...(panResponder ? panResponder.panHandlers : {})}
-                        >
-                          <TouchableOpacity onPress={() => {
-                            setFeedbackVisibleByCandidate((prev) => ({
-                              ...prev,
-                              [inscricao.id_candidato]: true,
-                            }));
-                            setFeedbackMessageByCandidate((prev) => ({
-                              ...prev,
-                            }));
-                          }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                              {candidato.foto_perfil ? (
-                                <Image source={{ uri: candidato.foto_perfil }} style={styles.photo} />
-                              ) : (
-                                <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                              )}
-                              <View style={{ marginLeft: 10 }}>
-                                <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
-                                <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
-                                {candidato.cpf && (
-                                  <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                        const animatedValue = animatedValues[inscricao.id_candidato];
+                        const panResponder = panResponders[inscricao.id_candidato];
+                        const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
+
+                        return (
+                          <Animatable.View
+                            key={inscricao.id_candidato}
+                            style={[
+                              styles.candidateContainer,
+                              {
+                                transform: [{ translateX: animatedValue }],
+                                backgroundColor: animatedValue.__getValue() === 0
+                                  ? 'white'
+                                  : feedbackMessage === 'Aceito'
+                                    ? 'lightgreen'
+                                    : feedbackMessage === 'Recusado'
+                                      ? 'lightcoral'
+                                      : 'white'
+                              }
+                            ]}
+                            animation={shakeCandidateIndex === candidateIndex ? 'shake' : undefined}
+                            duration={1600}
+                            {...(panResponder ? panResponder.panHandlers : {})}
+                          >
+                            <TouchableOpacity onPress={() => {
+                              setFeedbackVisibleByCandidate((prev) => ({
+                                ...prev,
+                                [inscricao.id_candidato]: true,
+                              }));
+                              setFeedbackMessageByCandidate((prev) => ({
+                                ...prev,
+                              }));
+                            }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                {candidato.foto_perfil ? (
+                                  <Image source={{ uri: candidato.foto_perfil }} style={styles.photo} />
+                                ) : (
+                                  <Image source={require('../../assets/perfil.png')} style={styles.photo} />
                                 )}
+                                <View style={{ marginLeft: 10 }}>
+                                  <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
+                                  <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
+                                  {candidato.cpf && (
+                                    <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                                  )}
+                                </View>
                               </View>
-                            </View>
-                          </TouchableOpacity>
-                        </Animated.View>
-                      );
-                    })
-                  ) : (
-                    <Text>Nenhum candidato inscrito nesta vaga.</Text>
-                  )}
-                </View>
-              )}
-            </Animatable.View>
-          ))
+                            </TouchableOpacity>
+                          </Animatable.View>
+                        );
+                      })
+                    ) : (
+                      <Text>Nenhum candidato inscrito nesta vaga.</Text>
+                    )}
+                  </View>
+                )}
+              </Animatable.View>
+            ))}
+          </>
         ) : (
           <Text>Nenhuma vaga disponível.</Text>
         )}
-
-
 
         <View>
           {/* Animação de Conexão (Modal) */}
@@ -1376,7 +1390,15 @@ const App = () => {
                     <TouchableOpacity style={[styles.button, styles.closeButton]} onPress={closeModal}>
                       <Text style={styles.buttonText}>Fechar</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.saveButton,
+                        { opacity: isCandidateAcceptedOrRejected ? 0.5 : 1 } 
+                      ]}
+                      onPress={isCandidateAcceptedOrRejected ? null : handleSave} 
+                      disabled={isCandidateAcceptedOrRejected} 
+                    >
                       <Text style={styles.buttonText}>Salvar</Text>
                     </TouchableOpacity>
                   </>

@@ -8,7 +8,7 @@ export const styles = StyleSheet.create({
         backgroundColor: 'white',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        paddingBottom:'33%'
+        paddingBottom: '33%'
     },
     chartContainer: {
         height: 330,
@@ -38,14 +38,14 @@ export const styles = StyleSheet.create({
         marginTop: 0,
         paddingHorizontal: 15,
     },
-    
+
     profileImage: {
         width: 60,
         height: 60,
         borderRadius: 25,
         marginRight: 10,
     },
-    
+
     textContainer: {
         justifyContent: 'center',
         alignItems: 'flex-start',
@@ -63,7 +63,7 @@ export const styles = StyleSheet.create({
         textAlign: 'left',
         color: 'black',
         marginTop: '13%',
-        
+
     },
     jobTitleContainer: {
         flexDirection: 'row',
@@ -200,8 +200,9 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
         position: 'absolute',
-        right: 10,
-        top: 10,
+        marginTop: '-10%',
+        marginLeft: '65%'
+
     },
     noCandidatesText: {
         textAlign: 'center',
@@ -361,5 +362,31 @@ export const styles = StyleSheet.create({
         color: 'red',
         fontSize: 18,
     },
-    
+    instructionText: {
+        fontSize: 16,
+        marginBottom: 10,
+        textAlign: 'center',
+        color: '#333',
+    },
+    highlightText: {
+        color: '#F07A26',
+        fontWeight: 'bold',
+    },
+    acceptText: {
+        color: 'lightgreen',
+        fontWeight: 'bold',
+    },
+    rejectText: {
+        color: 'lightcoral',
+        fontWeight: 'bold',
+    },  
+    tooltipContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 10,
+        borderRadius: 10,
+        zIndex:7
+    },
+
 });
