@@ -1162,10 +1162,10 @@ const App = () => {
             {Object.keys(toggleExpandInfo).some(jobId => toggleExpandInfo[jobId]) && (
               <View style={styles.instructionContainer}>
                 <Text style={styles.instructionText}>
-                  👉 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.acceptText}>aceitar</Text>.
+                  👈 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.rejectText}>recusar</Text>.
                 </Text>
                 <Text style={styles.instructionText}>
-                  👈 Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.rejectText}>recusar</Text>.
+                    Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.acceptText}>aceitar 👉</Text>.
                 </Text>
               </View>
             )}
