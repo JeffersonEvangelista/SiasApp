@@ -8,6 +8,7 @@ export const styles = StyleSheet.create({
         backgroundColor: 'white',
         alignItems: 'center',
         justifyContent: 'flex-start',
+        paddingBottom:'33%'
     },
     chartContainer: {
         height: 330,

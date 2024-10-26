@@ -1,7 +1,7 @@
 // Importações do codigo 
 import React, { useEffect, useState, useRef } from 'react';
 import { View, SafeAreaView, FlatList, Animated, Button, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
-import { getUserNameAndId, supabase, getJobInscriptions,countSolicitacoes } from '../services/userService';
+import { getUserNameAndId, supabase, getJobInscriptions, countSolicitacoes } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -11,7 +11,7 @@ import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { styles } from './Styles/stylesHome';
-import AppState  from '../components/globalVars';
+import AppState from '../components/globalVars';
 import PulsingDots from '../components/PulsingDots';
 
 
@@ -139,8 +139,8 @@ const App = () => {
           await fetchInscriptions(candidateData.id);
         }
       }
-      const solicitacoesCount = await countSolicitacoes(userId) || 0; 
-      AppState.solicitacoesCount = solicitacoesCount;     
+      const solicitacoesCount = await countSolicitacoes(userId) || 0;
+      AppState.solicitacoesCount = solicitacoesCount;
       await fetchJobOffers(userId);
       await fetchCandidates(userId);
 
@@ -1089,7 +1089,6 @@ const App = () => {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text>Aguardando dados</Text>
               {/*     <PulsingDots />    */}
-              <PulsingDots />
             </View>
           )}
         </View>
@@ -1136,8 +1135,8 @@ const App = () => {
                                   <Image source={require('../../assets/perfil.png')} style={styles.photo} />
                                 )}
                                 <View style={styles.infoContainer}>
-                                  {candidate.status === 'aceito' && <Text style={styles.statusText}>✔️ Aceito</Text>}
-                                  {candidate.status === 'recusado' && <Text style={styles.statusText}>❌ Recusado</Text>}
+                                  {candidate.status === 'aceita' && <Text style={styles.statusText}>✔️ Aceito</Text>}
+                                  {candidate.status === 'recusada' && <Text style={styles.statusText}>❌ Recusado</Text>}
                                   {candidate.status === 'pendente' && <Text style={styles.statusText}>⏳ Pendente</Text>}
                                   <Text style={styles.name}>{candidate.candidatos.nome}</Text>
                                   <Text style={styles.email}>{candidate.candidatos.email}</Text>
@@ -1167,8 +1166,8 @@ const App = () => {
               animation="bounceIn"
               duration={500}
             >
-                  <TouchableOpacity style={styles.jobTitleContainer} onPress={() => handleToggleExpand(job.id)}>
-                  <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+              <TouchableOpacity style={styles.jobTitleContainer} onPress={() => handleToggleExpand(job.id)}>
+                <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
                 <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
               </TouchableOpacity>
 
@@ -1191,7 +1190,19 @@ const App = () => {
                       return (
                         <Animated.View
                           key={inscricao.id_candidato}
-                          style={[styles.candidateContainer, { transform: [{ translateX: animatedValue }] }]}
+                          style={[
+                            styles.candidateContainer,
+                            {
+                              transform: [{ translateX: animatedValue }],
+                              backgroundColor: animatedValue.__getValue() === 0
+                                ? 'white' 
+                                : feedbackMessage === 'Aceito'
+                                  ? 'lightgreen'
+                                  : feedbackMessage === 'Recusado'
+                                    ? 'lightcoral'
+                                    : 'white' 
+                            }
+                          ]}
                           {...(panResponder ? panResponder.panHandlers : {})}
                         >
                           <TouchableOpacity onPress={() => {
@@ -1201,7 +1212,6 @@ const App = () => {
                             }));
                             setFeedbackMessageByCandidate((prev) => ({
                               ...prev,
-                              [inscricao.id_candidato]: 'Candidato selecionado com sucesso!',
                             }));
                           }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1219,13 +1229,6 @@ const App = () => {
                               </View>
                             </View>
                           </TouchableOpacity>
-                          {feedbackVisible && (
-                            <View style={[styles.feedbackContainer, { alignItems: feedbackMessage === 'Aceito' ? 'flex-start' : 'flex-end' }]}>
-                              <Text style={feedbackMessage === 'Aceito' ? styles.correct : styles.wrong}>
-                                {feedbackMessage}
-                              </Text>
-                            </View>
-                          )}
                         </Animated.View>
                       );
                     })
@@ -1243,28 +1246,28 @@ const App = () => {
 
 
         <View>
-                  {/* Animação de Conexão (Modal) */}
-        <Modal transparent={true} visible={showNoConnection}>
-          <View style={styles.modalBackground}>
-            <LottieView
-              source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
-              autoPlay
-              loop
-              style={styles.lottieAnimation}
-            />
-            <TouchableOpacity
-              style={styles.customButton}
-              onPress={() => {
-                setShowNoConnection(false);
-                // Você pode adicionar lógica aqui para tentar recarregar os dados
-                fetchInterviewCounts(userId); // Tenta recarregar os dados
-              }}
-            >
-              <Text style={styles.buttonText}>Tentar novamente</Text>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-        
+          {/* Animação de Conexão (Modal) */}
+          <Modal transparent={true} visible={showNoConnection}>
+            <View style={styles.modalBackground}>
+              <LottieView
+                source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+                autoPlay
+                loop
+                style={styles.lottieAnimation}
+              />
+              <TouchableOpacity
+                style={styles.customButton}
+                onPress={() => {
+                  setShowNoConnection(false);
+                  // Você pode adicionar lógica aqui para tentar recarregar os dados
+                  fetchInterviewCounts(userId); // Tenta recarregar os dados
+                }}
+              >
+                <Text style={styles.buttonText}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          </Modal>
+
           {/* Modal para informações do candidato */}
           <Modal
             animationType="slide"
@@ -1297,10 +1300,10 @@ const App = () => {
                       selectionColor="#000"
                       underlineColorAndroid="transparent"
                     />
- 
+
                     {/* Mapa para seleção do local */}
                     <View style={{ height: 300 }}>
-                    <MapView
+                      <MapView
                         ref={mapRef}
                         style={{ flex: 1 }}
                         initialRegion={{
@@ -1314,7 +1317,7 @@ const App = () => {
                         {mapLocation && (
                           <Marker
                             coordinate={mapLocation}
-                            title={location} 
+                            title={location}
                           />
                         )}
                       </MapView>

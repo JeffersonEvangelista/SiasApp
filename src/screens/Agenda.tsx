@@ -72,7 +72,7 @@ export default function Agenda() {
       // Verificar se o usuário é recrutador
       const { data: recruiterData } = await supabase
         .from('recrutadores')
-        .select('id, nome, cnpj, foto_perfil')
+        .select('id')
         .eq('id', userId)
         .single();
 
@@ -81,7 +81,7 @@ export default function Agenda() {
       } else {
         const { data: candidateData } = await supabase
           .from('candidatos')
-          .select('id, nome, foto_perfil')
+          .select('id')
           .eq('id', userId)
           .single();
 
