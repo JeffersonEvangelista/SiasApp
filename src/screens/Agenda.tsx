@@ -26,8 +26,6 @@ export default function Agenda() {
   const [selectedInterview, setSelectedInterview] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [distance, setDistance] = useState(null);
-  const [duration, setDuration] = useState(null);
-
   LocaleConfig.locales['pt'] = {
     monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
     monthNamesShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
@@ -57,13 +55,10 @@ export default function Agenda() {
     fetchProfile();
   }, [userType]);
 
-
-
-
-
   useEffect(() => {
     fetchProfile();
   }, [userType]);
+
 
   // Função que carrega os dados do usuário
   const fetchProfile = async () => {
@@ -91,6 +86,8 @@ export default function Agenda() {
         if (candidateData) {
           setUserType('candidato');
           handleCandidateProfile(candidateData.id);
+          const solicitacoesCount = await countSolicitacoes(userId) || 0;
+          AppState.solicitacoesCount = solicitacoesCount;
         }
       }
 
@@ -142,7 +139,8 @@ export default function Agenda() {
           const dotStyle = getDotStyle(request.status);
 
           if (request.status.toLowerCase() === 'pendente' && interviewDate < today) {
-            handleExpiredInterview(request); // Chama a função para lidar com entrevistas expiradas
+            handleExpiredInterview(request, candidateId); 
+
           }
 
           // Adiciona marcação ao calendário
@@ -189,38 +187,59 @@ export default function Agenda() {
     }
   };
 
-  // Função para lidar com entrevistas pendentes cujo prazo já passou
-  const handleExpiredInterview = (interview) => {
-    console.log('Entrevista pendente com data já passada:', interview);
-    supabase
+// Função para lidar com entrevistas pendentes cujo prazo já passou
+const handleExpiredInterview = async (interview, candidateId) => {
+  console.log('Entrevista pendente com data já passada:', interview);
+  
+  try {
+    // Atualizar o status da solicitação de entrevista
+    const { error: updateError } = await supabase
       .from('solicitacoes_entrevista')
       .update({ status: 'recusada' })
-      .eq('id', interview.id)
-      .then(async ({ error }) => {
-        if (error) {
-          console.error('Erro ao atualizar status da entrevista:', error);
-        } else {
-          console.log('Status da entrevista atualizado para "recusada"');
+      .eq('id', interview.id);
 
-          //
-          const { data, error: insertError } = await supabase
-            .from('respostas_candidatos')
-            .insert({
-              id_solicitacao: interview.id,
-              id_candidato: interview.id_candidato, // Certifique-se de que essa informação esteja disponível
-              resposta: 'recusada',
-            });
+    if (updateError) {
+      console.error('Erro ao atualizar status da entrevista:', updateError);
+      return;
+    }
 
-          if (insertError) {
-            console.error('Erro ao inserir resposta do candidato:', insertError);
-          } else {
-            console.log('Resposta do candidato inserida com sucesso:', data);
-            const solicitacoesCount = await countSolicitacoes(userId) || 0;
-            AppState.solicitacoesCount = solicitacoesCount;
-          }
-        }
-      });
-  };
+    console.log('Status da entrevista atualizado para "recusada"');
+
+    // Verificar se já existe uma resposta para essa solicitação e candidato
+    const { data: existingResponse, error: fetchError } = await supabase
+      .from('respostas_candidatos')
+      .select('*')
+      .eq('id_solicitacao', interview.id)
+      .eq('id_candidato', candidateId);
+
+    if (fetchError) {
+      console.error('Erro ao buscar resposta existente:', fetchError);
+      return;
+    }
+
+    // Se não houver resposta existente, insira uma nova
+    if (existingResponse.length === 0) {
+      const { data, error: insertError } = await supabase
+        .from('respostas_candidatos')
+        .insert({
+          id_solicitacao: interview.id,
+          id_candidato: candidateId, // Usa o ID do candidato passado
+          resposta: 'recusada',
+        });
+
+      if (insertError) {
+        console.error('Erro ao inserir resposta do candidato:', insertError);
+      } else {
+        console.log('Resposta do candidato inserida com sucesso:', data);
+      }
+    } else {
+      console.log('Já existe uma resposta para essa solicitação e candidato.');
+    }
+  } catch (error) {
+    console.error('Erro inesperado:', error);
+  }
+};
+
 
 
   // Função para obter coordenadas a partir do nome do local
