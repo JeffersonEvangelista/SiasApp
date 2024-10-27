@@ -38,7 +38,7 @@ export const styles = StyleSheet.create({
         borderBottomRightRadius: 20,
         marginTop: 0,
         paddingHorizontal: 15,
-    }, 
+    },
     icon: {
         marginVertical: 5,
     },
@@ -93,7 +93,7 @@ export const styles = StyleSheet.create({
         padding: 10,
         marginBottom: 10,
         marginTop: '4%',
-        elevation: 5, 
+        elevation: 5,
         shadowColor: '#000', // Sombra para iOS
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
@@ -405,5 +405,21 @@ export const styles = StyleSheet.create({
         borderRadius: 10,
         zIndex: 7
     },
-
+    buttonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 4,
+        marginBottom: '1%',
+    },
+    buttonTexnavegacao: {
+        fontSize: 18,
+        color: '#ff8c00',
+        marginLeft: 10,
+        fontWeight: 'bold',
+    },
+    imageContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 10,
+    },
 });

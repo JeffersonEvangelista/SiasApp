@@ -12,6 +12,9 @@ import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { styles } from './Styles/stylesHome';
 import AppState from '../components/globalVars';
+import { getUserIdByEmailFirestore } from '../services/Firebase';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 interface Candidate {
   nome: string;
@@ -77,7 +80,7 @@ const App = () => {
   const [typingTimeout, setTypingTimeout] = useState(null);
   const [shakeCandidateIndex, setShakeCandidateIndex] = useState(0);
   const isCandidateAcceptedOrRejected = selectedCandidate?.status === 'aceita' || selectedCandidate?.status === 'recusada';
-  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const navigation = useNavigation();
 
 
   useEffect(() => {
@@ -133,6 +136,16 @@ const App = () => {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setModalVisible(false); // Redefine o modal ao voltar para a tela
+    });
+
+    // Limpa o listener ao desmontar
+    return unsubscribe;
+  }, [navigation]);
+
 
   //  Função que carrega os dados do usuário
   const fetchProfile = async () => {
@@ -711,6 +724,7 @@ const App = () => {
   // Função para fechar o modal
   const closeModal = () => {
     setModalVisible(false);
+    setUserId(null);
   };
 
   // Função para exibir o seletor de data
@@ -739,10 +753,8 @@ const App = () => {
   const openModal = async (candidate, jobId) => {
     console.log('Candidato selecionado para o modal:', candidate);
     console.log('ID da vaga:', jobId);
-
     setSelectedCandidate(candidate);
     setSelectedJobId(jobId);
-
     try {
       // Buscar a solicitação de entrevista existente para o candidato e a vaga
       const { data: existingRequest, error } = await supabase
@@ -1305,6 +1317,32 @@ const App = () => {
                 {selectedCandidate && (
                   <>
                     <Text style={styles.modalTitle}>Detalhes do Candidato</Text>
+                    <View style={styles.imageContainer}>
+            <Image
+              source={selectedCandidate.candidatos.foto_perfil ? { uri: selectedCandidate.candidatos.foto_perfil } : require('../../assets/perfil.png')}
+              style={styles.profileImage}
+            />
+          </View>
+                    <TouchableOpacity
+                      style={styles.buttonContact}
+                      onPress={async () => {
+                        const userId = await getUserIdByEmailFirestore(selectedCandidate.candidatos.email);
+
+                        navigation.navigate('chatRoom', {
+                          item: {
+                            userId: userId,
+                            username: selectedCandidate.candidatos.nome,
+                            profileImg: selectedCandidate.candidatos.foto_perfil
+                          }
+                        });
+                      }}
+                    >
+                      <View style={styles.buttonContent}>
+                        <Ionicons name="chatbubble-outline" size={20} color="#ff8c00" />
+                        <Text style={styles.buttonTexnavegacao}>Conversar com o Candidato</Text>
+                      </View>
+
+                    </TouchableOpacity>
                     <Text style={styles.modalText}>
                       <Text style={styles.modalLabel}>Nome: </Text>
                       {selectedCandidate.candidatos.nome || 'Nome não disponível'}

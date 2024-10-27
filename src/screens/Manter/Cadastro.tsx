@@ -28,7 +28,6 @@ const CadastroScreen = () => {
   const { width, height } = Dimensions.get('window');
   const navigation = useNavigation();
   const isFocused = useIsFocused();
-
   const [email, setEmail] = useState<string>('');
   const [Nome, setNome] = useState<string>('');
   const [identificador, setIdentificador] = useState<string>('');

@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut, getReactNativePersistence, sendEmailVerification, initializeAuth, updateEmail, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { collection, doc, getDoc, setDoc, getFirestore, Timestamp, updateDoc, deleteDoc } from 'firebase/firestore';
+import {  query, where, getDocs ,collection, doc, getDoc, setDoc, getFirestore, Timestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRoomId } from '../utils/common';
 
@@ -14,6 +14,32 @@ const firebaseConfig = {
     appId: "1:18631145700:web:7c3d01d6c29f52804394f1",
     measurementId: "G-J29RZYWT9D",
 };
+
+
+// Função para buscar ID do usuário pelo email no Firestore
+export const getUserIdByEmailFirestore = async (email) => {
+  try {
+    const q = query(usersRef, where("email", "==", email)); 
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      console.warn('Nenhum usuário encontrado com esse email:', email);
+      return null; 
+    }
+
+    let userId = null;
+    querySnapshot.forEach((doc) => {
+      userId = doc.id;
+    });
+
+    return userId; 
+  } catch (error) {
+    console.error('Erro ao buscar ID do usuário:', error);
+    return null; 
+  }
+};
+
+
 
 // Inicialize o Firebase apenas se já não houver uma instância inicializada
 let app;
