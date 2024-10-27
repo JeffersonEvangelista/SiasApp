@@ -91,6 +91,7 @@ const Configuracoes: React.FC = () => {
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [userType, setUserType] = useState<string | null>(null);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
@@ -172,27 +173,46 @@ const Configuracoes: React.FC = () => {
       const { id: userId } = await getUserNameAndId(); // Obtém o ID do usuário
       console.log('User ID:', userId);
 
-      // Buscando a foto de perfil
-      const { data: profileData, error: profileError } = await supabase
+      // Primeiro, tenta buscar os dados do usuário na tabela de candidatos
+      const { data: profileData, error: candidateError } = await supabase
         .from('candidatos')
-        .select('foto_perfil, nome, email') // Buscando nome e foto de perfil
+        .select('foto_perfil, nome, email') // Buscando nome, foto de perfil e email
         .eq('id', userId)
         .single();
 
-      if (profileError) {
-        console.error('Erro ao buscar dados do perfil:', profileError);
-      } else {
-        if (profileData) {
-          setProfileImage(profileData.foto_perfil); // Define a foto de perfil
-          setUsername(profileData.nome); // Define o nome de usuário
-          setEmail(profileData.email);
-          console.log('Foto de perfil carregada:', profileData.foto_perfil);
+      if (candidateError || !profileData) {
+        // Se ocorrer erro ou não encontrar candidato, tenta na tabela recrutadores
+        console.log('Usuário não encontrado como candidato. Buscando na tabela de recrutadores...');
+
+        const { data: recruiterData, error: recruiterError } = await supabase
+          .from('recrutadores')
+          .select('foto_perfil, nome, email') // Buscando nome, foto de perfil e email
+          .eq('id', userId)
+          .single();
+
+        if (recruiterError || !recruiterData) {
+          console.error('Erro ao buscar dados do recrutador:', recruiterError || 'Nenhum recrutador encontrado');
+        } else {
+          if (recruiterData) {
+            // Se encontrar na tabela de recrutadores, define os dados
+            setProfileImage(recruiterData.foto_perfil);
+            setUsername(recruiterData.nome);
+            setEmail(recruiterData.email);
+            console.log('Dados do recrutador carregados:', recruiterData);
+          }
         }
+      } else {
+        // Se encontrar como candidato, define os dados do candidato
+        setProfileImage(profileData.foto_perfil);
+        setUsername(profileData.nome);
+        setEmail(profileData.email);
+        console.log('Dados do candidato carregados:', profileData);
       }
     } catch (err) {
       console.error('Erro ao carregar dados do usuário:', err);
     }
   };
+
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState('');
@@ -282,26 +302,43 @@ const Configuracoes: React.FC = () => {
       }
 
       const userEmail = auth.currentUser?.email;
-      console.log('Usuário autenticado:', auth.currentUser); // Adicionando log para depuração
+      console.log('Usuário autenticado:', auth.currentUser); // Log para depuração
 
       if (!userEmail) {
         console.error('Email do usuário não encontrado no Firebase');
         return null;
       }
 
-      // Buscar o ID do usuário no Supabase com o email atualizado
-      const { data, error } = await supabase
+      // Primeiro, buscar o ID do usuário na tabela de candidatos
+      let userId = null;
+
+      const { data: candidateData, error: candidateError } = await supabase
         .from('candidatos')
         .select('id')
         .eq('email', userEmail?.toLowerCase()) // Comparação insensível a maiúsculas e minúsculas
         .single();
 
-      if (error) {
-        console.error('Erro ao buscar o ID no Supabase:', error);
-        return null;
+      if (candidateError || !candidateData) {
+        console.log('Usuário não encontrado na tabela de candidatos. Buscando na tabela de recrutadores...');
+
+        // Se o usuário não for encontrado como candidato, buscar na tabela de recrutadores
+        const { data: recruiterData, error: recruiterError } = await supabase
+          .from('recrutadores')
+          .select('id')
+          .eq('email', userEmail?.toLowerCase()) // Comparação insensível a maiúsculas e minúsculas
+          .single();
+
+        if (recruiterError || !recruiterData) {
+          console.error('Erro ao buscar o ID no Supabase:', recruiterError || candidateError);
+          return null;
+        } else {
+          userId = recruiterData.id; // Se for recrutador, definir o ID
+        }
+      } else {
+        userId = candidateData.id; // Se for candidato, definir o ID
       }
 
-      return data ? data.id : null; // Retorna o ID do Supabase ou null se não houver dados
+      return userId;
     } catch (error) {
       console.error('Erro na função getUserIdFromSupabase:', error);
       return null;
@@ -310,7 +347,7 @@ const Configuracoes: React.FC = () => {
 
   const handleUpdateProfile = async () => {
     try {
-      // Validações antes de fazer update
+      // Validações de e-mail e nome
       const emailTrimmed = email.trim();
       if (!validateEmail(emailTrimmed)) {
         Alert.alert('Por favor, insira um e-mail válido.');
@@ -322,42 +359,95 @@ const Configuracoes: React.FC = () => {
         return;
       }
 
-      const userId = await getUserIdFromSupabase(); // busca o ID do Supabase
+      const userId = await getUserIdFromSupabase(); // Busca o ID do usuário no Supabase
       if (!userId) {
         Alert.alert('ID do usuário não encontrado. Verifique se o e-mail está correto.');
         return;
       }
 
+      // Verifica se o e-mail foi alterado
       if (emailTrimmed !== auth.currentUser?.email) {
         // Solicita a senha para atualização de email
         const password = await promptUserForPassword("updateEmail");
 
-        // Tenta atualizar o email no Firebase
+        // Tenta atualizar o e-mail no Firebase
         const emailUpdateSuccess = await updateUserEmail(emailTrimmed, password);
         if (!emailUpdateSuccess) {
           Alert.alert('Erro ao atualizar o e-mail no Firebase. Verifique suas credenciais.');
           return;
         }
 
-        // Fechar o modal após sucesso no Firebase
+        // Fecha o modal após sucesso no Firebase
         setShowPasswordModal(false);
       }
 
-      // Atualiza nome e e-mail no Supabase
-      const { error } = await supabase
-        .from('candidatos')
-        .update({ nome: username.trim(), email: emailTrimmed })
-        .eq('id', userId);
+      // Lógica para verificar em qual tabela o usuário está (candidatos ou recrutadores)
+      let userType = '';
 
-      if (error) {
-        console.error('Erro ao atualizar dados no Supabase:', error);
-        Alert.alert('Erro ao atualizar dados no Supabase.');
+      // Tenta buscar o usuário na tabela de candidatos
+      const { data: candidateData, error: candidateError } = await supabase
+        .from('candidatos')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (candidateError || !candidateData) {
+        console.log('Usuário não encontrado como candidato. Buscando na tabela de recrutadores...');
+
+        // Se não encontrou na tabela de candidatos, busca na tabela de recrutadores
+        const { data: recruiterData, error: recruiterError } = await supabase
+          .from('recrutadores')
+          .select('id')
+          .eq('id', userId)
+          .single();
+
+        if (recruiterError || !recruiterData) {
+          console.error('Erro ao buscar usuário nas tabelas:', recruiterError || candidateError);
+          Alert.alert('Erro ao buscar usuário. Verifique sua conta.');
+          return;
+        } else {
+          userType = 'recrutador'; // Usuário é recrutador
+        }
       } else {
-        Alert.alert('Dados atualizados com sucesso! Faça o login novamente!');
-        loadUserData(); // Atualiza os dados do usuário
-        setShowPasswordModal(false); // Fecha o modal, se estiver aberto
-        navigation.navigate('Auth', { screen: 'Login' });
+        userType = 'candidato'; // Usuário é candidato
       }
+
+      // Lógica para atualizar os dados com base no tipo de usuário
+      if (userType === 'candidato') {
+        // Atualiza os dados na tabela de candidatos
+        const { error: updateError } = await supabase
+          .from('candidatos')
+          .update({ nome: username.trim(), email: emailTrimmed })
+          .eq('id', userId);
+
+        if (updateError) {
+          console.error('Erro ao atualizar dados no Supabase (candidatos):', updateError);
+          Alert.alert('Erro ao atualizar dados no Supabase.');
+        } else {
+          Alert.alert('Dados de candidato atualizados com sucesso! Faça o login novamente!');
+          loadUserData(); // Atualiza os dados do usuário
+          setShowPasswordModal(false); // Fecha o modal, se estiver aberto
+          navigation.navigate('Auth', { screen: 'Login' });
+        }
+
+      } else if (userType === 'recrutador') {
+        // Atualiza os dados na tabela de recrutadores
+        const { error: updateError } = await supabase
+          .from('recrutadores')
+          .update({ nome: username.trim(), email: emailTrimmed })
+          .eq('id', userId);
+
+        if (updateError) {
+          console.error('Erro ao atualizar dados no Supabase (recrutadores):', updateError);
+          Alert.alert('Erro ao atualizar dados no Supabase.');
+        } else {
+          Alert.alert('Dados de recrutador atualizados com sucesso! Faça o login novamente!');
+          loadUserData(); // Atualiza os dados do usuário
+          setShowPasswordModal(false); // Fecha o modal, se estiver aberto
+          navigation.navigate('Auth', { screen: 'Login' });
+        }
+      }
+
     } catch (error) {
       console.error('Erro ao salvar os dados:', error);
       Alert.alert('Ocorreu um erro ao salvar os dados. Tente novamente.');
@@ -412,28 +502,70 @@ const Configuracoes: React.FC = () => {
       const credential = EmailAuthProvider.credential(user.email, password);
       await reauthenticateWithCredential(user, credential);
 
-      // Exclui o usuário no Supabase
-      const { error: supabaseError } = await supabase
-        .from('candidatos')
-        .delete()
-        .eq('email', user.email);
+      let deletedFrom = ''; // Variável para identificar de onde foi deletado
 
-      if (supabaseError) {
-        console.error('Erro ao deletar conta no Supabase:', supabaseError);
-        Alert.alert('Erro ao deletar a conta no Supabase. Tente novamente mais tarde.');
-        return;
+      // Verifica se o usuário é candidato
+      const { data: candidateData, error: candidateFetchError } = await supabase
+        .from('candidatos')
+        .select('id')
+        .eq('email', user.email)
+        .single();
+
+      if (candidateFetchError || !candidateData) {
+        console.log('Usuário não encontrado como candidato. Tentando deletar como recrutador...');
+
+        // Busca o ID do recrutador pelo email no Supabase
+        const { data: recruiterData, error: recruiterFetchError } = await supabase
+          .from('recrutadores')
+          .select('id')
+          .eq('email', user.email)
+          .single();
+
+        if (recruiterFetchError || !recruiterData) {
+          console.error('Usuário não encontrado como recrutador também:', recruiterFetchError);
+          Alert.alert('Conta não encontrada no Supabase.');
+          return;
+        }
+
+        // Se o usuário foi encontrado como recrutador, delete da tabela recrutadores usando o ID
+        const { error: recruiterDeleteError } = await supabase
+          .from('recrutadores')
+          .delete()
+          .eq('id', recruiterData.id);
+
+        if (recruiterDeleteError) {
+          console.error('Erro ao deletar conta no Supabase (recrutadores):', recruiterDeleteError);
+          Alert.alert('Erro ao deletar a conta no Supabase. Tente novamente mais tarde.');
+          return;
+        } else {
+          deletedFrom = 'recrutadores'; // Usuário deletado como recrutador
+        }
+      } else {
+        // Se o usuário foi encontrado como candidato, delete da tabela candidatos
+        const { error: candidateDeleteError } = await supabase
+          .from('candidatos')
+          .delete()
+          .eq('id', candidateData.id);
+
+        if (candidateDeleteError) {
+          console.error('Erro ao deletar conta no Supabase (candidatos):', candidateDeleteError);
+          Alert.alert('Erro ao deletar a conta no Supabase. Tente novamente mais tarde.');
+          return;
+        } else {
+          deletedFrom = 'candidatos'; // Usuário deletado como candidato
+        }
       }
 
       // Exclui o usuário no Firebase
       await deleteUser(user);
-      console.log('Usuário deletado com sucesso no firebase!');
+      console.log('Usuário deletado com sucesso no Firebase!', user.email);
 
       // Exclui o documento do respectivo usuário no Firestore
       console.log('Deletando documento do usuário no Firestore...', user.uid);
       await deleteUserDocumentationInFirestore(user.uid);
-      console.log('Documento do usuário deletado!')
+      console.log('Documento do usuário deletado!');
 
-      Alert.alert('Conta deletada com sucesso!');
+      Alert.alert(`Conta deletada com sucesso no Supabase da tabela ${deletedFrom}!`);
       navigation.navigate('Auth', { screen: 'Login' });
 
     } catch (error) {
@@ -441,6 +573,7 @@ const Configuracoes: React.FC = () => {
       Alert.alert('Erro ao deletar a conta. Tente novamente.');
     }
   };
+
 
   useEffect(() => {
     loadUserData(); // Chama a função ao inicializar o componente
