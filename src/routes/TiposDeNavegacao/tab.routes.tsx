@@ -8,19 +8,36 @@ import Agenda from '../../screens/Agenda';
 import TabIconWithBadge from '../../components/TabIconWithBadge';
 import { isUserEmailVerified } from '../../services/Firebase';
 import { useColorScheme } from 'nativewind';
+import AppState from '../../components/globalVars';
+
 
 const Tab = createBottomTabNavigator();
 
 
 export default function TabRoutes() {
     // Estado para gerenciar as contagens de notificações
-    const [badgeCounts, setBadgeCounts] = useState({
-        Home: 0,
-        Agenda: 0,
-        Assistente: 0,
-        Chat: 0,
-        Configurações: 0,
-    });
+
+    const updateBadge = (newCount) => {
+        setBadgeCount(newCount);
+    };
+
+    const [solicitacoesCount, setSolicitacoesCount] = useState(AppState.solicitacoesCount);
+    const [badgeCount, setBadgeCount] = useState(0);
+
+    useEffect(() => {
+        // Atualiza o badgeCount com o valor de solicitacoesCount
+        setBadgeCount(solicitacoesCount);
+
+        const interval = setInterval(() => {
+            const newCount = AppState.solicitacoesCount;
+            setSolicitacoesCount(newCount);
+            setBadgeCount(newCount);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+
 
     // Obtém o esquema de cores atual (light ou dark)
     const { colorScheme, toggleColorScheme } = useColorScheme();
@@ -45,14 +62,11 @@ export default function TabRoutes() {
                         iconName = 'home';
                     }
 
-                    const badgeCount = badgeCounts[route.name] || 0;
-
                     return (
                         <TabIconWithBadge
                             iconName={iconName}
                             color={color}
                             size={size}
-                            badgeCount={badgeCount}
                         />
                     );
                 },
@@ -73,7 +87,10 @@ export default function TabRoutes() {
             <Tab.Screen
                 name="Agenda"
                 component={Agenda}
-                options={{ tabBarLabel: 'Agenda' }}
+                options={{
+                    tabBarLabel: 'Agenda',
+                    tabBarBadge: badgeCount > 0 ? badgeCount : undefined,
+                }}
             />
 
             <Tab.Screen

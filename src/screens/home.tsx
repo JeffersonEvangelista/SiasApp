@@ -1,7 +1,7 @@
 // Importações do codigo 
-import React, { useEffect, useState } from 'react';
-import { View, Button, RefreshControl, Text, StatusBar, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, Platform } from 'react-native';
-import { getUserNameAndId, supabase, getInterviewCountByDate, getJobInscriptions } from '../services/userService';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Alert, FlatList, Animated, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
+import { getUserNameAndId, supabase, getJobInscriptions, countSolicitacoes } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -10,19 +10,30 @@ import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { styles } from './Styles/stylesHome';
+import AppState from '../components/globalVars';
+
+interface Candidate {
+  nome: string;
+  email: string;
+  foto_perfil?: string;
+}
+
 
 const App = () => {
-  //  Estados / Variáveis do código
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
   const [userData, setUserData] = useState({ nome: '', cnpj: null });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
-  const [jobOffers, setJobOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState([]);
   const [expandedJobs, setExpandedJobs] = useState({});
+  const [toggleExpandInfo, settoggleExpandInfo] = useState({});
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [modalVisibleInfo, setModalVisibleInfo] = useState(false);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [location, setLocation] = useState("");
@@ -53,12 +64,75 @@ const App = () => {
   const [locationName, setLocationName] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [jobOffers, setJobOffers] = useState([]);
+  const [jobOffersWithCandidates, setJobOffersWithCandidates] = useState([]);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [modalVisible1, setModalVisible1] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [animatedValues, setAnimatedValues] = useState({});
+  const [panResponders, setPanResponders] = useState({});
+  const [feedbackVisibleByCandidate, setFeedbackVisibleByCandidate] = useState({});
+  const [feedbackMessageByCandidate, setFeedbackMessageByCandidate] = useState({});
+  const mapRef = useRef(null);
+  const [typingTimeout, setTypingTimeout] = useState(null);
+  const [shakeCandidateIndex, setShakeCandidateIndex] = useState(0);
+  const isCandidateAcceptedOrRejected = selectedCandidate?.status === 'aceita' || selectedCandidate?.status === 'recusada';
+  const [tooltipVisible, setTooltipVisible] = useState(false);
 
-  //  Funções automáticas do código
+
   useEffect(() => {
+    const intervalId = setInterval(() => {
+      setShakeCandidateIndex(prevIndex => (prevIndex === 0 ? 1 : 0));
+    }, 10000);
 
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    const newAnimatedValues = {};
+    const newPanResponders = {};
+
+    jobOffersWithCandidates.forEach((job) => {
+      job.inscricoes_vagas.forEach((inscricao) => {
+        const { id_candidato } = inscricao;
+        const { animatedValue, panResponder } = createPanResponderForCandidate(job.id, id_candidato);
+
+        newAnimatedValues[id_candidato] = animatedValue;
+        newPanResponders[id_candidato] = panResponder;
+      });
+    });
+
+    setAnimatedValues(newAnimatedValues);
+    setPanResponders(newPanResponders);
+  }, [jobOffersWithCandidates]);
+
+  useEffect(() => {
     fetchProfile();
   }, [userType, currentDate]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [userType, currentDate]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchInscriptions(userId);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (!state.isConnected) {
+        setError('Sem conexão com a internet. Verifique sua conexão.');
+        setShowNoConnection(true);
+      } else {
+        setError(null);
+        setShowNoConnection(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   //  Função que carrega os dados do usuário
   const fetchProfile = async () => {
@@ -80,6 +154,8 @@ const App = () => {
         if (recruiterData.foto_perfil) {
           setProfileImage(recruiterData.foto_perfil);
         }
+        // Chamar a função para buscar vagas e candidatos inscritos
+        await fetchJobOffersWithCandidates(recruiterData.id);
       } else {
         const { data: candidateData } = await supabase
           .from('candidatos')
@@ -96,7 +172,8 @@ const App = () => {
           await fetchInscriptions(candidateData.id);
         }
       }
-
+      const solicitacoesCount = await countSolicitacoes(userId) || 0;
+      AppState.solicitacoesCount = solicitacoesCount;
       await fetchJobOffers(userId);
       await fetchCandidates(userId);
 
@@ -137,7 +214,6 @@ const App = () => {
       setError('Erro ao buscar vagas.');
     }
   };
-
   //   Funções auxiliares para buscar candidatos
   const fetchCandidates = async (userId: any) => {
     try {
@@ -165,7 +241,7 @@ const App = () => {
     }
   };
 
-  //    Funções auxiliares para buscar Inscrições
+  // Funções auxiliares para buscar Inscrições
   const fetchInscriptions = async (candidateId: any) => {
     try {
       const inscriptions = await getJobInscriptions(candidateId);
@@ -176,29 +252,222 @@ const App = () => {
     }
   };
 
-  useEffect(() => {
-    fetchProfile();
-  }, [userType, currentDate]);
+  // Funções para recursar um candidato
+  const handleRecusar = async (vaga, candidato) => {
+    console.log("O item foi recusado!");
+    console.log("Vaga recusada:", vaga);
+    console.log("Candidato recusado:", candidato);
 
-  useEffect(() => {
-    if (userId) {
-      fetchInscriptions(userId);
+    // Verifique se o ID da vaga e do candidato estão definidos
+    if (!vaga || !candidato) {
+      console.error("ID da vaga ou do candidato não estão definidos.");
+      return;
     }
-  }, [userId]);
 
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      if (!state.isConnected) {
-        setError('Sem conexão com a internet. Verifique sua conexão.');
-        setShowNoConnection(true);
-      } else {
-        setError(null);
-        setShowNoConnection(false);
+    try {
+      const { data, error } = await supabase
+        .from('inscricoes_vagas')
+        .update({ status: 'recusada' })
+        .match({ id_vaga: vaga, id_candidato: candidato });
+
+      if (error) {
+        console.error("Erro ao atualizar a vaga:", error);
+        return;
       }
+
+      console.log("Vaga atualizada com sucesso:", data);
+
+
+      fetchJobOffersWithCandidates(userId);
+    } catch (err) {
+      console.error("Erro ao tentar recusar candidato:", err);
+    }
+  };
+
+  // Função para aceitar um candidato 
+  const handleAcceptCandidate = async (jobId, candidateId, userId) => {
+    // Defina os detalhes da entrevista
+    const dataAtual = new Date();
+    const dataEntrevista = new Date(dataAtual.getTime() + 10 * 24 * 60 * 60 * 1000);
+
+    const dia = dataEntrevista.getDate().toString().padStart(2, '0');
+    const mes = (dataEntrevista.getMonth() + 1).toString().padStart(2, '0');
+    const ano = dataEntrevista.getFullYear();
+
+    const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`; const horario = '10:00:00';
+    const local = '';
+
+    // Verifique se o ID da vaga e do candidato estão definidos
+    if (!jobId || !candidateId) {
+      console.error("ID da vaga ou do candidato não estão definidos.");
+      return;
+    }
+
+    try {
+      // Atualiza o status do candidato
+      const { data: updateData, error: updateError } = await supabase
+        .from('inscricoes_vagas')
+        .update({ status: 'aceita' })
+        .match({ id_vaga: jobId, id_candidato: candidateId });
+
+      if (updateError) {
+        console.error("Erro ao atualizar a vaga:", updateError);
+        return;
+      }
+
+      console.log("Vaga atualizada com sucesso:", updateData);
+      fetchJobOffersWithCandidates(userId);
+
+      // Inserir na tabela solicitacoes_entrevista
+      const { data: interviewData, error: interviewError } = await supabase
+        .from('solicitacoes_entrevista')
+        .insert([
+          {
+            id_recrutador: userId,
+            id_candidato: candidateId,
+            id_vaga: jobId,
+            data_entrevista: dataEntrevista,
+            horario: horario,
+            local: local,
+            status: 'pendente',
+          },
+        ]);
+
+      if (interviewError) {
+        throw interviewError;
+      }
+
+      alert('Candidato aceito com sucesso, você pode editar os detalhes logo acima!');
+      fetchProfile();
+      console.log('Solicitação de entrevista criada com sucesso:', interviewData);
+      fetchJobOffers(userId);
+
+    } catch (error) {
+      console.error('Erro ao processar a aceitação do candidato:', error);
+      // Aqui você pode lidar com erros, como exibir uma mensagem de erro
+    }
+  };
+
+  // Função para buscar vagas e candidatos inscritos
+  const fetchJobOffersWithCandidates = async (userId) => {
+    try {
+      // Buscar as vagas do recrutador
+      const { data: jobOffers, error } = await supabase
+        .from('vagas')
+        .select(`
+          id, 
+          titulo, 
+          descricao, 
+          localizacao, 
+          requisitos, 
+          salario, 
+          data_criacao, 
+          inscricoes_vagas (
+            id_candidato, 
+            status,
+            candidatos (id, nome, email, foto_perfil, cpf)
+          )
+        `)
+        .eq('id_recrutador', userId);
+
+      if (error) {
+        console.error('Erro ao buscar vagas:', error);
+        setJobOffersWithCandidates([]);
+        return;
+      }
+
+      console.log('Vagas com candidatos inscritos:', JSON.stringify(jobOffers, null, 2));
+
+      // Verificação e validação dos dados recebidos
+      if (!jobOffers || !Array.isArray(jobOffers)) {
+        console.warn('Nenhuma vaga encontrada ou formato inválido:', jobOffers);
+        setJobOffersWithCandidates([]);
+        return;
+      }
+
+      // Filtrar as inscrições recusadas
+      const filteredJobOffers = jobOffers.map((job) => {
+        return {
+          ...job,
+          inscricoes_vagas: job.inscricoes_vagas.filter(inscricao =>
+            inscricao.status !== 'recusada' && inscricao.status !== 'aceita'
+          )
+        };
+      })
+
+      // Salvar as vagas e candidatos no estado
+      setJobOffersWithCandidates(filteredJobOffers);
+      console.log('Estado atualizado com as vagas e candidatos filtrados:', filteredJobOffers);
+
+    } catch (error) {
+      console.error('Erro ao buscar vagas e candidatos:', error);
+      setError('Erro ao buscar vagas e candidatos.');
+    }
+  };
+
+  // Funcao para controlar questao de arrastar o candidato 
+  const createPanResponderForCandidate = (jobId, candidateId) => {
+    const animatedValue = new Animated.Value(0);
+
+    const panResponder = PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 20;
+      },
+      onPanResponderGrant: () => {
+        setFeedbackVisibleByCandidate((prev) => ({
+          ...prev,
+          [candidateId]: true,
+        }));
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        animatedValue.setValue(gestureState.dx);
+
+        setFeedbackMessageByCandidate((prev) => ({
+          ...prev,
+          [candidateId]: gestureState.dx > 20 ? 'Aceito' : 'Recusado',
+        }));
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 120) {
+          handleAcceptCandidate(jobId, candidateId, userId);
+          Animated.spring(animatedValue, {
+            toValue: 500,
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+            setFeedbackVisibleByCandidate((prev) => ({
+              ...prev,
+              [candidateId]: false,
+            }));
+          });
+        } else if (gestureState.dx < -120) {
+          handleRecusar(jobId, candidateId);
+          Animated.spring(animatedValue, {
+            toValue: -500,
+            useNativeDriver: true,
+          }).start(() => {
+            animatedValue.setValue(0);
+            setFeedbackVisibleByCandidate((prev) => ({
+              ...prev,
+              [candidateId]: false,
+            }));
+          });
+        } else {
+          Animated.spring(animatedValue, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start(() => {
+            setFeedbackVisibleByCandidate((prev) => ({
+              ...prev,
+              [candidateId]: false,
+            }));
+          });
+        }
+      },
     });
 
-    return () => unsubscribe();
-  }, []);
+    return { animatedValue, panResponder };
+  };
 
   // ======================================================= Funções do Gráfico, Alterações nessa parte representam risco de porrada =====================================================
 
@@ -420,19 +689,20 @@ const App = () => {
     );
   }
 
-
-  // Função para selecionar a vaga e alternar a expansão
-  const handleJobSelect = (jobId) => {
-    setSelectedJobId(jobId);
-    toggleExpand(jobId);
-    console.log('ID da vaga selecionada:', jobId);
-  };
-
   // Função para alternar a expansão das vagas
   const toggleExpand = (jobId) => {
-    setExpandedJobs(prevState => ({
-      ...prevState,
-      [jobId]: !prevState[jobId],
+    // Toggle individual do estado de expansão
+    setExpandedJobs(prev => ({
+      ...prev,
+      [jobId]: !prev[jobId],
+    }));
+  };
+
+  const handleToggleExpand = (jobId) => {
+    // Toggle individual do estado de expansão
+    settoggleExpandInfo(prev => ({
+      ...prev,
+      [jobId]: !prev[jobId],
     }));
   };
 
@@ -441,12 +711,7 @@ const App = () => {
   // Função para fechar o modal
   const closeModal = () => {
     setModalVisible(false);
-    setSelectedCandidate(null);
-    setLocation('');
-    setDate(null);
-    setTime(null);
   };
-
 
   // Função para exibir o seletor de data
   const onChangeDate = (event, selectedDate) => {
@@ -469,7 +734,6 @@ const App = () => {
   const showTimePickerDialog = () => {
     setShowTimePicker(true);
   };
-
 
   // Função para abrir o modal
   const openModal = async (candidate, jobId) => {
@@ -504,6 +768,7 @@ const App = () => {
       alert('Erro ao buscar informações da entrevista.');
     }
   };
+
   // Função para obter o nome do local a partir das coordenadas
   const getLocationName = async (latitude, longitude) => {
     try {
@@ -529,7 +794,6 @@ const App = () => {
   };
 
   // Função para obter coordenadas a partir do nome do local
-
   const getCoordinatesFromLocationName = async (locationName) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`, {
@@ -539,11 +803,11 @@ const App = () => {
           'Accept-Language': 'pt-BR',
         },
       });
-  
+
       if (!response.ok) {
         throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
       }
-  
+
       const data = await response.json();
       if (data.length > 0) {
         return {
@@ -556,27 +820,46 @@ const App = () => {
     }
     return null; // Retorna nulo se não encontrar as coordenadas
   };
-  
 
-  // Handle ao mudar texto no input
+  // Função para lidar com a mudança de texto no input de endereço
   const handleInputChange = async (text) => {
     setLocation(text);
 
-    const coords = await getCoordinatesFromLocationName(text);
-    if (coords) {
-      setMapLocation(coords); // Atualiza a localização do mapa com as coordenadas obtidas
-      setLocationName(text); // Atualiza o nome do local para o marcador
-    } else {
-      setMapLocation(null); // Limpa o marcador se o endereço não for encontrado
+    // Limpar o timeout anterior, se houver
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
     }
+
+    // Definir um novo timeout
+    const newTimeout = setTimeout(async () => {
+      const coords = await getCoordinatesFromLocationName(text);
+
+      if (coords) {
+        setMapLocation(coords);
+        console.log('Coordenadas obtidas:', coords);
+
+        // Centraliza o mapa nas coordenadas encontradas
+        mapRef.current?.animateToRegion({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        }, 2000);
+      } else {
+        setMapLocation(null);
+      }
+    }, 500);
+
+    // Atualiza o estado do timeout
+    setTypingTimeout(newTimeout);
   };
 
   // Função para lidar com o toque no mapa
   const handleMapPress = async (event) => {
     const { coordinate } = event.nativeEvent;
-    setMapLocation(coordinate); // Atualiza a localização do mapa
+    setMapLocation(coordinate);
     await getLocationName(coordinate.latitude, coordinate.longitude);
-    // O nome do local já está atualizado na função getLocationName
+
   };
 
   // Função para salvar as informações do modal no banco de dados 
@@ -643,7 +926,7 @@ const App = () => {
             alert('Erro ao atualizar solicitação de entrevista.');
           } else {
             console.log('Solicitação de entrevista atualizada com sucesso!');
-            alert('Solicitação de entrevista atualizada com sucesso!');
+            handleSuccess();
             closeModal();
           }
         } else {
@@ -680,6 +963,15 @@ const App = () => {
       alert('Erro ao salvar solicitação de entrevista.');
     }
   };
+
+  const handleSuccess = () => {
+    Alert.alert(
+      'Sucesso', // Título do alerta
+      'Solicitação de entrevista atualizada com sucesso!', // Mensagem do alerta
+      [{ text: 'OK' }] // Botões do alerta
+    );
+  };
+
 
   //=================================================================================================================================================== 
 
@@ -733,10 +1025,7 @@ const App = () => {
                 <Text style={{ fontSize: 16, marginBottom: 10, fontWeight: 'bold' }}>
                   Solicitações de Entrevista - {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
                 </Text>
-                <TouchableOpacity
-                  style={styles.toggleButton}
-                  onPress={toggleViewMode}
-                >
+                <TouchableOpacity style={styles.toggleButton} onPress={toggleViewMode}>
                   <Icon
                     name={viewMode === 'days' ? 'calendar-view-month' : 'calendar-today'}
                     size={20}
@@ -759,7 +1048,6 @@ const App = () => {
                     }
                   }}
                 >
-                  {/* Parte realmente do grafico, se mexer aqui faz uns 5 Pai nossos viu */}
                   <View style={[styles.chartWrapper, { backgroundColor: '#FFFFFF', borderRadius: 16 }]}>
                     <LineChart
                       data={chartData}
@@ -795,23 +1083,13 @@ const App = () => {
                   </View>
                 </PanGestureHandler>
 
-                {/* Exibindo informações de texto  apenas para melhor edicao do grafico e suas funcionalidades 
-                
-                <View style={{ marginTop: 16 }}>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Detalhes das Entrevistas:</Text>
-                  {chartData.labels.map((label, index) => (
-                    <Text key={index}>
-                      {label}: {chartData.datasets[0].data[index]} entrevistas
-                    </Text>
-                  ))}
-                </View>
-              
-                */}
-
               </View>
             </GestureHandlerRootView>
           ) : (
-            <Text>Aguardando dados...</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text>Aguardando dados</Text>
+              {/*     <PulsingDots />    */}
+            </View>
           )}
         </View>
 
@@ -819,67 +1097,191 @@ const App = () => {
         <Text style={styles.text1}>
           Entrevistas Agendadas
         </Text>
-
-
         {error ? (
-          <Text style={styles.errorText}>{error}</Text>
-        ) : jobOffers.length > 0 ? (
-          jobOffers.map((job, index) => (
-            <Animatable.View
-              key={job.id}
-              style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
-              animation="bounceIn"
-              duration={500}
-            >
-              <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
-                <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-                <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
-              </TouchableOpacity>
-
-              {expandedJobs[job.id] && (
-                candidates.length > 0 ? (
-                  [...new Map(candidates.map(candidate => [candidate.candidatos.id, candidate])).values()]
-                    .map(candidate => (
-                      <View key={candidate.id} style={styles.candidateContainer}>
-                        <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
-                          <View style={styles.candidateDetails}>
-                            {candidate.candidatos.foto_perfil ? (
-                              <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
-                            ) : (
-                              <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                            )}
-                            <View style={styles.infoContainer}>
-                              {/* Aqui adicionamos a lógica para mostrar o status */}
-                              {candidate.status === 'aceito' && (
-                                <Text style={styles.statusText}>✔️ Aceito</Text>
-                              )}
-                              {candidate.status === 'recusado' && (
-                                <Text style={styles.statusText}>❌ Recusado</Text>
-                              )}
-                              {candidate.status === 'pendente' && (
-                                <Text style={styles.statusText}>⏳ Pendente</Text>
-                              )}
-                              <Text style={styles.name}>{candidate.candidatos.nome}</Text>
-                              <Text style={styles.email}>{candidate.candidatos.email}</Text>
-                              <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
-                            </View>
-                          </View>
-
-                        </TouchableOpacity>
-                      </View>
-                    ))
-                ) : (
-                  <Text style={styles.noCandidatesText}>Nenhum candidato inscrito.</Text>
-                )
-              )}
-            </Animatable.View>
-          ))
+          <Text style={styles.errorText}>{error.message || 'Erro desconhecido'}</Text>
         ) : (
-          <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
+          <>
+            {console.log('Job Offers:', jobOffers)}
+            {console.log('Candidates:', candidates)}
+
+            {jobOffers.filter(job => candidates.some(candidate => candidate.vagas.id === job.id)).length > 0 ? (
+              jobOffers
+                .filter(job => candidates.some(candidate => candidate.vagas.id === job.id))
+                .map((job, index) => (
+                  <Animatable.View
+                    key={job.id}
+                    style={[
+                      styles.jobContainer,
+                      { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+                    ]}
+                    animation="bounceIn"
+                    duration={500}
+                  >
+                    <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
+                      <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                      <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
+                    </TouchableOpacity>
+
+                    {expandedJobs[job.id] && (
+                      candidates
+                        .filter(candidate => candidate.vagas.id === job.id)
+                        .map(candidate => (
+                          <View key={candidate.id} style={styles.candidateContainer}>
+                            <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
+                              <View style={styles.candidateDetails}>
+                                {candidate.candidatos.foto_perfil ? (
+                                  <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
+                                ) : (
+                                  <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                                )}
+                                <View style={styles.infoContainer}>
+                                  {candidate.status === 'aceita' && <Text style={styles.statusText}>✔️ Aceito</Text>}
+                                  {candidate.status === 'recusada' && <Text style={styles.statusText}>❌ Recusado</Text>}
+                                  {candidate.status === 'pendente' && <Text style={styles.statusText}>⏳ Pendente</Text>}
+                                  <Text style={styles.name}>{candidate.candidatos.nome}</Text>
+                                  <Text style={styles.email}>{candidate.candidatos.email}</Text>
+                                  <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                                </View>
+                              </View>
+                            </TouchableOpacity>
+                          </View>
+                        ))
+                    )}
+                  </Animatable.View>
+                ))
+            ) : (
+              <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
+            )}
+          </>
         )}
 
+        <Text style={styles.text1}>Suas Ofertas de Trabalho:</Text>
+        {jobOffersWithCandidates.length > 0 ? (
+          <>
+            {/* Renderiza as instruções apenas se a lista estiver expandida */}
+            {Object.keys(toggleExpandInfo).some(jobId => toggleExpandInfo[jobId]) && (
+              <View style={styles.instructionContainer}>
+                <Text style={styles.instructionText}>
+                  👈 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.rejectText}>recusar</Text>.
+                </Text>
+                <Text style={styles.instructionText}>
+                    Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.acceptText}>aceitar 👉</Text>.
+                </Text>
+              </View>
+            )}
+
+            {jobOffersWithCandidates.map((job, index) => (
+              <Animatable.View
+                key={job.id}
+                style={[
+                  styles.jobContainer,
+                  { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+                ]}
+                animation="bounceIn"
+                duration={500}
+              >
+                <TouchableOpacity style={styles.jobTitleContainer} onPress={() => handleToggleExpand(job.id)}>
+                  <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                  <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{toggleExpandInfo[job.id] ? '▼' : '▲'}</Text>
+                </TouchableOpacity>
+
+                {toggleExpandInfo[job.id] && (
+                  <View>
+                    <Text style={{ fontWeight: 'bold', color: '#FFFFFF' }}>Inscritos:</Text>
+                    {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
+                      job.inscricoes_vagas.map((inscricao, candidateIndex) => {
+                        const candidato = inscricao.candidatos;
+                        if (!candidato) {
+                          console.warn('Inscrição sem candidatos:', inscricao);
+                          return null;
+                        }
+
+                        const animatedValue = animatedValues[inscricao.id_candidato];
+                        const panResponder = panResponders[inscricao.id_candidato];
+                        const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
+
+                        return (
+                          <Animatable.View
+                            key={inscricao.id_candidato}
+                            style={[
+                              styles.candidateContainer,
+                              {
+                                transform: [{ translateX: animatedValue }],
+                                backgroundColor: animatedValue.__getValue() === 0
+                                  ? 'white'
+                                  : feedbackMessage === 'Aceito'
+                                    ? 'lightgreen'
+                                    : feedbackMessage === 'Recusado'
+                                      ? 'lightcoral'
+                                      : 'white'
+                              }
+                            ]}
+                            animation={shakeCandidateIndex === candidateIndex ? 'shake' : undefined}
+                            duration={1600}
+                            {...(panResponder ? panResponder.panHandlers : {})}
+                          >
+                            <TouchableOpacity onPress={() => {
+                              setFeedbackVisibleByCandidate((prev) => ({
+                                ...prev,
+                                [inscricao.id_candidato]: true,
+                              }));
+                              setFeedbackMessageByCandidate((prev) => ({
+                                ...prev,
+                              }));
+                            }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                {candidato.foto_perfil ? (
+                                  <Image source={{ uri: candidato.foto_perfil }} style={styles.photo} />
+                                ) : (
+                                  <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                                )}
+                                <View style={{ marginLeft: 10 }}>
+                                  <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
+                                  <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
+                                  {candidato.cpf && (
+                                    <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                                  )}
+                                </View>
+                              </View>
+                            </TouchableOpacity>
+                          </Animatable.View>
+                        );
+                      })
+                    ) : (
+                      <Text>Nenhum candidato inscrito nesta vaga.</Text>
+                    )}
+                  </View>
+                )}
+              </Animatable.View>
+            ))}
+          </>
+        ) : (
+          <Text>Nenhuma vaga disponível.</Text>
+        )}
 
         <View>
+          {/* Animação de Conexão (Modal) */}
+          <Modal transparent={true} visible={showNoConnection}>
+            <View style={styles.modalBackground}>
+              <LottieView
+                source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+                autoPlay
+                loop
+                style={styles.lottieAnimation}
+              />
+              <TouchableOpacity
+                style={styles.customButton}
+                onPress={() => {
+                  setShowNoConnection(false);
+                  // Você pode adicionar lógica aqui para tentar recarregar os dados
+                  fetchInterviewCounts(userId); // Tenta recarregar os dados
+                }}
+              >
+                <Text style={styles.buttonText}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          </Modal>
+
           {/* Modal para informações do candidato */}
           <Modal
             animationType="slide"
@@ -916,6 +1318,7 @@ const App = () => {
                     {/* Mapa para seleção do local */}
                     <View style={{ height: 300 }}>
                       <MapView
+                        ref={mapRef}
                         style={{ flex: 1 }}
                         initialRegion={{
                           latitude: -23.5505,
@@ -928,8 +1331,7 @@ const App = () => {
                         {mapLocation && (
                           <Marker
                             coordinate={mapLocation}
-                            title={locationName}
-                            description={locationName}
+                            title={location}
                           />
                         )}
                       </MapView>
@@ -988,7 +1390,15 @@ const App = () => {
                     <TouchableOpacity style={[styles.button, styles.closeButton]} onPress={closeModal}>
                       <Text style={styles.buttonText}>Fechar</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.saveButton,
+                        { opacity: isCandidateAcceptedOrRejected ? 0.5 : 1 } 
+                      ]}
+                      onPress={isCandidateAcceptedOrRejected ? null : handleSave} 
+                      disabled={isCandidateAcceptedOrRejected} 
+                    >
                       <Text style={styles.buttonText}>Salvar</Text>
                     </TouchableOpacity>
                   </>
@@ -1184,332 +1594,5 @@ const App = () => {
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  chartContainer: {
-    height: 330,
-    marginBottom: 8,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-  },
-  loaderContent: {
-    alignItems: 'center',
-  },
-  top: {
-    backgroundColor: '#ff8c00',
-    height: 160,
-    width: '100%',
-    borderWidth: 2,
-    borderColor: '#ff8c00',
-    borderRadius: 0,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 0,
-    paddingHorizontal: 15,
-  },
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  textContainer: {
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  text: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'left',
-    color: 'white',
-    marginTop: 5
-  },
-  text1: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'left',
-    color: 'black',
-    marginTop: '13%'
-  },
-  jobTitleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  mid: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-  },
-  jobContainer: {
-    width: '95%',
-    borderBottomColor: '#ccc',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-    elevation: 1,
-    marginTop: '4%',
-
-  },
-  jobTitle: {
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  jobCompany: {
-    fontSize: 14,
-    color: 'gray',
-  },
-  jobLocation: {
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: '2%',
-
-    padding: 5,
-  },
-  jobSalary: {
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: '2%',
-
-    padding: 5,
-  },
-  jobRequirements: {
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: '2%',
-
-    padding: 5,
-  },
-  jobDescription: {
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: '2%',
-    padding: 5,
-  },
-  jobDate: {
-    fontSize: 12,
-    padding: 5,
-    marginLeft: '2%',
-
-    color: 'gray',
-  },
-  noJobsContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  noJobsText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'red',
-    marginTop: 50,
-  },
-  forte: {
-    fontWeight: 'bold',
-  },
-  noJobsImage: {
-    width: 50,
-    height: 50,
-    marginTop: 10,
-  },
-  text2: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'left',
-    color: 'white',
-    marginTop: 5
-  },
-  candidateContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 15,
-    marginVertical: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
-    elevation: 2,
-  },
-  candidateDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  photo: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  infoContainer: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  email: {
-    fontSize: 14,
-    color: '#666',
-  },
-  cpf: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    position: 'absolute',
-    right: 10,
-    top: 10,
-  },
-  noCandidatesText: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: '#F07A26',
-  },
-
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    width: '90%',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  modalText: {
-    fontSize: 16,
-    marginVertical: 5,
-  },
-  modalLabel: {
-    fontWeight: 'bold',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FF8C00',
-    borderRadius: 5,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-  },
-  icon: {
-    marginLeft: 10,
-  },
-  button: {
-    backgroundColor: '#FF8C00',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    backgroundColor: '#888',
-  },
-  iconMargin: {
-    marginRight: 8,
-  },
-  toggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF8C00',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  chartWrapper: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 2.5,
-    borderColor: '#FFA726',
-    overflow: 'hidden',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 8,
-    textAlign: 'center',
-    paddingBottom: 4,
-  },
-  modalBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  lottieAnimation: {
-    width: 200,
-    height: 200,
-  },
-  customButton: {
-    backgroundColor: '#ffa726',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 20,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-  },
-  input: {
-    height: 40,
-    padding: 10,
-    flex: 1,
-    minHeight: "5%",
-    fontSize: 16,
-    textAlignVertical: 'center',
-    paddingVertical: 0,
-    paddingHorizontal: 10,
-  },
-  mapContainer: {
-    height: 200,
-    width: '100%',
-    marginBottom: 10,
-  },
-  map: {
-    flex: 1,
-  },
-});
 
 export default App;

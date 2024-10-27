@@ -639,7 +639,7 @@ export const getInterviewCountByDate = async (recruiterId: string) => {
         return null; // Retorna null em caso de erro
     }
 };
-export const getJobInscriptions = async (userId:any) => {
+export const getJobInscriptions = async (userId: any) => {
     try {
         const { data, error } = await supabase
             .from('inscricoes_vagas')
@@ -663,5 +663,28 @@ export const getJobInscriptions = async (userId:any) => {
     } catch (err) {
         console.error('Erro ao buscar inscrições:', err.message);
         throw err;
+    }
+};
+
+
+export const countSolicitacoes = async (userId: any) => {
+    try {
+        const { data, error, count } = await supabase
+            .from('solicitacoes_entrevista')
+            .select('*', { count: 'exact' })
+            .eq('id_candidato', userId)
+            .eq('status', 'pendente');
+
+        if (error) {
+            console.error('Erro ao contar as solicitações:', error);
+            return 0;
+        }
+
+        console.log(`Total de solicitações pendentes para o candidato: ${count}`);
+
+        return count;
+    } catch (error) {
+        console.error('Erro ao executar a contagem de solicitações:', error);
+        return 0;
     }
 };
