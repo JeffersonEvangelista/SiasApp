@@ -57,56 +57,6 @@ export const styles = StyleSheet.create({
         color: 'green',
         fontWeight: 'bold',
     },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalView: {
-        width: '80%',
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 20,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
-    modalText: {
-        marginBottom: 15,
-        textAlign: 'center',
-    },
-
-    map: {
-        width: '100%',
-        height: 300,
-        marginVertical: 15,
-        borderRadius: 20,
-    },
-    buttonClose: {
-        backgroundColor: "#ff8c00",
-        borderRadius: 10,
-        padding: 10,
-        elevation: 2,
-        marginTop: 10,
-    },
-    buttonText: {
-        color: "white",
-        fontWeight: "bold",
-        textAlign: "center",
-    },
-
     toggleButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -259,5 +209,84 @@ export const styles = StyleSheet.create({
     actionText: {
         color: '#fff',
         fontWeight: 'bold',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalView: {
+        width: '80%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 15,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    profileImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        alignSelf: 'center',
+        marginBottom: 15,
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 15,
+        textAlign: 'center',
+    },
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    modalText: {
+        fontSize: 16,
+        color: '#555',
+        marginLeft: 10,
+    },
+    distanceText: {
+        fontSize: 16,
+        color: '#555',
+        marginBottom: 20,
+    },
+    buttonClose: {
+        backgroundColor: '#ff8c00',
+        padding: 10,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 15,
+    },
+    buttonText: {
+        fontSize: 18,
+        color: '#ff8c00',
+        marginLeft: 10,
+        fontWeight: 'bold',
+    },
+    buttonTextclosd: {
+        fontSize: 20,
+        color: '#ffffff',
+    },
+    buttonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 4,
+        marginBottom: '1%',
+    },
+    map: {
+        width: '100%',
+        height: 300,
+        marginVertical: 15,
+        borderRadius: 20,
     },
 });

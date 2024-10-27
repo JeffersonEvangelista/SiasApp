@@ -25,6 +25,9 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
     },
     top: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
         backgroundColor: '#ff8c00',
         height: '14%',
         width: '100%',
@@ -33,12 +36,16 @@ export const styles = StyleSheet.create({
         borderRadius: 0,
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
         marginTop: 0,
         paddingHorizontal: 15,
+    }, 
+    icon: {
+        marginVertical: 5,
     },
-
+    greetingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     profileImage: {
         width: 60,
         height: 60,
@@ -85,13 +92,21 @@ export const styles = StyleSheet.create({
         borderRadius: 10,
         padding: 10,
         marginBottom: 10,
-        elevation: 1,
         marginTop: '4%',
-
+        elevation: 5, 
+        shadowColor: '#000', // Sombra para iOS
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
     jobTitle: {
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 18,
+        color: '#FFFFFF',
+    },
+    arrow: {
+        fontSize: 18,
+        color: '#FFFFFF',
     },
     jobCompany: {
         fontSize: 14,
@@ -101,21 +116,21 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         color: '#fff',
         marginLeft: '2%',
-
+        marginBottom: 5,
         padding: 5,
     },
     jobSalary: {
         fontSize: 14,
         color: '#fff',
         marginLeft: '2%',
-
+        marginBottom: 5,
         padding: 5,
     },
     jobRequirements: {
         fontSize: 14,
         color: '#fff',
         marginLeft: '2%',
-
+        marginBottom: 5,
         padding: 5,
     },
     jobDescription: {
@@ -123,12 +138,14 @@ export const styles = StyleSheet.create({
         color: '#fff',
         marginLeft: '2%',
         padding: 5,
+        marginBottom: 5,
+
     },
     jobDate: {
         fontSize: 12,
         padding: 5,
         marginLeft: '2%',
-
+        marginBottom: 5,
         color: 'gray',
     },
     noJobsContainer: {
@@ -379,14 +396,14 @@ export const styles = StyleSheet.create({
     rejectText: {
         color: 'lightcoral',
         fontWeight: 'bold',
-    },  
+    },
     tooltipContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 10,
         borderRadius: 10,
-        zIndex:7
+        zIndex: 7
     },
 
 });

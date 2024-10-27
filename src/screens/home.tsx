@@ -1009,12 +1009,23 @@ const App = () => {
             style={styles.profileImage}
           />
           <View style={styles.textContainer}>
-            <Text style={styles.text}>Olá,</Text>
-            {userData.nome && <Text style={styles.text2}>{userData.nome}</Text>}
+            <View style={styles.greetingContainer}>
+              <Text style={styles.text}>Olá, Recrutador</Text>
+              <Icon
+                name="work"
+                size={20}
+                color="#ffff"
+                style={styles.icon}
+              />
+            </View>
+            {userData.nome && (
+              <View style={styles.nameContainer}>
+                <Text style={styles.text2}>{userData.nome}</Text>
+              </View>
+            )}
           </View>
           <StatusBar style="auto" />
         </View>
-
         <View style={styles.chartContainer}>
           <Text style={styles.title}>Quantidade de entrevistas oferecidas</Text>
           {isLoading ? (
@@ -1165,7 +1176,7 @@ const App = () => {
                   👈 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.rejectText}>recusar</Text>.
                 </Text>
                 <Text style={styles.instructionText}>
-                    Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.acceptText}>aceitar 👉</Text>.
+                  Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.acceptText}>aceitar 👉</Text>.
                 </Text>
               </View>
             )}
@@ -1394,10 +1405,10 @@ const App = () => {
                       style={[
                         styles.button,
                         styles.saveButton,
-                        { opacity: isCandidateAcceptedOrRejected ? 0.5 : 1 } 
+                        { opacity: isCandidateAcceptedOrRejected ? 0.5 : 1 }
                       ]}
-                      onPress={isCandidateAcceptedOrRejected ? null : handleSave} 
-                      disabled={isCandidateAcceptedOrRejected} 
+                      onPress={isCandidateAcceptedOrRejected ? null : handleSave}
+                      disabled={isCandidateAcceptedOrRejected}
                     >
                       <Text style={styles.buttonText}>Salvar</Text>
                     </TouchableOpacity>
@@ -1427,8 +1438,20 @@ const App = () => {
             style={styles.profileImage}
           />
           <View style={styles.textContainer}>
-            <Text style={styles.text}>Olá,</Text>
-            {userData.nome && <Text style={styles.text2}>{userData.nome}</Text>}
+            <View style={styles.greetingContainer}>
+              <Text style={styles.text}>Olá, Candidato</Text>
+              <Icon
+                name="assignment"
+                size={20}
+                color="#ffff"
+                style={styles.icon}
+              />
+            </View>
+            {userData.nome && (
+              <View style={styles.nameContainer}>
+                <Text style={styles.text2}>{userData.nome}</Text>
+              </View>
+            )}
           </View>
           <StatusBar style="auto" />
         </View>
@@ -1527,47 +1550,90 @@ const App = () => {
         </View>
 
 
-        {/* Carregamento das ultimas incricoes do candidato  */}
+        {/* Carregamento das últimas inscrições do candidato */}
         <Text style={styles.text1}>Últimas Inscrições</Text>
+
         {error ? (
           <Text style={styles.errorText}>{error}</Text>
         ) : inscriptions.length > 0 ? (
-          inscriptions.map((inscription, index) => (
-            <Animatable.View
-              key={inscription.id}
-              style={[styles.jobContainer, { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }]}
-              animation="bounceIn"
-              duration={500}
-            >
-              <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(inscription.id)}>
-                <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{inscription.vagas.titulo}</Text>
-                <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[inscription.id] ? '▼' : '▲'}</Text>
-              </TouchableOpacity>
-              {expandedJobs[inscription.id] && (
-                <View style={styles.jobDetails}>
-                  <Text style={styles.jobDescription}>
-                    <Icon name="description" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    {inscription.vagas.descricao}
+          inscriptions.map((inscription, index) => {
+            const backgroundColor = index % 2 === 0 ? '#1F1F3F' : '#F07A26';
+            const borderColor = index % 2 === 0 ? '#F07A26' : '#1F1F3F';
+
+            return (
+              <Animatable.View
+                key={inscription.id}
+                style={[
+                  styles.jobContainer,
+                  {
+                    backgroundColor: backgroundColor,
+                    borderRadius: 8,
+                    marginVertical: 8,
+                    padding: 10,
+                    elevation: 3,
+                    borderLeftWidth: 4,
+                    borderLeftColor: borderColor,
+                  }
+                ]}
+                animation="bounceIn"
+                duration={500}
+              >
+                <TouchableOpacity
+                  style={styles.jobTitleContainer}
+                  onPress={() => toggleExpand(inscription.id)}
+                >
+                  <Text
+                    style={[
+                      styles.jobTitle,
+                      { color: '#FFFFFF', fontWeight: 'bold' }
+                    ]}
+                  >
+                    {inscription.vagas.titulo}
                   </Text>
-                  <Text style={styles.jobLocation}>
-                    <Icon name="place" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    {`Localização: ${inscription.vagas.localizacao}`}
+                  <Text style={[styles.arrow, { color: '#FFFFFF' }]}>
+                    {expandedJobs[inscription.id] ? '▼' : '▲'}
                   </Text>
-                  <Text style={styles.jobRequirements}>
-                    <Icon name="check-circle" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    {`Requisitos: ${inscription.vagas.requisitos}`}
-                  </Text>
-                  <Text style={styles.jobSalary}>
-                    <Icon name="attach-money" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    {`Salário: R$ ${inscription.vagas.salario.toFixed(2)}`}
-                  </Text>
-                </View>
-              )}
-            </Animatable.View>
-          ))
+                </TouchableOpacity>
+                {expandedJobs[inscription.id] && (
+                  <View style={styles.jobDetails}>
+                    <Text
+                      style={[
+                        styles.jobDescription,
+                        {
+                          color: '#FFFFFF',
+                          borderLeftColor: borderColor,
+                          borderLeftWidth: 2,
+                          paddingLeft: 8,
+                        },
+                      ]}
+                    >
+                      <Icon name="description" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      {inscription.vagas.descricao}
+                    </Text>
+
+                    <Text style={styles.jobLocation}>
+                      <Icon name="place" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      {`Localização: ${inscription.vagas.localizacao}`}
+                    </Text>
+                    <Text style={styles.jobRequirements}>
+                      <Icon name="check-circle" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      {`Requisitos: ${inscription.vagas.requisitos}`}
+                    </Text>
+                    <Text style={styles.jobSalary}>
+                      <Icon name="attach-money" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      {`Salário: R$ ${inscription.vagas.salario.toFixed(2)}`}
+                    </Text>
+                  </View>
+                )}
+              </Animatable.View>
+            );
+          })
         ) : (
           <Text style={styles.noInscriptionText}>Nenhuma inscrição encontrada.</Text>
         )}
+
+
+
         {/* Animação de Conexão (Modal) */}
         <Modal transparent={true} visible={showNoConnection}>
           <View style={styles.modalBackground}>
