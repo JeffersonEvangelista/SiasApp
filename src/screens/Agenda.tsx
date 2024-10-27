@@ -89,6 +89,7 @@ export default function Agenda() {
 
       if (recruiterData) {
         setUserType('recrutador');
+        handleRecruiterProfile(recruiterData.id);
       } else {
         const { data: candidateData } = await supabase
           .from('candidatos')
@@ -108,8 +109,115 @@ export default function Agenda() {
 
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);
-    } 
+    }
   }, []);
+
+  // Função para lidar com o perfil do recrutador e buscar entrevistas relacionadas
+  const handleRecruiterProfile = async (recruiterId) => {
+    try {
+      // Buscar as entrevistas associadas ao recrutador
+      const { data: interviewRequests, error } = await supabase
+        .from('solicitacoes_entrevista')
+        .select(`
+      id,
+      id_candidato,
+      data_entrevista,
+      horario,
+      local,
+      status,
+      candidatos (
+        id,
+        nome,
+        email,
+        foto_perfil
+      ),
+      vagas (
+        id,
+        titulo
+      )
+    `)
+        .eq('id_recrutador', recruiterId);
+
+      console.log('Dados de entrevistas do recrutador:', interviewRequests);
+
+      if (error) {
+        throw error;
+      }
+
+      // Certificar que interviewRequests é um array antes de acessar o length
+      const marked = {};
+      const details = [];
+
+      // Filtrar entrevistas por status
+      const statuses = ['pendente', 'aceita', 'recusada'];
+      const filteredInterviews = Array.isArray(interviewRequests)
+        ? interviewRequests.filter(request => statuses.includes(request.status.toLowerCase()))
+        : [];
+
+      const today = new Date(); // Data atual
+
+      if (filteredInterviews.length > 0) {
+        console.log('Entrevistas encontradas para o recrutador:', filteredInterviews);
+
+        for (const request of filteredInterviews) {
+          const interviewDate = new Date(request.data_entrevista);
+
+          // Verifica se a data da entrevista já passou
+          if (interviewDate < today) {
+            // Chama a função para lidar com entrevistas expiradas
+            await handleExpiredInterview(request, request.id_candidato);
+            continue; // Continua para a próxima entrevista
+          }
+
+          const dateString = request.data_entrevista;
+          const dotStyle = getDotStyle(request.status);
+
+          // Adiciona marcação ao calendário
+          marked[dateString] = {
+            marked: true,
+            dotColor: dotStyle.color,
+            dotStyle: {
+              borderColor: dotStyle.borderColor,
+              borderWidth: dotStyle.borderWidth,
+              width: dotStyle.width,
+              height: dotStyle.height,
+            },
+            selected: true,
+            selectedColor: dotStyle.color,
+          };
+
+          // Adiciona detalhes da entrevista ao array
+          details.push({
+            id: request.id,
+            title: request.vagas.titulo,
+            candidate: request.candidatos.nome,
+            candidateEmail: request.candidatos.email,
+            candidateId: request.candidatos.id,
+            profileImg: request.candidatos.foto_perfil,
+            date: request.data_entrevista,
+            time: request.horario,
+            location: request.local,
+            status: request.status,
+          });
+          console.log(
+            'Detalhes da Entrevista do Recrutador Formatados:',
+            JSON.stringify(details, null, 2)
+          );
+        }
+
+        setInterviewDetails(details);
+        setMarkedDates(marked);
+      } else {
+        console.log('Nenhuma entrevista encontrada para este recrutador.');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar entrevistas do recrutador:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
 
   // Função para lidar com o perfil do candidato e marcar as datas no calendário
@@ -210,7 +318,7 @@ export default function Agenda() {
 
     } catch (error) {
       console.error('Erro ao buscar solicitações de entrevista:', error);
-    }finally {
+    } finally {
       setLoading(false); // Finaliza o carregamento
     }
   };
@@ -548,13 +656,168 @@ export default function Agenda() {
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
     return (
-      <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-      </ScrollView>
+      <View style={{ flex: 1 }}>
+        {loading ? (
+          <ActivityIndicator size="large" color="#ff8c00" />
+        ) : (
+          <ScrollView
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            <View style={styles.header}>
+              <Text style={styles.headerText}>Agenda</Text>
+            </View>
+
+            {/* Necessário arrumar essa questão pois o calendário está afetando o reload da página */}
+            {renderCalendar()}
+
+            <TouchableOpacity style={styles.toggleButton} onPress={toggleLegend}>
+              <Ionicons
+                name={showLegend ? 'eye-off' : 'eye'}
+                size={20}
+                color="white"
+                style={styles.icon}
+              />
+              <Text style={styles.toggleButtonText}>
+                {showLegend ? ' Ocultar' : ' Legendas'}
+              </Text>
+            </TouchableOpacity>
+
+            {showLegend && (
+              <View style={styles.legendContainer}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.dot, { backgroundColor: '#ff8c00' }]} />
+                  <Text style={styles.legendText}>Pendente</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.dot, { backgroundColor: '#009e23' }]} />
+                  <Text style={styles.legendText}>Aceita</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.dot, { backgroundColor: '#a30000' }]} />
+                  <Text style={styles.legendText}>Recusada</Text>
+                </View>
+              </View>
+            )}
+            <View style={styles.interviewListContainer}>
+              {/* Seção para entrevistas pendentes */}
+              <Text style={styles.monthTitle}>Entrevistas a serem confirmadas</Text>
+              {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente').length > 0 ? (
+                <FlatList
+                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente')}
+                  keyExtractor={item => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <View style={styles.interviewItemPedentes}>
+                      <View style={styles.dateContainer}>
+                        <View style={styles.dateBar} />
+                        <View style={styles.dateTextContainer}>
+                          <Text style={styles.interviewDateDay}>
+                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                          </Text>
+                          <Text style={styles.interviewDateMonth}>
+                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.detailsContainer}>
+                        <Text style={styles.interviewTitle}>
+                          {truncateText(item.title, 20)} {/* Limite de 20 caracteres */}
+                        </Text>
+                        <Text style={styles.interviewRecruiter}>
+                          Candidato: {truncateText(item.candidate, 20)}
+                        </Text>
+                        <Text style={styles.interviewLocation}>
+                          Local: {truncateText(item.location, 20)}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                />
+              ) : (
+                <Text style={styles.noInterviewsMessage}>Nenhuma entrevista pendente.</Text>
+              )}
+
+              {/* Seção para entrevistas aceitas */}
+              <Text style={styles.monthTitle}>Entrevistas Aceitas</Text>
+              {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
+                <FlatList
+                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita')}
+                  keyExtractor={item => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <View style={styles.interviewItem}>
+                      <View style={styles.dateContainer}>
+                        <View style={styles.dateBarAceita} />
+                        <View style={styles.dateTextAceita}>
+                          <Text style={styles.interviewDateDayAceita}>
+                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                          </Text>
+                          <Text style={styles.interviewDateMonthAceita}>
+                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.detailsContainer}>
+                        <Text style={styles.interviewTitleAceita}>
+                          {truncateText(item.title, 20)} {/* Limite de 20 caracteres */}
+                        </Text>
+                        <Text style={styles.interviewRecruiter}>
+                          Candidato: {truncateText(item.candidate, 20)}
+                        </Text>
+                        <Text style={styles.interviewLocation}>
+                          Local: {truncateText(item.location, 20)}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                />
+              ) : (
+                <Text style={styles.noInterviewsMessage}>Nenhuma entrevista aceita.</Text>
+              )}
+
+              {/* Seção para entrevistas recusadas */}
+              <Text style={styles.monthTitle}>Entrevistas Recusadas</Text>
+              {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada').length > 0 ? (
+                <FlatList
+                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada')}
+                  keyExtractor={item => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <View style={styles.interviewItem}>
+                      <View style={styles.dateContainer}>
+                        <View style={styles.dateBarRecursada} />
+                        <View style={styles.dateTextContainer}>
+                          <Text style={styles.interviewDateDayRecursada}>
+                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                          </Text>
+                          <Text style={styles.interviewDateMonthRecursada}>
+                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.detailsContainer}>
+                        <Text style={styles.interviewTitleRecursada}>
+                          {truncateText(item.title, 20)} {/* Limite de 20 caracteres */}
+                        </Text>
+                        <Text style={styles.interviewRecruiter}>
+                          Candidato: {truncateText(item.candidate, 20)}
+                        </Text>
+                        <Text style={styles.interviewLocation}>
+                          Local: {truncateText(item.location, 20)}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                />
+              ) : (
+                <Text style={styles.noInterviewsMessage}>Nenhuma entrevista recusada.</Text>
+              )}
+            </View>
+
+
+
+          </ScrollView>
+        )}
+      </View>
     );
   } else {
     return (
