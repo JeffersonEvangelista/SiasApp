@@ -13,6 +13,9 @@ import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../services/Firebase';
+import { supabase  } from '../../services/userService';
+import { getAuth } from 'firebase/auth';
+
 const logo = require('./../../../assets/logo.png');
 
 interface FormErrors {
@@ -113,7 +116,7 @@ const CadastroScreen = () => {
       console.log('Formulário válido! Enviando...');
       setLoading(true);
 
-      let userIdFirebase: string | null = null; // Variável para armazenar o ID do usuário no Firebase
+      let userIdFirebase = null; // Variável para armazenar o ID do usuário no Firebase
 
       try {
         const profileImg = '';
@@ -152,13 +155,13 @@ const CadastroScreen = () => {
           throw new Error('Identificador inválido. Deve ter 11 dígitos para CPF ou 14 dígitos para CNPJ.');
         }
 
-        // Primeiro, navega para a Home
+        // Navega para a Home
         navigation.navigate('Home');
 
-        // Depois de garantir que a navegação ocorreu, enviar notificações
+        // Enviar notificações
         await sendNotificationNow('Cadastro Completo', 'Seu cadastro foi realizado com sucesso!');
         await checkEmailVerificationAndNotify();
-      } catch (error: any) {
+      } catch (error) {
         console.error('Erro ao cadastrar usuário:', error.message);
 
         if (userIdFirebase) {
@@ -167,6 +170,7 @@ const CadastroScreen = () => {
           await deleteFirebaseUser(userIdFirebase);
         }
 
+        // Tratamento de erros
         if (error.message.includes('Firebase')) {
           setErrors((prevErrors) => ({
             ...prevErrors,
@@ -198,14 +202,24 @@ const CadastroScreen = () => {
     }
   }
 
-
   const deleteFirebaseUser = async (userId: string) => {
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+  
       // Deletar o documento do usuário no Firestore
       await deleteDoc(doc(db, 'users', userId));
       console.log(`Usuário com ID ${userId} excluído do Firestore.`);
+  
+      // Verificar se o usuário está autenticado antes de tentar excluí-lo
+      if (user) {
+        await user.delete();
+        console.log(`Usuário com ID ${userId} excluído da autenticação.`);
+      } else {
+        console.warn('Nenhum usuário autenticado para excluir.');
+      }
     } catch (error) {
-      console.error('Erro ao excluir usuário no Firestore:', error);
+      console.error('Erro ao excluir usuário:', error);
     }
   };
 
