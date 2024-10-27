@@ -15,13 +15,16 @@ import AppState from '../components/globalVars';
 import { getUserIdByEmailFirestore } from '../services/Firebase';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
 
 interface Candidate {
   nome: string;
   email: string;
   foto_perfil?: string;
 }
-
+interface LocationSuggestion {
+  display_name: string;
+}
 
 const App = () => {
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -81,6 +84,7 @@ const App = () => {
   const [shakeCandidateIndex, setShakeCandidateIndex] = useState(0);
   const isCandidateAcceptedOrRejected = selectedCandidate?.status === 'aceita' || selectedCandidate?.status === 'recusada';
   const navigation = useNavigation();
+  const [suggestions, setSuggestions] = useState([]);
 
 
   useEffect(() => {
@@ -297,6 +301,29 @@ const App = () => {
     }
   };
 
+  const getMostFrequentLocation = async (userId) => {
+    const { data, error } = await supabase
+      .from('solicitacoes_entrevista')
+      .select('local')
+      .eq('id_recrutador', userId);
+
+    if (error) {
+      console.error("Erro ao buscar os locais:", error);
+      return null;
+    }
+
+    // Contar a frequência de cada local
+    const locationCount = data.reduce((acc, { local }) => {
+      acc[local] = (acc[local] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Obter o local mais frequente
+    const mostFrequentLocation = Object.keys(locationCount).reduce((a, b) => locationCount[a] > locationCount[b] ? a : b);
+
+    return mostFrequentLocation || null;
+  };
+
   // Função para aceitar um candidato 
   const handleAcceptCandidate = async (jobId, candidateId, userId) => {
     // Defina os detalhes da entrevista
@@ -308,7 +335,7 @@ const App = () => {
     const ano = dataEntrevista.getFullYear();
 
     const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`; const horario = '10:00:00';
-    const local = '';
+    const local = await getMostFrequentLocation(userId) || '';
 
     // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
@@ -844,27 +871,38 @@ const App = () => {
 
     // Definir um novo timeout
     const newTimeout = setTimeout(async () => {
-      const coords = await getCoordinatesFromLocationName(text);
+      if (text) {
 
-      if (coords) {
-        setMapLocation(coords);
-        console.log('Coordenadas obtidas:', coords);
+        // Obter coordenadas a partir do nome do local
+        const coords = await getCoordinatesFromLocationName(text);
 
-        // Centraliza o mapa nas coordenadas encontradas
-        mapRef.current?.animateToRegion({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          latitudeDelta: 0.005,
-          longitudeDelta: 0.005,
-        }, 2000);
-      } else {
-        setMapLocation(null);
+        if (coords) {
+          setMapLocation(coords);
+          console.log('Coordenadas obtidas:', coords);
+
+          // Centraliza o mapa nas coordenadas encontradas
+          mapRef.current?.animateToRegion({
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          }, 2000);
+        } else {
+          setMapLocation(null);
+        }
+      
       }
-    }, 500);
+    }, 600); // Timeout de 600ms para debouncing
 
     // Atualiza o estado do timeout
     setTypingTimeout(newTimeout);
   };
+
+  const handleSuggestionSelect = (suggestion) => {
+    setLocation(suggestion); // Atualiza o campo de entrada com a sugestão escolhida
+    setSuggestions([]); // Limpa as sugestões
+  };
+
 
   // Função para lidar com o toque no mapa
   const handleMapPress = async (event) => {
@@ -1318,11 +1356,11 @@ const App = () => {
                   <>
                     <Text style={styles.modalTitle}>Detalhes do Candidato</Text>
                     <View style={styles.imageContainer}>
-            <Image
-              source={selectedCandidate.candidatos.foto_perfil ? { uri: selectedCandidate.candidatos.foto_perfil } : require('../../assets/perfil.png')}
-              style={styles.profileImage}
-            />
-          </View>
+                      <Image
+                        source={selectedCandidate.candidatos.foto_perfil ? { uri: selectedCandidate.candidatos.foto_perfil } : require('../../assets/perfil.png')}
+                        style={styles.profileImage}
+                      />
+                    </View>
                     <TouchableOpacity
                       style={styles.buttonContact}
                       onPress={async () => {
@@ -1352,7 +1390,6 @@ const App = () => {
                       {selectedCandidate.candidatos.email || 'Email não disponível'}
                     </Text>
 
-
                     {/* Campo de input para digitar o local */}
                     <TextInput
                       style={{ borderColor: '#FF8C00', borderWidth: 1, height: 40, padding: 10 }}
@@ -1360,10 +1397,9 @@ const App = () => {
                       value={location}
                       onChangeText={handleInputChange}
                       placeholderTextColor="#888"
-                      selectionColor="#000"
+                      selectionColor="#FF8C00"
                       underlineColorAndroid="transparent"
                     />
-
                     {/* Mapa para seleção do local */}
                     <View style={{ height: 300 }}>
                       <MapView
