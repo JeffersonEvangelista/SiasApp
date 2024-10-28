@@ -12,18 +12,17 @@ import { getDistance } from 'geolib';
 import AppState from '../components/globalVars';
 import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
 import { useNavigation } from '@react-navigation/native';
-import { sendPushNotification } from "../components/Notificacao";
+import LottieView from "lottie-react-native";
 import NetInfo from '@react-native-community/netinfo';
-import LottieView from 'lottie-react-native';
+import { sendPushNotification } from "../components/Notificacao";
 
 
 
 export default function Agenda() {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Estado para carregamento
   const db = getFirestore();
-  const [showNoConnection, setShowNoConnection] = useState(false);
   const navigation = useNavigation();
+  const [showNoConnection, setShowNoConnection] = useState(false);
   const pan = useRef(new Animated.ValueXY()).current;
   const [userId, setUserId] = useState(null);
   const [userType, setUserType] = useState(null);
@@ -36,6 +35,7 @@ export default function Agenda() {
   const [selectedInterview, setSelectedInterview] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [distance, setDistance] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   LocaleConfig.locales['pt'] = {
     monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
     monthNamesShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
@@ -86,15 +86,16 @@ export default function Agenda() {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      setModalVisible(false);
+      setModalVisible(false); // Redefine o modal ao voltar para a tela
     });
 
+    // Limpa o listener ao desmontar
     return unsubscribe;
   }, [navigation]);
 
   // Função que carrega os dados do usuário
   const fetchProfile = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); // Começa o carregamento
     try {
       const { id: userId } = await getUserNameAndId();
       setUserId(userId);
@@ -339,18 +340,22 @@ export default function Agenda() {
     }
   };
 
-  // Funçao para  obter o uud do usario no firebase 
+
   const getRecruiterIdByEmail = async (recruiterEmail) => {
     try {
       // Log do email que está sendo buscado
       console.log(`Buscando ID do recrutador para o email: ${recruiterEmail}`);
 
+      // Referência à coleção "recruiters" no Firestore
       const usersRef = collection(db, "users");
 
+      // Criação da query para encontrar um documento com o campo "email" igual ao email fornecido
       const q = query(usersRef, where("email", "==", recruiterEmail));
 
+      // Executa a consulta e obtém os documentos
       const querySnapshot = await getDocs(q);
 
+      // Verifica se encontrou algum documento
       if (!querySnapshot.empty) {
         const recruiterDoc = querySnapshot.docs[0];
         const recruiterId = recruiterDoc.id;
@@ -405,12 +410,14 @@ export default function Agenda() {
     });
   }, []);
 
-  // Função para aceitar o entrevista
+  // Função para aceitar a entrevista
   const handleAcceptCandidate = async (interview, userId) => {
     console.log('Candidate ID:', userId);
-    const recruiterId = await getRecrutadorIdBySolicitacao(interview.id);
+    console.log('Entrevista recebida:', interview); // Log dos dados da entrevista
+
     try {
       console.log(`Candidato aceito:`, interview);
+
       // Atualizar o status da solicitação de entrevista
       const { error: updateError } = await supabase
         .from('solicitacoes_entrevista')
@@ -436,6 +443,8 @@ export default function Agenda() {
         return;
       }
 
+      console.log('Resposta existente:', existingResponse); // Log da resposta existente
+
       // Se não houver resposta existente, insira uma nova
       if (existingResponse.length === 0) {
         const { data, error: insertError } = await supabase
@@ -451,40 +460,61 @@ export default function Agenda() {
         } else {
           console.log('Resposta do candidato inserida com sucesso:', data);
           fetchProfile();
-
-
-          // Buscar o token do recrutador para enviar uma notificação
-          const { data: recruiterTokenData, error: tokenError } = await supabase
-            .from('device_tokens')
-            .select('token')
-            .eq('user_id', recruiterId)
-            .single();
-
-          if (tokenError || !recruiterTokenData) {
-            console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
-            return;
-          }
-
-          const recruiterToken = recruiterTokenData.token;
-
-          // Enviar a notificação apenas se o token existir
-          if (recruiterToken) {
-            const notificationTitle = 'Boas,notícias!';
-            const notificationBody = 'Um candidato aceitou participar de uma das suas entrevistas. Confira os detalhes em seu aplicativo.';
-
-            // Função de atraso
-            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-            await delay(10000); // Adiciona um delay de 10 segundos
-
-            await sendPushNotification(recruiterToken, notificationTitle, notificationBody);
-          } else {
-            console.warn('Recrutador optou por não receber notificações.');
-          }
-
         }
       } else {
         console.log('Já existe uma resposta para essa solicitação e candidato.');
+      }
+
+      // Buscar informações do recrutador responsável pela solicitação
+      const { data: recruiterInfo, error: recruiterError } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('*, recrutadores(*)') // Seleciona a tabela de recrutadores relacionada
+        .eq('id', interview.id)
+        .single(); // Usa .single() para obter apenas um registro
+
+      if (recruiterError) {
+        console.error('Erro ao buscar informações do recrutador:', recruiterError);
+        return;
+      }
+
+      if (recruiterInfo) {
+        console.log('Informações do recrutador:', recruiterInfo.recrutadores); // Log das informações do recrutador
+
+        // Obter o ID do recrutador
+        const recruiterId = recruiterInfo.id_recrutador;
+        console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
+
+        // 1. Buscar o token do recrutador
+        const { data: recrutadorTokenData, error: tokenError } = await supabase
+          .from('device_tokens')
+          .select('token')
+          .eq('user_id', recruiterId)
+          .single();
+
+        if (tokenError || !recrutadorTokenData) {
+          console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
+          return; // Se não houver token, não envia notificação
+        }
+
+        const recrutadorToken = recrutadorTokenData.token;
+        console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
+
+        // 2. Enviar a notificação apenas se o token existir
+        if (recrutadorToken) {
+          const notificationTitle = 'Boas Notícias!';
+          const notificationBody = 'Um candidato aceitou participar do seu processo seletivo. Confira os detalhes em seu aplicativo.';
+
+          // Log antes de enviar a notificação
+          console.log('Enviando notificação para o recrutador:', recrutadorToken);
+
+          // Enviar a notificação e esperar pela resposta
+          const notificationResponse = await sendPushNotification(recrutadorToken, notificationTitle, notificationBody);
+
+          // Log após o envio
+          console.log('Resposta da notificação enviada:', notificationResponse);
+        } else {
+          console.warn('Recrutador optou por não receber notificações.');
+        }
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
@@ -492,41 +522,15 @@ export default function Agenda() {
   };
 
 
-  // Função para buscar o ID do recrutador a partir de uma solicitação de entrevista
-  const getRecrutadorIdBySolicitacao = async (solicitacaoId) => {
-    try {
-      const { data, error } = await supabase
-        .from('solicitacoes_entrevista')
-        .select('id_recrutador')
-        .eq('id', solicitacaoId)
-        .single();
-
-      if (error) {
-        console.error('Erro ao buscar o ID do recrutador:', error);
-        return null;
-      }
-
-      return data.id_recrutador;
-    } catch (error) {
-      console.error('Erro inesperado ao buscar o ID do recrutador:', error);
-      return null;
-    }
-  };
-
-  // Função principal para recusar a entrevista
+  // Função para recusar a entrevista
   const handleRecusar = async (interview, userId) => {
+    console.log('Candidate ID:', userId);
+    console.log('Entrevista recebida:', interview); // Log dos dados da entrevista
+
     try {
-      // Buscar o ID do recrutador associado à solicitação de entrevista
-      const recruiterId = await getRecrutadorIdBySolicitacao(interview.id);
+      console.log(`Candidato recursado:`, interview);
 
-      if (!recruiterId) {
-        console.warn('ID do recrutador não encontrado para a solicitação:', interview.id);
-        return;
-      }
-
-      console.log(`Entrevista recusada pelo candidato:`, interview);
-
-      // Atualizar o status da solicitação de entrevista para 'recusada'
+      // Atualizar o status da solicitação de entrevista
       const { error: updateError } = await supabase
         .from('solicitacoes_entrevista')
         .update({ status: 'recusada' })
@@ -551,6 +555,8 @@ export default function Agenda() {
         return;
       }
 
+      console.log('Resposta existente:', existingResponse); // Log da resposta existente
+
       // Se não houver resposta existente, insira uma nova
       if (existingResponse.length === 0) {
         const { data, error: insertError } = await supabase
@@ -565,44 +571,67 @@ export default function Agenda() {
           console.error('Erro ao inserir resposta do candidato:', insertError);
         } else {
           console.log('Resposta do candidato inserida com sucesso:', data);
-
-          // Buscar o token do recrutador para enviar uma notificação
-          const { data: recruiterTokenData, error: tokenError } = await supabase
-            .from('device_tokens')
-            .select('token')
-            .eq('user_id', recruiterId)
-            .single();
-
-          if (tokenError || !recruiterTokenData) {
-            console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
-            return;
-          }
-
-          const recruiterToken = recruiterTokenData.token;
-
-          // Enviar a notificação apenas se o token existir
-          if (recruiterToken) {
-            const notificationTitle = 'Poxa, as notícias não são muito legais!';
-            const notificationBody = 'Um candidato recusou participar de uma das suas entrevistas. Confira os detalhes em seu aplicativo.';
-
-            // Função de atraso
-            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-            await delay(10000); // Adiciona um delay de 10 segundos
-
-            await sendPushNotification(recruiterToken, notificationTitle, notificationBody);
-          } else {
-            console.warn('Recrutador optou por não receber notificações.');
-          }
+          fetchProfile();
         }
       } else {
         console.log('Já existe uma resposta para essa solicitação e candidato.');
+      }
+
+      // Buscar informações do recrutador responsável pela solicitação
+      const { data: recruiterInfo, error: recruiterError } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('*, recrutadores(*)') // Seleciona a tabela de recrutadores relacionada
+        .eq('id', interview.id)
+        .single(); // Usa .single() para obter apenas um registro
+
+      if (recruiterError) {
+        console.error('Erro ao buscar informações do recrutador:', recruiterError);
+        return;
+      }
+
+      if (recruiterInfo) {
+        console.log('Informações do recrutador:', recruiterInfo.recrutadores); // Log das informações do recrutador
+
+        // Obter o ID do recrutador
+        const recruiterId = recruiterInfo.id_recrutador;
+        console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
+
+        // 1. Buscar o token do recrutador
+        const { data: recrutadorTokenData, error: tokenError } = await supabase
+          .from('device_tokens')
+          .select('token')
+          .eq('user_id', recruiterId)
+          .single();
+
+        if (tokenError || !recrutadorTokenData) {
+          console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
+          return; // Se não houver token, não envia notificação
+        }
+
+        const recrutadorToken = recrutadorTokenData.token;
+        console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
+
+        // 2. Enviar a notificação apenas se o token existir
+        if (recrutadorToken) {
+          const notificationTitle = 'Atualização de Entrevista!';
+          const notificationBody = 'Um candidato recusou participar do seu processo seletivo. Confira os detalhes em seu aplicativo';
+
+          // Log antes de enviar a notificação
+          console.log('Enviando notificação para o recrutador:', recrutadorToken);
+
+          // Enviar a notificação e esperar pela resposta
+          const notificationResponse = await sendPushNotification(recrutadorToken, notificationTitle, notificationBody);
+
+          // Log após o envio
+          console.log('Resposta da notificação enviada:', notificationResponse);
+        } else {
+          console.warn('Recrutador optou por não receber notificações.');
+        }
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
     }
   };
-
   // Função para lidar com entrevistas pendentes cujo prazo já passou
   const handleExpiredInterview = async (interview, candidateId) => {
     console.log('Entrevista pendente com data já passada:', interview);
@@ -639,7 +668,7 @@ export default function Agenda() {
           .from('respostas_candidatos')
           .insert({
             id_solicitacao: interview.id,
-            id_candidato: candidateId,
+            id_candidato: candidateId, // Usa o ID do candidato passado
             resposta: 'recusada',
           });
 
@@ -647,38 +676,45 @@ export default function Agenda() {
           console.error('Erro ao inserir resposta do candidato:', insertError);
         } else {
           console.log('Resposta do candidato inserida com sucesso:', data);
-
-          // Buscar o token do recrutador
-          const { data: recruiterTokenData, error: tokenError } = await supabase
-            .from('device_tokens')
-            .select('token')
-            .eq('user_id', interview.id_recrutador)
-            .single();
-
-          if (tokenError || !recruiterTokenData) {
-            console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
-            return;
-          }
-
-          const recruiterToken = recruiterTokenData.token;
-
-          // Enviar a notificação apenas se o token existir
-          if (recruiterToken) {
-            const notificationTitle = 'Poxa, as notícias não são muito legais!';
-            const notificationBody = 'Um candidato recusou participar de uma das suas entrevistas. Confira os detalhes em seu aplicativo.';
-
-            // Função de atraso
-            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-            await delay(10000); // Adiciona um delay de 10 segundos
-
-            await sendPushNotification(recruiterToken, notificationTitle, notificationBody);
-          } else {
-            console.warn('Recrutador optou por não receber notificações.');
-          }
         }
       } else {
         console.log('Já existe uma resposta para essa solicitação e candidato.');
+      }
+
+      // Obter o ID do recrutador
+      const recruiterId = interview.id_recrutador; // Assume que o ID do recrutador está na entrevista
+      console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
+
+      // 1. Buscar o token do recrutador
+      const { data: recrutadorTokenData, error: tokenError } = await supabase
+        .from('device_tokens')
+        .select('token')
+        .eq('user_id', recruiterId)
+        .single();
+
+      if (tokenError || !recrutadorTokenData) {
+        console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
+        return; // Se não houver token, não envia notificação
+      }
+
+      const recrutadorToken = recrutadorTokenData.token;
+      console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
+
+      // 2. Enviar a notificação apenas se o token existir
+      if (recrutadorToken) {
+        const notificationTitle = 'Atualização de Entrevista';
+        const notificationBody = 'Um candidato recusou participar do seu processo seletivo devido ao prazo já ter passado. Confira os detalhes em seu aplicativo.';
+
+        // Log antes de enviar a notificação
+        console.log('Enviando notificação para o recrutador:', recrutadorToken);
+
+        // Enviar a notificação e esperar pela resposta
+        const notificationResponse = await sendPushNotification(recrutadorToken, notificationTitle, notificationBody);
+
+        // Log após o envio
+        console.log('Resposta da notificação enviada:', notificationResponse);
+      } else {
+        console.warn('Recrutador optou por não receber notificações.');
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
@@ -717,6 +753,7 @@ export default function Agenda() {
     }
     return null;
   };
+
 
   // Função para determinar a cor e o estilo do ponto com base no status
   const getDotStyle = (status) => {
@@ -781,6 +818,7 @@ export default function Agenda() {
     setShowLegend(!showLegend);
   };
 
+
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
     return (
@@ -796,8 +834,10 @@ export default function Agenda() {
             <View style={styles.header}>
               <Text style={styles.headerText}>Agenda</Text>
             </View>
+
             {/* Necessário arrumar essa questão pois o calendário está afetando o reload da página */}
             {renderCalendar()}
+
             <TouchableOpacity style={styles.toggleButton} onPress={toggleLegend}>
               <Ionicons
                 name={showLegend ? 'eye-off' : 'eye'}
@@ -809,6 +849,7 @@ export default function Agenda() {
                 {showLegend ? ' Ocultar' : ' Legendas'}
               </Text>
             </TouchableOpacity>
+
             {showLegend && (
               <View style={styles.legendContainer}>
                 <View style={styles.legendItem}>
@@ -862,6 +903,7 @@ export default function Agenda() {
               ) : (
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista pendente.</Text>
               )}
+
               {/* Seção para entrevistas aceitas */}
               <Text style={styles.monthTitle}>Entrevistas Aceitas</Text>
               {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
@@ -898,6 +940,7 @@ export default function Agenda() {
               ) : (
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista aceita.</Text>
               )}
+
               {/* Seção para entrevistas recusadas */}
               <Text style={styles.monthTitle}>Entrevistas Recusadas</Text>
               {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada').length > 0 ? (
@@ -935,6 +978,8 @@ export default function Agenda() {
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista recusada.</Text>
               )}
             </View>
+
+
             {/* Animação de Conexão (Modal) */}
             <Modal transparent={true} visible={showNoConnection}>
               <View style={styles.modalBackground}>
@@ -948,7 +993,8 @@ export default function Agenda() {
                   style={styles.customButton}
                   onPress={() => {
                     setShowNoConnection(false);
-                    fetchProfile();
+
+                    fetchProfile(); // Tenta recarregar os dados
                   }}
                 >
                   <Text style={styles.buttonText}>Tentar novamente</Text>
@@ -1180,7 +1226,6 @@ export default function Agenda() {
                       </View>
                     </TouchableOpacity>
 
-
                     <View style={styles.infoRow}>
                       <Ionicons name="briefcase-outline" size={24} color="#ff8c00" />
                       <Text style={styles.modalText}>Empresa: {selectedInterview.recruiter}</Text>
@@ -1216,8 +1261,8 @@ export default function Agenda() {
                             latitude: selectedInterview.coordinates.latitude,
                             longitude: selectedInterview.coordinates.longitude,
                           }}
-                          title={selectedInterview.streetName}
-                          description={`Entrevista: ${selectedInterview.title}`}
+                          title={selectedInterview.recruiter} // Nome da empresa
+                          description={`Entrevista: ${selectedInterview.title}\nDescrição: ${selectedInterview.description || 'Sem descrição disponível.'}`} // Descrição adicional
                         />
                       </MapView>
                     ) : (
@@ -1237,7 +1282,6 @@ export default function Agenda() {
                   </View>
                 </View>
               </Modal>
-
             )}
             {/* Animação de Conexão (Modal) */}
             <Modal transparent={true} visible={showNoConnection}>
@@ -1252,7 +1296,8 @@ export default function Agenda() {
                   style={styles.customButton}
                   onPress={() => {
                     setShowNoConnection(false);
-                    fetchProfile();
+                    // Você pode adicionar lógica aqui para tentar recarregar os dados
+                    fetchProfile(); // Tenta recarregar os dados
                   }}
                 >
                   <Text style={styles.buttonText}>Tentar novamente</Text>

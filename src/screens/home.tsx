@@ -144,7 +144,7 @@ const App = () => {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      setModalVisible(false);
+      setModalVisible(false); // Redefine o modal ao voltar para a tela
     });
 
     // Limpa o listener ao desmontar
@@ -153,6 +153,7 @@ const App = () => {
 
 
   //  Função que carrega os dados do usuário
+
   const fetchProfile = async () => {
     try {
       const { id: userId } = await getUserNameAndId();
@@ -258,6 +259,7 @@ const App = () => {
       setError('Erro ao buscar candidatos.');
     }
   };
+
   // Funções auxiliares para buscar Inscrições
   const fetchInscriptions = async (candidateId: any) => {
     try {
@@ -268,6 +270,7 @@ const App = () => {
       setError('Erro ao carregar as inscrições: ' + err.message);
     }
   };
+
   // Funções para recursar um candidato
   const handleRecusar = async (vaga, candidato) => {
     console.log("O item foi recusado!");
@@ -290,9 +293,7 @@ const App = () => {
         console.error("Erro ao atualizar a vaga:", error);
         return;
       }
-
-      console.log("Vaga atualizada com sucesso:", data);
-
+      // Enviar notificação ao candidato
       // 1. Buscar o token do candidato
       const { data: candidateTokenData, error: tokenError } = await supabase
         .from('device_tokens')
@@ -309,12 +310,22 @@ const App = () => {
 
       // 2. Enviar a notificação apenas se o token existir
       if (candidateToken) {
-        const notificationTitle = 'Poxa, notícias não muito legais!';
-        const notificationBody = 'Infelizmente! Você não foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
-        await sendPushNotification(candidateToken, notificationTitle, notificationBody);
+        const notificationTitle = 'Poxa, as notícia não são legais!';
+        const notificationBody = 'Infelizmente você  não foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
+
+        // Log antes de enviar a notificação
+        console.log('Enviando notificação para o candidato:', candidateToken);
+
+        // Enviar a notificação e esperar pela resposta
+        const notificationResponse = await sendPushNotification(candidateToken, notificationTitle, notificationBody);
+
+        // Log após o envio
+        console.log('Resposta da notificação enviada:', notificationResponse);
       } else {
         console.warn('Candidato optou por não receber notificações.');
       }
+      console.log("Vaga atualizada com sucesso:", data);
+
 
       fetchJobOffersWithCandidates(userId);
     } catch (err) {
@@ -357,7 +368,7 @@ const App = () => {
 
     const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`;
     const horario = '10:00:00';
-    const local = '';
+    const local = await getMostFrequentLocation(userId) || '';
 
     // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
@@ -424,15 +435,18 @@ const App = () => {
         const notificationTitle = 'Boa notícia!';
         const notificationBody = 'Parabéns! Você foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
 
-        // Função de atraso
-        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        // Log antes de enviar a notificação
+        console.log('Enviando notificação para o candidato:', candidateToken);
 
-        await delay(10000);
+        // Enviar a notificação e esperar pela resposta
+        const notificationResponse = await sendPushNotification(candidateToken, notificationTitle, notificationBody);
 
-        await sendPushNotification(candidateToken, notificationTitle, notificationBody);
+        // Log após o envio
+        console.log('Resposta da notificação enviada:', notificationResponse);
       } else {
         console.warn('Candidato optou por não receber notificações.');
       }
+
 
     } catch (error) {
       console.error('Erro ao processar a aceitação do candidato:', error);
@@ -834,6 +848,7 @@ const App = () => {
     console.log('ID da vaga:', jobId);
     setSelectedCandidate(candidate);
     setSelectedJobId(jobId);
+
     try {
       // Buscar a solicitação de entrevista existente para o candidato e a vaga
       const { data: existingRequest, error } = await supabase
@@ -845,6 +860,7 @@ const App = () => {
 
       console.log('Dados da solicitação de entrevista:', existingRequest);
       console.log('Erro ao buscar a solicitação de entrevista:', error);
+
       if (error) {
         console.error('Erro ao buscar solicitação de entrevista:', error);
       } else if (existingRequest) {
@@ -856,7 +872,14 @@ const App = () => {
       setModalVisible(true);
     } catch (err) {
       console.error('Erro ao buscar informações da entrevista:', err);
-      alert('Erro ao buscar informações da entrevista.');
+      Alert.alert(
+        'Algo deu errrado', // Título do alerta personalizado
+        'Erro ao buscar informações da entrevista, lamentamos por isso', // Mensagem do alerta
+        [
+          { text: 'OK', onPress: () => console.log('OK Pressionado') },
+        ],
+        { cancelable: true } // Impede que o alerta seja fechado ao tocar fora dele
+      );
     }
   };
 
@@ -944,7 +967,7 @@ const App = () => {
         }
 
       }
-    }, 600); // Timeout de 600ms para debouncing
+    }, 700); // Timeout de 600ms para debouncing
 
     // Atualiza o estado do timeout
     setTypingTimeout(newTimeout);
@@ -954,6 +977,7 @@ const App = () => {
     setLocation(suggestion); // Atualiza o campo de entrada com a sugestão escolhida
     setSuggestions([]); // Limpa as sugestões
   };
+
 
   // Função para lidar com o toque no mapa
   const handleMapPress = async (event) => {
@@ -1002,7 +1026,14 @@ const App = () => {
 
       if (existingRequestResponse.error) {
         console.error('Erro ao buscar solicitação existente:', existingRequestResponse.error);
-        alert('Erro ao buscar solicitação existente.');
+        Alert.alert(
+          'Algo deu errrado', // Título do alerta personalizado
+          'Erro ao buscar informações da entrevista, lamentamos por isso', // Mensagem do alerta
+          [
+            { text: 'OK', onPress: () => console.log('OK Pressionado') },
+          ],
+          { cancelable: true } // Impede que o alerta seja fechado ao tocar fora dele
+        );
         return;
       }
 
@@ -1032,7 +1063,14 @@ const App = () => {
           }
         } else {
           // Se o status não é 'pendente', não permitir nova solicitação
-          alert('Não é possível enviar uma nova solicitação, pois já existe uma solicitação com status diferente de "pendente".');
+          Alert.alert(
+            'Candidato ja aceitou ou recursou', // Título do alerta personalizado
+            'Não é possível enviar uma nova solicitação, pois já existe uma solicitação com status diferente', // Mensagem do alerta
+            [
+              { text: 'OK', onPress: () => console.log('OK Pressionado') },
+            ],
+            { cancelable: true } // Impede que o alerta seja fechado ao tocar fora dele
+          );
         }
       } else {
         // Caso não exista uma solicitação, criar uma nova
@@ -1055,8 +1093,14 @@ const App = () => {
           alert('Erro ao salvar solicitação de entrevista.');
         } else {
           console.log('Solicitação de entrevista salva com sucesso!');
-          alert('Solicitação de entrevista salva com sucesso!');
-          closeModal();
+          Alert.alert(
+            'Atualizado com sucesso', // Título do alerta personalizado
+            'Os detralhes da entrevista forem alterados com sucesso', // Mensagem do alerta
+            [
+              { text: 'OK', onPress: () => console.log('OK Pressionado') },
+            ],
+            { cancelable: false } // Impede que o alerta seja fechado ao tocar fora dele
+          ); closeModal();
         }
       }
     } catch (error) {
@@ -1076,6 +1120,7 @@ const App = () => {
 
   //=================================================================================================================================================== 
 
+
   // Funcao para recarregar a pagina
   const onRefresh = async () => {
     try {
@@ -1092,6 +1137,7 @@ const App = () => {
       setRefreshing(false);
     }
   };
+
 
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
@@ -1305,11 +1351,9 @@ const App = () => {
                           console.warn('Inscrição sem candidatos:', inscricao);
                           return null;
                         }
-
-                        const animatedValue = animatedValues[inscricao.id_candidato];
+                        const animatedValue = animatedValues[inscricao.id_candidato] || new Animated.Value(0);
                         const panResponder = panResponders[inscricao.id_candidato];
                         const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
-
                         return (
                           <Animatable.View
                             key={inscricao.id_candidato}
@@ -1317,13 +1361,7 @@ const App = () => {
                               styles.candidateContainer,
                               {
                                 transform: [{ translateX: animatedValue }],
-                                backgroundColor: animatedValue.__getValue() === 0
-                                  ? 'white'
-                                  : feedbackMessage === 'Aceito'
-                                    ? 'lightgreen'
-                                    : feedbackMessage === 'Recusado'
-                                      ? 'lightcoral'
-                                      : 'white'
+                                backgroundColor: animatedValue ? (feedbackMessage === 'Aceito' ? 'lightgreen' : feedbackMessage === 'Recusado' ? 'lightcoral' : 'white') : 'white',
                               }
                             ]}
                             animation={shakeCandidateIndex === candidateIndex ? 'shake' : undefined}
@@ -1368,7 +1406,6 @@ const App = () => {
         ) : (
           <Text>Nenhuma vaga disponível.</Text>
         )}
-
         <View>
           {/* Animação de Conexão (Modal) */}
           <Modal transparent={true} visible={showNoConnection}>
@@ -1519,8 +1556,6 @@ const App = () => {
                         onChange={onChangeTime}
                       />
                     )}
-
-
                     <TouchableOpacity style={[styles.button, styles.closeButton]} onPress={closeModal}>
                       <Text style={styles.buttonText}>Fechar</Text>
                     </TouchableOpacity>
@@ -1553,7 +1588,6 @@ const App = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-
         {/* Topo da pagina com a foto de perfil carregando, talvez mexerei no tamanho dela de forma geral */}
         <View style={styles.top}>
           <Image

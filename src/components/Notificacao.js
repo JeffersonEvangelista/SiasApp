@@ -1,4 +1,3 @@
-
 export const sendPushNotification = async (token, title, body) => {
     const message = {
         to: token,
@@ -20,7 +19,10 @@ export const sendPushNotification = async (token, title, body) => {
 
         const data = await response.json();
         console.log('Push notification response:', data);
+        
+        return data;
     } catch (error) {
         console.error('Error sending push notification:', error);
+        throw error; // Lançar o erro para que possa ser tratado na função chamadora
     }
 };
