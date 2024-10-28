@@ -16,6 +16,7 @@ import { getUserIdByEmailFirestore } from '../services/Firebase';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
+import { sendPushNotification } from '../components/Notificacao';
 
 interface Candidate {
   nome: string;
@@ -324,69 +325,94 @@ const App = () => {
     return mostFrequentLocation || null;
   };
 
-  // Função para aceitar um candidato 
-  const handleAcceptCandidate = async (jobId, candidateId, userId) => {
-    // Defina os detalhes da entrevista
-    const dataAtual = new Date();
-    const dataEntrevista = new Date(dataAtual.getTime() + 10 * 24 * 60 * 60 * 1000);
+// Função para aceitar um candidato 
+const handleAcceptCandidate = async (jobId, candidateId, userId) => {
+  // Defina os detalhes da entrevista
+  const dataAtual = new Date();
+  const dataEntrevista = new Date(dataAtual.getTime() + 10 * 24 * 60 * 60 * 1000);
 
-    const dia = dataEntrevista.getDate().toString().padStart(2, '0');
-    const mes = (dataEntrevista.getMonth() + 1).toString().padStart(2, '0');
-    const ano = dataEntrevista.getFullYear();
+  const dia = dataEntrevista.getDate().toString().padStart(2, '0');
+  const mes = (dataEntrevista.getMonth() + 1).toString().padStart(2, '0');
+  const ano = dataEntrevista.getFullYear();
 
-    const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`; const horario = '10:00:00';
-    const local = await getMostFrequentLocation(userId) || '';
+  const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`;
+  const horario = '10:00:00';
+  const local = '';
 
-    // Verifique se o ID da vaga e do candidato estão definidos
-    if (!jobId || !candidateId) {
-      console.error("ID da vaga ou do candidato não estão definidos.");
+  // Verifique se o ID da vaga e do candidato estão definidos
+  if (!jobId || !candidateId) {
+    console.error("ID da vaga ou do candidato não estão definidos.");
+    return;
+  }
+
+  try {
+    // Atualiza o status do candidato
+    const { data: updateData, error: updateError } = await supabase
+      .from('inscricoes_vagas')
+      .update({ status: 'aceita' })
+      .match({ id_vaga: jobId, id_candidato: candidateId });
+
+    if (updateError) {
+      console.error("Erro ao atualizar a vaga:", updateError);
       return;
     }
 
-    try {
-      // Atualiza o status do candidato
-      const { data: updateData, error: updateError } = await supabase
-        .from('inscricoes_vagas')
-        .update({ status: 'aceita' })
-        .match({ id_vaga: jobId, id_candidato: candidateId });
+    console.log("Vaga atualizada com sucesso:", updateData);
+    fetchJobOffersWithCandidates(userId);
 
-      if (updateError) {
-        console.error("Erro ao atualizar a vaga:", updateError);
-        return;
-      }
+    // Inserir na tabela solicitacoes_entrevista
+    const { data: interviewData, error: interviewError } = await supabase
+      .from('solicitacoes_entrevista')
+      .insert([
+        {
+          id_recrutador: userId,
+          id_candidato: candidateId,
+          id_vaga: jobId,
+          data_entrevista: dataEntrevista,
+          horario: horario,
+          local: local,
+          status: 'pendente',
+        },
+      ]);
 
-      console.log("Vaga atualizada com sucesso:", updateData);
-      fetchJobOffersWithCandidates(userId);
-
-      // Inserir na tabela solicitacoes_entrevista
-      const { data: interviewData, error: interviewError } = await supabase
-        .from('solicitacoes_entrevista')
-        .insert([
-          {
-            id_recrutador: userId,
-            id_candidato: candidateId,
-            id_vaga: jobId,
-            data_entrevista: dataEntrevista,
-            horario: horario,
-            local: local,
-            status: 'pendente',
-          },
-        ]);
-
-      if (interviewError) {
-        throw interviewError;
-      }
-
-      alert('Candidato aceito com sucesso, você pode editar os detalhes logo acima!');
-      fetchProfile();
-      console.log('Solicitação de entrevista criada com sucesso:', interviewData);
-      fetchJobOffers(userId);
-
-    } catch (error) {
-      console.error('Erro ao processar a aceitação do candidato:', error);
-      // Aqui você pode lidar com erros, como exibir uma mensagem de erro
+    if (interviewError) {
+      throw interviewError;
     }
-  };
+
+    alert('Candidato aceito com sucesso, você pode editar os detalhes logo acima!');
+    fetchProfile();
+    console.log('Solicitação de entrevista criada com sucesso:', interviewData);
+    fetchJobOffers(userId);
+
+    // Enviar notificação ao candidato
+    // 1. Buscar o token do candidato
+    const { data: candidateTokenData, error: tokenError } = await supabase
+      .from('device_tokens')
+      .select('token')
+      .eq('user_id', candidateId)
+      .single();
+
+    if (tokenError || !candidateTokenData) {
+      console.warn('Token do candidato não encontrado ou erro ao buscar:', tokenError);
+      return; // Se não houver token, não envia notificação
+    }
+
+    const candidateToken = candidateTokenData.token;
+
+    // 2. Enviar a notificação apenas se o token existir
+    if (candidateToken) {
+      const notificationTitle = 'Boa notícia!';
+      const notificationBody = 'Parabéns! Você foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
+      await sendPushNotification(candidateToken, notificationTitle, notificationBody);
+    } else {
+      console.warn('Candidato optou por não receber notificações.');
+    }
+
+  } catch (error) {
+    console.error('Erro ao processar a aceitação do candidato:', error);
+    // Aqui você pode lidar com erros, como exibir uma mensagem de erro
+  }
+};
 
   // Função para buscar vagas e candidatos inscritos
   const fetchJobOffersWithCandidates = async (userId) => {
