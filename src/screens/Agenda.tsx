@@ -19,7 +19,7 @@ import { sendPushNotification } from "../components/Notificacao";
 
 
 export default function Agenda() {
-  const [loading, setLoading] = useState(true); // Estado para carregamento
+  const [loading, setLoading] = useState(true);
   const db = getFirestore();
   const navigation = useNavigation();
   const [showNoConnection, setShowNoConnection] = useState(false);
@@ -412,13 +412,10 @@ export default function Agenda() {
 
   // Função para aceitar a entrevista
   const handleAcceptCandidate = async (interview, userId) => {
-    console.log('Candidate ID:', userId);
-    console.log('Entrevista recebida:', interview); // Log dos dados da entrevista
+    updateInterviewStatus(interview.id, 'aceita'); // Atualiza o estado localmente
 
     try {
-      console.log(`Candidato aceito:`, interview);
-
-      // Atualizar o status da solicitação de entrevista
+      // Chamada ao banco de dados
       const { error: updateError } = await supabase
         .from('solicitacoes_entrevista')
         .update({ status: 'aceita' })
@@ -426,6 +423,7 @@ export default function Agenda() {
 
       if (updateError) {
         console.error('Erro ao atualizar status da entrevista:', updateError);
+        updateInterviewStatus(interview.id, 'pendente'); // Reverte a atualização local
         return;
       }
 
@@ -518,7 +516,8 @@ export default function Agenda() {
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
-    }
+      updateInterviewStatus(interview.id, 'pendente'); // Reverte a atualização local em caso de erro
+    } 
   };
 
 
@@ -818,6 +817,14 @@ export default function Agenda() {
     setShowLegend(!showLegend);
   };
 
+  // Função para atualizar o estado local
+  const updateInterviewStatus = (interviewId, newStatus) => {
+    setInterviewDetails(prevDetails =>
+      prevDetails.map(interview =>
+        interview.id === interviewId ? { ...interview, status: newStatus } : interview
+      )
+    );
+  };
 
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
