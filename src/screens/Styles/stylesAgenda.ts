@@ -237,6 +237,22 @@ export const styles = StyleSheet.create({
         alignSelf: 'center',
         marginBottom: 15,
     },
+    customButton: {
+        backgroundColor: '#ffa726',
+        padding: 10,
+        borderRadius: 5,
+        marginTop: 20,
+    },
+    modalBackground: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    lottieAnimation: {
+        width: 200,
+        height: 200,
+    },
     modalTitle: {
         fontSize: 24,
         fontWeight: 'bold',

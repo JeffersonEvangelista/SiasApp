@@ -12,12 +12,17 @@ import { getDistance } from 'geolib';
 import AppState from '../components/globalVars';
 import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
 import { useNavigation } from '@react-navigation/native';
+import { sendPushNotification } from "../components/Notificacao";
+import NetInfo from '@react-native-community/netinfo';
+import LottieView from 'lottie-react-native';
 
 
 
 export default function Agenda() {
-  const [loading, setLoading] = useState(true); // Estado para carregamento
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const db = getFirestore();
+  const [showNoConnection, setShowNoConnection] = useState(false);
   const navigation = useNavigation();
   const pan = useRef(new Animated.ValueXY()).current;
   const [userId, setUserId] = useState(null);
@@ -44,6 +49,20 @@ export default function Agenda() {
   };
 
   useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (!state.isConnected) {
+        setError('Sem conexão com a internet. Verifique sua conexão.');
+        setShowNoConnection(true);
+      } else {
+        setError(null);
+        setShowNoConnection(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const getUserLocation = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
@@ -67,16 +86,15 @@ export default function Agenda() {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      setModalVisible(false); // Redefine o modal ao voltar para a tela
+      setModalVisible(false);
     });
 
-    // Limpa o listener ao desmontar
     return unsubscribe;
   }, [navigation]);
 
   // Função que carrega os dados do usuário
   const fetchProfile = useCallback(async () => {
-    setLoading(true); // Começa o carregamento
+    setLoading(true);
     try {
       const { id: userId } = await getUserNameAndId();
       setUserId(userId);
@@ -218,8 +236,6 @@ export default function Agenda() {
   };
 
 
-
-
   // Função para lidar com o perfil do candidato e marcar as datas no calendário
   const handleCandidateProfile = async (candidateId) => {
     try {
@@ -323,22 +339,18 @@ export default function Agenda() {
     }
   };
 
-
+  // Funçao para  obter o uud do usario no firebase 
   const getRecruiterIdByEmail = async (recruiterEmail) => {
     try {
       // Log do email que está sendo buscado
       console.log(`Buscando ID do recrutador para o email: ${recruiterEmail}`);
 
-      // Referência à coleção "recruiters" no Firestore
       const usersRef = collection(db, "users");
 
-      // Criação da query para encontrar um documento com o campo "email" igual ao email fornecido
       const q = query(usersRef, where("email", "==", recruiterEmail));
 
-      // Executa a consulta e obtém os documentos
       const querySnapshot = await getDocs(q);
 
-      // Verifica se encontrou algum documento
       if (!querySnapshot.empty) {
         const recruiterDoc = querySnapshot.docs[0];
         const recruiterId = recruiterDoc.id;
@@ -354,8 +366,6 @@ export default function Agenda() {
       return null;
     }
   };
-
-
 
   // Função para dar animação na questão da entrevista
   const createPanResponderForInterview = useCallback((animatedValue, interview, userId) => {
@@ -398,6 +408,7 @@ export default function Agenda() {
   // Função para aceitar o entrevista
   const handleAcceptCandidate = async (interview, userId) => {
     console.log('Candidate ID:', userId);
+    const recruiterId = await getRecrutadorIdBySolicitacao(interview.id);
     try {
       console.log(`Candidato aceito:`, interview);
       // Atualizar o status da solicitação de entrevista
@@ -439,7 +450,38 @@ export default function Agenda() {
           console.error('Erro ao inserir resposta do candidato:', insertError);
         } else {
           console.log('Resposta do candidato inserida com sucesso:', data);
-          fetchProfile()
+          fetchProfile();
+
+
+          // Buscar o token do recrutador para enviar uma notificação
+          const { data: recruiterTokenData, error: tokenError } = await supabase
+            .from('device_tokens')
+            .select('token')
+            .eq('user_id', recruiterId)
+            .single();
+
+          if (tokenError || !recruiterTokenData) {
+            console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
+            return;
+          }
+
+          const recruiterToken = recruiterTokenData.token;
+
+          // Enviar a notificação apenas se o token existir
+          if (recruiterToken) {
+            const notificationTitle = 'Boas,notícias!';
+            const notificationBody = 'Um candidato aceitou participar de uma das suas entrevistas. Confira os detalhes em seu aplicativo.';
+
+            // Função de atraso
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+            await delay(10000); // Adiciona um delay de 10 segundos
+
+            await sendPushNotification(recruiterToken, notificationTitle, notificationBody);
+          } else {
+            console.warn('Recrutador optou por não receber notificações.');
+          }
+
         }
       } else {
         console.log('Já existe uma resposta para essa solicitação e candidato.');
@@ -449,12 +491,42 @@ export default function Agenda() {
     }
   };
 
-  // Função para recusar a entrevista
+
+  // Função para buscar o ID do recrutador a partir de uma solicitação de entrevista
+  const getRecrutadorIdBySolicitacao = async (solicitacaoId) => {
+    try {
+      const { data, error } = await supabase
+        .from('solicitacoes_entrevista')
+        .select('id_recrutador')
+        .eq('id', solicitacaoId)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar o ID do recrutador:', error);
+        return null;
+      }
+
+      return data.id_recrutador;
+    } catch (error) {
+      console.error('Erro inesperado ao buscar o ID do recrutador:', error);
+      return null;
+    }
+  };
+
+  // Função principal para recusar a entrevista
   const handleRecusar = async (interview, userId) => {
     try {
-      console.log(`Candidato recusado:`, interview);
+      // Buscar o ID do recrutador associado à solicitação de entrevista
+      const recruiterId = await getRecrutadorIdBySolicitacao(interview.id);
 
-      // Atualizar o status da solicitação de entrevista
+      if (!recruiterId) {
+        console.warn('ID do recrutador não encontrado para a solicitação:', interview.id);
+        return;
+      }
+
+      console.log(`Entrevista recusada pelo candidato:`, interview);
+
+      // Atualizar o status da solicitação de entrevista para 'recusada'
       const { error: updateError } = await supabase
         .from('solicitacoes_entrevista')
         .update({ status: 'recusada' })
@@ -466,6 +538,7 @@ export default function Agenda() {
       }
 
       console.log('Status da entrevista atualizado para "recusada"');
+
       // Verificar se já existe uma resposta para a solicitação e candidato
       const { data: existingResponse, error: fetchError } = await supabase
         .from('respostas_candidatos')
@@ -492,7 +565,35 @@ export default function Agenda() {
           console.error('Erro ao inserir resposta do candidato:', insertError);
         } else {
           console.log('Resposta do candidato inserida com sucesso:', data);
-          fetchProfile()
+
+          // Buscar o token do recrutador para enviar uma notificação
+          const { data: recruiterTokenData, error: tokenError } = await supabase
+            .from('device_tokens')
+            .select('token')
+            .eq('user_id', recruiterId)
+            .single();
+
+          if (tokenError || !recruiterTokenData) {
+            console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
+            return;
+          }
+
+          const recruiterToken = recruiterTokenData.token;
+
+          // Enviar a notificação apenas se o token existir
+          if (recruiterToken) {
+            const notificationTitle = 'Poxa, as notícias não são muito legais!';
+            const notificationBody = 'Um candidato recusou participar de uma das suas entrevistas. Confira os detalhes em seu aplicativo.';
+
+            // Função de atraso
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+            await delay(10000); // Adiciona um delay de 10 segundos
+
+            await sendPushNotification(recruiterToken, notificationTitle, notificationBody);
+          } else {
+            console.warn('Recrutador optou por não receber notificações.');
+          }
         }
       } else {
         console.log('Já existe uma resposta para essa solicitação e candidato.');
@@ -538,7 +639,7 @@ export default function Agenda() {
           .from('respostas_candidatos')
           .insert({
             id_solicitacao: interview.id,
-            id_candidato: candidateId, // Usa o ID do candidato passado
+            id_candidato: candidateId,
             resposta: 'recusada',
           });
 
@@ -546,6 +647,35 @@ export default function Agenda() {
           console.error('Erro ao inserir resposta do candidato:', insertError);
         } else {
           console.log('Resposta do candidato inserida com sucesso:', data);
+
+          // Buscar o token do recrutador
+          const { data: recruiterTokenData, error: tokenError } = await supabase
+            .from('device_tokens')
+            .select('token')
+            .eq('user_id', interview.id_recrutador)
+            .single();
+
+          if (tokenError || !recruiterTokenData) {
+            console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
+            return;
+          }
+
+          const recruiterToken = recruiterTokenData.token;
+
+          // Enviar a notificação apenas se o token existir
+          if (recruiterToken) {
+            const notificationTitle = 'Poxa, as notícias não são muito legais!';
+            const notificationBody = 'Um candidato recusou participar de uma das suas entrevistas. Confira os detalhes em seu aplicativo.';
+
+            // Função de atraso
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+            await delay(10000); // Adiciona um delay de 10 segundos
+
+            await sendPushNotification(recruiterToken, notificationTitle, notificationBody);
+          } else {
+            console.warn('Recrutador optou por não receber notificações.');
+          }
         }
       } else {
         console.log('Já existe uma resposta para essa solicitação e candidato.');
@@ -587,7 +717,6 @@ export default function Agenda() {
     }
     return null;
   };
-
 
   // Função para determinar a cor e o estilo do ponto com base no status
   const getDotStyle = (status) => {
@@ -652,7 +781,6 @@ export default function Agenda() {
     setShowLegend(!showLegend);
   };
 
-
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
     return (
@@ -668,10 +796,8 @@ export default function Agenda() {
             <View style={styles.header}>
               <Text style={styles.headerText}>Agenda</Text>
             </View>
-
             {/* Necessário arrumar essa questão pois o calendário está afetando o reload da página */}
             {renderCalendar()}
-
             <TouchableOpacity style={styles.toggleButton} onPress={toggleLegend}>
               <Ionicons
                 name={showLegend ? 'eye-off' : 'eye'}
@@ -683,7 +809,6 @@ export default function Agenda() {
                 {showLegend ? ' Ocultar' : ' Legendas'}
               </Text>
             </TouchableOpacity>
-
             {showLegend && (
               <View style={styles.legendContainer}>
                 <View style={styles.legendItem}>
@@ -737,7 +862,6 @@ export default function Agenda() {
               ) : (
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista pendente.</Text>
               )}
-
               {/* Seção para entrevistas aceitas */}
               <Text style={styles.monthTitle}>Entrevistas Aceitas</Text>
               {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
@@ -774,7 +898,6 @@ export default function Agenda() {
               ) : (
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista aceita.</Text>
               )}
-
               {/* Seção para entrevistas recusadas */}
               <Text style={styles.monthTitle}>Entrevistas Recusadas</Text>
               {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada').length > 0 ? (
@@ -812,9 +935,26 @@ export default function Agenda() {
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista recusada.</Text>
               )}
             </View>
-
-
-
+            {/* Animação de Conexão (Modal) */}
+            <Modal transparent={true} visible={showNoConnection}>
+              <View style={styles.modalBackground}>
+                <LottieView
+                  source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+                  autoPlay
+                  loop
+                  style={styles.lottieAnimation}
+                />
+                <TouchableOpacity
+                  style={styles.customButton}
+                  onPress={() => {
+                    setShowNoConnection(false);
+                    fetchProfile();
+                  }}
+                >
+                  <Text style={styles.buttonText}>Tentar novamente</Text>
+                </TouchableOpacity>
+              </View>
+            </Modal>
           </ScrollView>
         )}
       </View>
@@ -1099,6 +1239,26 @@ export default function Agenda() {
               </Modal>
 
             )}
+            {/* Animação de Conexão (Modal) */}
+            <Modal transparent={true} visible={showNoConnection}>
+              <View style={styles.modalBackground}>
+                <LottieView
+                  source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+                  autoPlay
+                  loop
+                  style={styles.lottieAnimation}
+                />
+                <TouchableOpacity
+                  style={styles.customButton}
+                  onPress={() => {
+                    setShowNoConnection(false);
+                    fetchProfile();
+                  }}
+                >
+                  <Text style={styles.buttonText}>Tentar novamente</Text>
+                </TouchableOpacity>
+              </View>
+            </Modal>
           </ScrollView>
         )}
       </View>

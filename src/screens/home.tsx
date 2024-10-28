@@ -144,7 +144,7 @@ const App = () => {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      setModalVisible(false); // Redefine o modal ao voltar para a tela
+      setModalVisible(false);
     });
 
     // Limpa o listener ao desmontar
@@ -258,7 +258,6 @@ const App = () => {
       setError('Erro ao buscar candidatos.');
     }
   };
-
   // Funções auxiliares para buscar Inscrições
   const fetchInscriptions = async (candidateId: any) => {
     try {
@@ -269,7 +268,6 @@ const App = () => {
       setError('Erro ao carregar as inscrições: ' + err.message);
     }
   };
-
   // Funções para recursar um candidato
   const handleRecusar = async (vaga, candidato) => {
     console.log("O item foi recusado!");
@@ -295,6 +293,28 @@ const App = () => {
 
       console.log("Vaga atualizada com sucesso:", data);
 
+      // 1. Buscar o token do candidato
+      const { data: candidateTokenData, error: tokenError } = await supabase
+        .from('device_tokens')
+        .select('token')
+        .eq('user_id', candidateId)
+        .single();
+
+      if (tokenError || !candidateTokenData) {
+        console.warn('Token do candidato não encontrado ou erro ao buscar:', tokenError);
+        return; // Se não houver token, não envia notificação
+      }
+
+      const candidateToken = candidateTokenData.token;
+
+      // 2. Enviar a notificação apenas se o token existir
+      if (candidateToken) {
+        const notificationTitle = 'Poxa, notícias não muito legais!';
+        const notificationBody = 'Infelizmente! Você não foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
+        await sendPushNotification(candidateToken, notificationTitle, notificationBody);
+      } else {
+        console.warn('Candidato optou por não receber notificações.');
+      }
 
       fetchJobOffersWithCandidates(userId);
     } catch (err) {
@@ -325,94 +345,100 @@ const App = () => {
     return mostFrequentLocation || null;
   };
 
-// Função para aceitar um candidato 
-const handleAcceptCandidate = async (jobId, candidateId, userId) => {
-  // Defina os detalhes da entrevista
-  const dataAtual = new Date();
-  const dataEntrevista = new Date(dataAtual.getTime() + 10 * 24 * 60 * 60 * 1000);
+  // Função para aceitar um candidato 
+  const handleAcceptCandidate = async (jobId, candidateId, userId) => {
+    // Defina os detalhes da entrevista
+    const dataAtual = new Date();
+    const dataEntrevista = new Date(dataAtual.getTime() + 10 * 24 * 60 * 60 * 1000);
 
-  const dia = dataEntrevista.getDate().toString().padStart(2, '0');
-  const mes = (dataEntrevista.getMonth() + 1).toString().padStart(2, '0');
-  const ano = dataEntrevista.getFullYear();
+    const dia = dataEntrevista.getDate().toString().padStart(2, '0');
+    const mes = (dataEntrevista.getMonth() + 1).toString().padStart(2, '0');
+    const ano = dataEntrevista.getFullYear();
 
-  const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`;
-  const horario = '10:00:00';
-  const local = '';
+    const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`;
+    const horario = '10:00:00';
+    const local = '';
 
-  // Verifique se o ID da vaga e do candidato estão definidos
-  if (!jobId || !candidateId) {
-    console.error("ID da vaga ou do candidato não estão definidos.");
-    return;
-  }
-
-  try {
-    // Atualiza o status do candidato
-    const { data: updateData, error: updateError } = await supabase
-      .from('inscricoes_vagas')
-      .update({ status: 'aceita' })
-      .match({ id_vaga: jobId, id_candidato: candidateId });
-
-    if (updateError) {
-      console.error("Erro ao atualizar a vaga:", updateError);
+    // Verifique se o ID da vaga e do candidato estão definidos
+    if (!jobId || !candidateId) {
+      console.error("ID da vaga ou do candidato não estão definidos.");
       return;
     }
 
-    console.log("Vaga atualizada com sucesso:", updateData);
-    fetchJobOffersWithCandidates(userId);
+    try {
+      // Atualiza o status do candidato
+      const { data: updateData, error: updateError } = await supabase
+        .from('inscricoes_vagas')
+        .update({ status: 'aceita' })
+        .match({ id_vaga: jobId, id_candidato: candidateId });
 
-    // Inserir na tabela solicitacoes_entrevista
-    const { data: interviewData, error: interviewError } = await supabase
-      .from('solicitacoes_entrevista')
-      .insert([
-        {
-          id_recrutador: userId,
-          id_candidato: candidateId,
-          id_vaga: jobId,
-          data_entrevista: dataEntrevista,
-          horario: horario,
-          local: local,
-          status: 'pendente',
-        },
-      ]);
+      if (updateError) {
+        console.error("Erro ao atualizar a vaga:", updateError);
+        return;
+      }
 
-    if (interviewError) {
-      throw interviewError;
+      console.log("Vaga atualizada com sucesso:", updateData);
+      fetchJobOffersWithCandidates(userId);
+
+      // Inserir na tabela solicitacoes_entrevista
+      const { data: interviewData, error: interviewError } = await supabase
+        .from('solicitacoes_entrevista')
+        .insert([
+          {
+            id_recrutador: userId,
+            id_candidato: candidateId,
+            id_vaga: jobId,
+            data_entrevista: dataEntrevista,
+            horario: horario,
+            local: local,
+            status: 'pendente',
+          },
+        ]);
+
+      if (interviewError) {
+        throw interviewError;
+      }
+
+      alert('Candidato aceito com sucesso, você pode editar os detalhes logo acima!');
+      fetchProfile();
+      console.log('Solicitação de entrevista criada com sucesso:', interviewData);
+      fetchJobOffers(userId);
+
+      // Enviar notificação ao candidato
+      // 1. Buscar o token do candidato
+      const { data: candidateTokenData, error: tokenError } = await supabase
+        .from('device_tokens')
+        .select('token')
+        .eq('user_id', candidateId)
+        .single();
+
+      if (tokenError || !candidateTokenData) {
+        console.warn('Token do candidato não encontrado ou erro ao buscar:', tokenError);
+        return; // Se não houver token, não envia notificação
+      }
+
+      const candidateToken = candidateTokenData.token;
+
+      // 2. Enviar a notificação apenas se o token existir
+      if (candidateToken) {
+        const notificationTitle = 'Boa notícia!';
+        const notificationBody = 'Parabéns! Você foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
+
+        // Função de atraso
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        await delay(10000);
+
+        await sendPushNotification(candidateToken, notificationTitle, notificationBody);
+      } else {
+        console.warn('Candidato optou por não receber notificações.');
+      }
+
+    } catch (error) {
+      console.error('Erro ao processar a aceitação do candidato:', error);
+      // Aqui você pode lidar com erros, como exibir uma mensagem de erro
     }
-
-    alert('Candidato aceito com sucesso, você pode editar os detalhes logo acima!');
-    fetchProfile();
-    console.log('Solicitação de entrevista criada com sucesso:', interviewData);
-    fetchJobOffers(userId);
-
-    // Enviar notificação ao candidato
-    // 1. Buscar o token do candidato
-    const { data: candidateTokenData, error: tokenError } = await supabase
-      .from('device_tokens')
-      .select('token')
-      .eq('user_id', candidateId)
-      .single();
-
-    if (tokenError || !candidateTokenData) {
-      console.warn('Token do candidato não encontrado ou erro ao buscar:', tokenError);
-      return; // Se não houver token, não envia notificação
-    }
-
-    const candidateToken = candidateTokenData.token;
-
-    // 2. Enviar a notificação apenas se o token existir
-    if (candidateToken) {
-      const notificationTitle = 'Boa notícia!';
-      const notificationBody = 'Parabéns! Você foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
-      await sendPushNotification(candidateToken, notificationTitle, notificationBody);
-    } else {
-      console.warn('Candidato optou por não receber notificações.');
-    }
-
-  } catch (error) {
-    console.error('Erro ao processar a aceitação do candidato:', error);
-    // Aqui você pode lidar com erros, como exibir uma mensagem de erro
-  }
-};
+  };
 
   // Função para buscar vagas e candidatos inscritos
   const fetchJobOffersWithCandidates = async (userId) => {
@@ -916,7 +942,7 @@ const handleAcceptCandidate = async (jobId, candidateId, userId) => {
         } else {
           setMapLocation(null);
         }
-      
+
       }
     }, 600); // Timeout de 600ms para debouncing
 
@@ -928,7 +954,6 @@ const handleAcceptCandidate = async (jobId, candidateId, userId) => {
     setLocation(suggestion); // Atualiza o campo de entrada com a sugestão escolhida
     setSuggestions([]); // Limpa as sugestões
   };
-
 
   // Função para lidar com o toque no mapa
   const handleMapPress = async (event) => {
@@ -1051,7 +1076,6 @@ const handleAcceptCandidate = async (jobId, candidateId, userId) => {
 
   //=================================================================================================================================================== 
 
-
   // Funcao para recarregar a pagina
   const onRefresh = async () => {
     try {
@@ -1068,7 +1092,6 @@ const handleAcceptCandidate = async (jobId, candidateId, userId) => {
       setRefreshing(false);
     }
   };
-
 
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
