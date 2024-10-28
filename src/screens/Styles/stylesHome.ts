@@ -10,6 +10,9 @@ export const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         paddingBottom: '33%'
     },
+    noJobOffersText: {
+        color: '#ffff'
+    },
     chartContainer: {
         height: 330,
         marginBottom: 8,
@@ -31,6 +34,7 @@ export const styles = StyleSheet.create({
         backgroundColor: '#ff8c00',
         height: '14%',
         width: '100%',
+        maxHeight: '17%',
         borderWidth: 2,
         borderColor: '#ff8c00',
         borderRadius: 0,
@@ -39,9 +43,7 @@ export const styles = StyleSheet.create({
         marginTop: 0,
         paddingHorizontal: 15,
     },
-    icon: {
-        marginVertical: 5,
-    },
+
     greetingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -225,13 +227,6 @@ export const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 16,
         color: '#fff',
-    },
-
-    modalContent: {
-        backgroundColor: 'white',
-        padding: 20,
-        borderRadius: 10,
-        width: '90%',
     },
     modalTitle: {
         fontSize: 18,

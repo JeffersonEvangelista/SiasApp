@@ -834,6 +834,9 @@ export default function Agenda() {
             <View style={styles.header}>
               <Text style={styles.headerText}>Agenda</Text>
             </View>
+            <StatusBar
+              backgroundColor="#ff8c00"
+            />
 
             {/* Necessário arrumar essa questão pois o calendário está afetando o reload da página */}
             {renderCalendar()}
@@ -1109,10 +1112,6 @@ export default function Agenda() {
               ) : (
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista pendente.</Text>
               )}
-
-
-
-
               {/* Seção para entrevistas aceitas */}
               <Text style={styles.monthTitle}>Entrevistas aceitas</Text>
               {interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (

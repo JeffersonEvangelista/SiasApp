@@ -1,6 +1,6 @@
 // Importações do codigo 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Alert, FlatList, Animated, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
+import { View, Alert, Animated, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
 import { getUserNameAndId, supabase, getJobInscriptions, countSolicitacoes } from '../services/userService';
 import * as Animatable from 'react-native-animatable';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -15,30 +15,88 @@ import AppState from '../components/globalVars';
 import { getUserIdByEmailFirestore } from '../services/Firebase';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { Item } from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
 import { sendPushNotification } from '../components/Notificacao';
+import { AbstractChartConfig } from 'react-native-chart-kit/dist/AbstractChart';
 
 interface Candidate {
+  candidatos: any;
+  id: string;
   nome: string;
   email: string;
   foto_perfil?: string;
+  status: 'aceita' | 'recusada' | 'pendente';
+  vagas: {
+    id: string;
+    nome: string;
+  };
 }
 interface LocationSuggestion {
   display_name: string;
 }
+interface ChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    borderColor: string;
+    backgroundColor: string;
+    borderWidth: number;
+    fill: boolean;
+  }[];
+}
+interface InterviewCounts {
+  days?: Record<string, number>;
+  months?: Record<string, number>;
+}
+interface ExpandedJobs {
+  [jobId: string]: boolean;
+}
+interface LineChartProps {
+  chartConfig: AbstractChartConfig;
+}
+interface Inscricao {
+  id_candidato: string;
+}
+
+interface Job {
+  titulo: string;
+  id: string;
+  inscricoes_vagas: Inscricao[];
+}
+interface JobOffer {
+  id: string; 
+  titulo: string;
+  inscricoes_vagas: InscricaoVaga[]; 
+}
+interface InscricaoVaga {
+  id_candidato: string;
+  candidatos: any;
+}
+interface Props {
+  jobOffersWithCandidates: Job[];
+}
+
+interface CustomChartConfig extends AbstractChartConfig {
+  withVerticalLines?: boolean;
+}
+
+interface CustomError {
+  message: string;
+}
 
 const App = () => {
+  const [userId, setUserId] = useState<string | null>(null);
   const animatedValue = useRef(new Animated.Value(0)).current;
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [userData, setUserData] = useState({ nome: '', cnpj: null });
+  const [userData, setUserData] = useState<{ nome: string; cnpj: null }>({ nome: '', cnpj: null });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [candidates, setCandidates] = useState([]);
-  const [expandedJobs, setExpandedJobs] = useState({});
-  const [toggleExpandInfo, settoggleExpandInfo] = useState({});
+  const [error, setError] = useState<CustomError | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [expandedJobs, setExpandedJobs] = useState<ExpandedJobs>({});
+  const [toggleExpandInfo, settoggleExpandInfo] = useState<ExpandedJobs>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [modalVisibleInfo, setModalVisibleInfo] = useState(false);
   const [date, setDate] = useState(new Date());
@@ -46,14 +104,12 @@ const App = () => {
   const [location, setLocation] = useState("");
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [candidateStatus, setCandidateStatus] = useState({});
-  const [interviewCounts, setInterviewCounts] = useState([]);
+  const [interviewCounts, setInterviewCounts] = useState<InterviewCounts>({});
   const [inscriptions, setInscriptions] = useState([]);
-  const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('days');
   const screenWidth = Dimensions.get('window').width;
   const [changingMonth, setChangingMonth] = useState(false);
-  const [userId, setUserId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
@@ -71,13 +127,13 @@ const App = () => {
   const [locationName, setLocationName] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [jobOffers, setJobOffers] = useState([]);
+  const [jobOffers, setJobOffers] = useState<Job[]>([]);
   const [jobOffersWithCandidates, setJobOffersWithCandidates] = useState([]);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [modalVisible1, setModalVisible1] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [animatedValues, setAnimatedValues] = useState({});
-  const [panResponders, setPanResponders] = useState({});
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [animatedValues, setAnimatedValues] = useState<{ [key: string]: any }>({});
+  const [panResponders, setPanResponders] = useState<{ [key: string]: any }>({});
   const [feedbackVisibleByCandidate, setFeedbackVisibleByCandidate] = useState({});
   const [feedbackMessageByCandidate, setFeedbackMessageByCandidate] = useState({});
   const mapRef = useRef(null);
@@ -86,7 +142,18 @@ const App = () => {
   const isCandidateAcceptedOrRejected = selectedCandidate?.status === 'aceita' || selectedCandidate?.status === 'recusada';
   const navigation = useNavigation();
   const [suggestions, setSuggestions] = useState([]);
-
+  const [isDragging, setIsDragging] = useState(false);
+  const [chartData, setChartData] = useState<ChartData>({
+    labels: [],
+    datasets: [{
+      label: '',
+      data: [],
+      borderColor: '',
+      backgroundColor: '',
+      borderWidth: 0,
+      fill: false,
+    }],
+  });
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -97,11 +164,11 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    const newAnimatedValues = {};
-    const newPanResponders = {};
+    const newAnimatedValues: { [key: string]: any } = {};
+    const newPanResponders: { [key: string]: any } = {};
 
     jobOffersWithCandidates.forEach((job) => {
-      job.inscricoes_vagas.forEach((inscricao) => {
+      job.inscricoes_vagas.forEach((inscricao: any) => {
         const { id_candidato } = inscricao;
         const { animatedValue, panResponder } = createPanResponderForCandidate(job.id, id_candidato);
 
@@ -113,6 +180,7 @@ const App = () => {
     setAnimatedValues(newAnimatedValues);
     setPanResponders(newPanResponders);
   }, [jobOffersWithCandidates]);
+
 
   useEffect(() => {
     fetchProfile();
@@ -131,8 +199,7 @@ const App = () => {
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
       if (!state.isConnected) {
-        setError('Sem conexão com a internet. Verifique sua conexão.');
-        setShowNoConnection(true);
+        setError({ message: 'Sem conexão com a internet. Verifique sua conexão.' }); setShowNoConnection(true);
       } else {
         setError(null);
         setShowNoConnection(false);
@@ -152,80 +219,93 @@ const App = () => {
   }, [navigation]);
 
 
-  //  Função que carrega os dados do usuário
-
+  // Função que carrega os dados do usuário
   const fetchProfile = async () => {
     try {
+      setLoading(true);
       const { id: userId } = await getUserNameAndId();
       console.log('User ID:', userId);
       setUserId(userId);
 
-      // Verificar se o usuário é recrutador
-      const { data: recruiterData } = await supabase
-        .from('recrutadores')
-        .select('id, nome, cnpj, foto_perfil')
-        .eq('id', userId)
-        .single();
+      // Verificar se o usuário é recrutador ou candidato em paralelo
+      const [recruiterResponse, candidateResponse] = await Promise.all([
+        supabase
+          .from('recrutadores')
+          .select('id, nome, cnpj, foto_perfil')
+          .eq('id', userId)
+          .single(),
+        supabase
+          .from('candidatos')
+          .select('id, nome, foto_perfil')
+          .eq('id', userId)
+          .single()
+      ]);
+
+      const recruiterData = recruiterResponse.data;
+      const candidateData = candidateResponse.data;
 
       if (recruiterData) {
         setUserData(recruiterData);
         setUserType('recrutador');
-        if (recruiterData.foto_perfil) {
-          setProfileImage(recruiterData.foto_perfil);
-        }
-        // Chamar a função para buscar vagas e candidatos inscritos
+        recruiterData.foto_perfil && setProfileImage(recruiterData.foto_perfil);
         await fetchJobOffersWithCandidates(recruiterData.id);
+      } else if (candidateData) {
+        setUserData(candidateData);
+        setUserType('candidato');
+        candidateData.foto_perfil && setProfileImage(candidateData.foto_perfil);
+        await fetchInscriptions(candidateData.id);
       } else {
-        const { data: candidateData } = await supabase
-          .from('candidatos')
-          .select('id, nome, foto_perfil')
-          .eq('id', userId)
-          .single();
-
-        if (candidateData) {
-          setUserData(candidateData);
-          setUserType('candidato');
-          if (candidateData.foto_perfil) {
-            setProfileImage(candidateData.foto_perfil);
-          }
-          await fetchInscriptions(candidateData.id);
-        }
+        console.error('Usuário não encontrado em ambas as tabelas.');
+        return;
       }
-      const solicitacoesCount = await countSolicitacoes(userId) || 0;
-      AppState.solicitacoesCount = solicitacoesCount;
-      await fetchJobOffers(userId);
-      await fetchCandidates(userId);
 
-      if (userType) {
-        await fetchInterviewCounts(userId);
-      }
+      // Executar as outras operações em paralelo
+      const [solicitacoesCount, jobOffers, candidates, interviewCounts] = await Promise.all([
+        countSolicitacoes(userId),
+        fetchJobOffers(userId),
+        fetchCandidates(userId),
+        fetchInterviewCounts(userId)
+      ]);
+
+      // Atualizar o número de solicitações no estado global ou em qualquer outro lugar necessário
+      AppState.solicitacoesCount = solicitacoesCount || 0;
+
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);
-      setError('Erro ao buscar perfil.');
+      setError({ message: 'Erro ao buscar perfil.' });
+      setShowNoConnection(true);
     } finally {
       setLoading(false);
     }
   };
-
-  //  Funções auxiliares para buscar vagas  e candidatos
+  // Função auxiliar para buscar vagas
   const fetchJobOffers = async (userId: any) => {
     try {
       let query;
+
+      // Diferenciar a consulta dependendo do tipo de usuário
       if (userType === 'recrutador') {
         query = supabase
           .from('vagas')
-          .select(`id, titulo, descricao, localizacao, requisitos, salario, data_criacao, recrutadores (nome)`)
+          .select('id, titulo, descricao, localizacao, requisitos, salario, data_criacao, recrutadores (nome)')
           .eq('id_recrutador', userId)
           .limit(5);
       } else {
         query = supabase
           .from('solicitacoes_entrevista')
-          .select(`id_vaga, vagas (id, titulo, descricao, localizacao, requisitos, salario, data_criacao)`)
+          .select('id_vaga, vagas (id, titulo, descricao, localizacao, requisitos, salario, data_criacao)')
           .eq('id_candidato', userId)
           .limit(5);
       }
 
-      const { data: jobsData } = await query;
+      // Executar a consulta e armazenar os dados
+      const { data: jobsData, error } = await query;
+      if (error) {
+        console.error('Erro ao buscar vagas:', error);
+        setError('Erro ao buscar vagas.');
+        return;
+      }
+
       console.log('Vagas encontradas:', jobsData);
       setJobOffers(jobsData);
     } catch (error) {
@@ -233,25 +313,24 @@ const App = () => {
       setError('Erro ao buscar vagas.');
     }
   };
-  //   Funções auxiliares para buscar candidatos
+
+  // Função auxiliar para buscar candidatos
   const fetchCandidates = async (userId: any) => {
     try {
-      let query;
-      if (userType === 'recrutador') {
-        query = supabase
-          .from('solicitacoes_entrevista')
-          .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario), status`)
-          .eq('id_recrutador', userId)
-          .limit(5);
-      } else {
-        query = supabase
-          .from('solicitacoes_entrevista')
-          .select(`id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario), status`)
-          .eq('id_candidato', userId)
-          .limit(5);
+      const query = supabase
+        .from('solicitacoes_entrevista')
+        .select('id, id_candidato, candidatos (id, nome, email, foto_perfil, cpf), vagas (id, titulo, localizacao, salario), status')
+        .eq(userType === 'recrutador' ? 'id_recrutador' : 'id_candidato', userId)
+        .limit(5);
+
+      // Executar a consulta e armazenar os dados
+      const { data: candidatesData, error } = await query;
+      if (error) {
+        console.error('Erro ao buscar candidatos:', error);
+        setError('Erro ao buscar candidatos.');
+        return;
       }
 
-      const { data: candidatesData } = await query;
       console.log('Candidatos encontrados:', candidatesData);
       setCandidates(candidatesData);
     } catch (error) {
@@ -260,19 +339,20 @@ const App = () => {
     }
   };
 
-  // Funções auxiliares para buscar Inscrições
+  // Função auxiliar para buscar inscrições
   const fetchInscriptions = async (candidateId: any) => {
     try {
       const inscriptions = await getJobInscriptions(candidateId);
-      console.log('Inscrições carregadas:', inscriptions); // Log para verificar os dados
+      console.log('Inscrições carregadas:', inscriptions);
       setInscriptions(inscriptions);
     } catch (err) {
+      console.error('Erro ao carregar inscrições:', err);
       setError('Erro ao carregar as inscrições: ' + err.message);
     }
   };
 
   // Funções para recursar um candidato
-  const handleRecusar = async (vaga, candidato) => {
+  const handleRecusar = async (vaga: any, candidato: any) => {
     console.log("O item foi recusado!");
     console.log("Vaga recusada:", vaga);
     console.log("Candidato recusado:", candidato);
@@ -333,7 +413,7 @@ const App = () => {
     }
   };
 
-  const getMostFrequentLocation = async (userId) => {
+  const getMostFrequentLocation = async (userId: any) => {
     const { data, error } = await supabase
       .from('solicitacoes_entrevista')
       .select('local')
@@ -357,19 +437,7 @@ const App = () => {
   };
 
   // Função para aceitar um candidato 
-  const handleAcceptCandidate = async (jobId, candidateId, userId) => {
-    // Defina os detalhes da entrevista
-    const dataAtual = new Date();
-    const dataEntrevista = new Date(dataAtual.getTime() + 10 * 24 * 60 * 60 * 1000);
-
-    const dia = dataEntrevista.getDate().toString().padStart(2, '0');
-    const mes = (dataEntrevista.getMonth() + 1).toString().padStart(2, '0');
-    const ano = dataEntrevista.getFullYear();
-
-    const dataEntrevistaFormatada = `${ano}-${mes}-${dia}`;
-    const horario = '10:00:00';
-    const local = await getMostFrequentLocation(userId) || '';
-
+  const handleAcceptCandidate = async (jobId: any, candidateId: any, userId: any) => {
     // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
       console.error("ID da vaga ou do candidato não estão definidos.");
@@ -377,76 +445,73 @@ const App = () => {
     }
 
     try {
-      // Atualiza o status do candidato
-      const { data: updateData, error: updateError } = await supabase
-        .from('inscricoes_vagas')
-        .update({ status: 'aceita' })
-        .match({ id_vaga: jobId, id_candidato: candidateId });
+      // Defina os detalhes da entrevista
+      const dataEntrevista = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+      const dataEntrevistaFormatada = dataEntrevista.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      const horario = '10:00:00';
+      const local = await getMostFrequentLocation(userId) || '';
 
-      if (updateError) {
-        console.error("Erro ao atualizar a vaga:", updateError);
+      // Atualiza o status do candidato e insere a solicitação de entrevista em paralelo
+      const [updateResponse, interviewResponse] = await Promise.all([
+        supabase
+          .from('inscricoes_vagas')
+          .update({ status: 'aceita' })
+          .match({ id_vaga: jobId, id_candidato: candidateId }),
+        supabase
+          .from('solicitacoes_entrevista')
+          .insert([
+            {
+              id_recrutador: userId,
+              id_candidato: candidateId,
+              id_vaga: jobId,
+              data_entrevista: dataEntrevistaFormatada,
+              horario,
+              local,
+              status: 'pendente',
+            },
+          ])
+      ]);
+
+      const { error: updateError } = updateResponse;
+      const { error: interviewError } = interviewResponse;
+
+      if (updateError || interviewError) {
+        console.error("Erro ao atualizar a vaga ou criar a solicitação de entrevista:", updateError || interviewError);
         return;
       }
 
-      console.log("Vaga atualizada com sucesso:", updateData);
-      fetchJobOffersWithCandidates(userId);
-
-      // Inserir na tabela solicitacoes_entrevista
-      const { data: interviewData, error: interviewError } = await supabase
-        .from('solicitacoes_entrevista')
-        .insert([
-          {
-            id_recrutador: userId,
-            id_candidato: candidateId,
-            id_vaga: jobId,
-            data_entrevista: dataEntrevista,
-            horario: horario,
-            local: local,
-            status: 'pendente',
-          },
-        ]);
-
-      if (interviewError) {
-        throw interviewError;
-      }
-
+      console.log("Vaga atualizada e solicitação de entrevista criada com sucesso.");
       alert('Candidato aceito com sucesso, você pode editar os detalhes logo acima!');
       fetchProfile();
-      console.log('Solicitação de entrevista criada com sucesso:', interviewData);
+      fetchJobOffersWithCandidates(userId);
       fetchJobOffers(userId);
 
-      // Enviar notificação ao candidato
-      // 1. Buscar o token do candidato
+      // Buscar o token do candidato enquanto atualiza os dados anteriores
       const { data: candidateTokenData, error: tokenError } = await supabase
         .from('device_tokens')
         .select('token')
         .eq('user_id', candidateId)
         .single();
 
-      if (tokenError || !candidateTokenData) {
-        console.warn('Token do candidato não encontrado ou erro ao buscar:', tokenError);
-        return; // Se não houver token, não envia notificação
+      if (tokenError) {
+        console.warn('Erro ao buscar o token do candidato:', tokenError);
+        return;
       }
 
-      const candidateToken = candidateTokenData.token;
-
-      // 2. Enviar a notificação apenas se o token existir
+      const candidateToken = candidateTokenData?.token;
       if (candidateToken) {
         const notificationTitle = 'Boa notícia!';
         const notificationBody = 'Parabéns! Você foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
 
-        // Log antes de enviar a notificação
-        console.log('Enviando notificação para o candidato:', candidateToken);
-
-        // Enviar a notificação e esperar pela resposta
-        const notificationResponse = await sendPushNotification(candidateToken, notificationTitle, notificationBody);
-
-        // Log após o envio
-        console.log('Resposta da notificação enviada:', notificationResponse);
+        try {
+          const notificationResponse = await sendPushNotification(candidateToken, notificationTitle, notificationBody);
+          console.log('Notificação enviada com sucesso:', notificationResponse);
+        } catch (notificationError) {
+          console.error('Erro ao enviar notificação:', notificationError);
+        }
       } else {
         console.warn('Candidato optou por não receber notificações.');
       }
-
 
     } catch (error) {
       console.error('Erro ao processar a aceitação do candidato:', error);
@@ -455,7 +520,7 @@ const App = () => {
   };
 
   // Função para buscar vagas e candidatos inscritos
-  const fetchJobOffersWithCandidates = async (userId) => {
+  const fetchJobOffersWithCandidates = async (userId: any) => {
     try {
       // Buscar as vagas do recrutador
       const { data: jobOffers, error } = await supabase
@@ -511,74 +576,94 @@ const App = () => {
     }
   };
 
-  // Funcao para controlar questao de arrastar o candidato 
-  const createPanResponderForCandidate = (jobId, candidateId) => {
-    const animatedValue = new Animated.Value(0);
 
+  const handleAcceptOrReject = (jobId: any, candidateId: any, isAccepted: any) => {
+    setFeedbackMessageByCandidate((prev) => ({
+      ...prev,
+      [candidateId]: isAccepted ? 'Aceito' : 'Recusado',
+    }));
+
+    // Aqui, você pode chamar a função de aceitação ou recusa
+    if (isAccepted) {
+      handleAcceptCandidate(jobId, candidateId, userId);
+    } else {
+      handleRecusar(jobId, candidateId);
+    }
+
+    // Reseta o feedback message após a animação de deslizamento.
+    setTimeout(() => {
+      setFeedbackMessageByCandidate((prev) => ({
+        ...prev,
+        [candidateId]: null,
+      }));
+    }, 50);
+  };
+
+  const getBackgroundColor = (animatedValue: any, feedbackMessage: any) => {
+    if (feedbackMessage === 'Aceito') {
+      return 'lightgreen';
+    } else if (feedbackMessage === 'Recusado') {
+      return 'lightcoral';
+    }
+
+    // Durante o arraste, altera a cor dinamicamente
+    return animatedValue.interpolate({
+      inputRange: [-100, 0, 100],
+      outputRange: ['lightcoral', 'white', 'lightgreen'],
+      extrapolate: 'clamp',
+    });
+  };
+
+  const createPanResponderForCandidate = (jobId: any, candidateId: any) => {
+    const animatedValue = new Animated.Value(0);
     const panResponder = PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
         return Math.abs(gestureState.dx) > 20;
       },
       onPanResponderGrant: () => {
-        setFeedbackVisibleByCandidate((prev) => ({
-          ...prev,
-          [candidateId]: true,
-        }));
+        setIsDragging(true);
       },
       onPanResponderMove: (evt, gestureState) => {
         animatedValue.setValue(gestureState.dx);
-
-        setFeedbackMessageByCandidate((prev) => ({
-          ...prev,
-          [candidateId]: gestureState.dx > 20 ? 'Aceito' : 'Recusado',
-        }));
       },
       onPanResponderRelease: (evt, gestureState) => {
-        if (gestureState.dx > 120) {
-          handleAcceptCandidate(jobId, candidateId, userId);
+        setIsDragging(false);
+        const threshold = 120;
+
+        if (gestureState.dx > threshold) {
+          // Aceitar
           Animated.spring(animatedValue, {
             toValue: 500,
             useNativeDriver: true,
           }).start(() => {
-            animatedValue.setValue(0);
-            setFeedbackVisibleByCandidate((prev) => ({
-              ...prev,
-              [candidateId]: false,
-            }));
+            handleAcceptOrReject(jobId, candidateId, true);
+            animatedValue.setValue(0); // Reseta a posição após a animação
           });
-        } else if (gestureState.dx < -120) {
-          handleRecusar(jobId, candidateId);
+        } else if (gestureState.dx < -threshold) {
+          // Recusar
           Animated.spring(animatedValue, {
             toValue: -500,
             useNativeDriver: true,
           }).start(() => {
-            animatedValue.setValue(0);
-            setFeedbackVisibleByCandidate((prev) => ({
-              ...prev,
-              [candidateId]: false,
-            }));
+            handleAcceptOrReject(jobId, candidateId, false);
+            animatedValue.setValue(0); // Reseta a posição após a animação
           });
         } else {
+          // Volta à posição original sem aceitar ou recusar
           Animated.spring(animatedValue, {
             toValue: 0,
             useNativeDriver: true,
-          }).start(() => {
-            setFeedbackVisibleByCandidate((prev) => ({
-              ...prev,
-              [candidateId]: false,
-            }));
-          });
+          }).start();
         }
       },
     });
-
     return { animatedValue, panResponder };
   };
 
   // ======================================================= Funções do Gráfico, Alterações nessa parte representam risco de porrada =====================================================
 
   // Função do capeta, não mexer por tudo que é mais sagrado
-  const fetchInterviewCounts = async (userId) => {
+  const fetchInterviewCounts = async (userId: any) => {
     setIsLoading(true);
 
     try {
@@ -641,7 +726,7 @@ const App = () => {
   };
 
   // Rederizacao do modo mensal, ocorreu a separacao dos modos para uma facil manuntencao
-  const renderMonthlyChart = (countsByMonth) => {
+  const renderMonthlyChart = (countsByMonth: any) => {
     const labels = Object.keys(countsByMonth);
     const dataCounts = Object.values(countsByMonth);
 
@@ -667,7 +752,7 @@ const App = () => {
         datasets: [
           {
             label: 'Contagem de Solicitações',
-            data: dataCounts,
+            data: dataCounts as number[],
             borderColor: '#008080',
             backgroundColor: 'rgba(0, 128, 128, 0.2)',
             borderWidth: 2,
@@ -679,7 +764,7 @@ const App = () => {
   };
 
   //  Rederizacao do modo diario, ocorreu a separacao dos modos para uma facil manuntencao 
-  const renderDailyChart = (countsByDay) => {
+  const renderDailyChart = (countsByDay: any) => {
     const labels = Object.keys(countsByDay);
     const dataCounts = Object.values(countsByDay);
 
@@ -736,9 +821,9 @@ const App = () => {
   };
 
   //  Funcao para a evitar muitas requisicoes do banco de dados
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
+  const debounce = (func: any, delay: any) => {
+    let timeoutId: any;
+    return (...args: any[]) => {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
@@ -751,7 +836,7 @@ const App = () => {
   const toggleViewModeDebounced = debounce(toggleViewMode, 300);
 
   // Função para mudar o mês
-  const changeMonth = (direction) => {
+  const changeMonth = (direction: any) => {
     if (!changingMonth) {
       setChangingMonth(true);
       const newDate = new Date(currentDate);
@@ -766,7 +851,7 @@ const App = () => {
   };
 
   // Função para mudar o ano
-  const changeYear = (direction) => {
+  const changeYear = (direction: any) => {
     if (!changingMonth) {
       setChangingMonth(true);
       const newDate = new Date(currentDate);
@@ -796,7 +881,7 @@ const App = () => {
   }
 
   // Função para alternar a expansão das vagas
-  const toggleExpand = (jobId) => {
+  const toggleExpand = (jobId: string) => {
     // Toggle individual do estado de expansão
     setExpandedJobs(prev => ({
       ...prev,
@@ -804,8 +889,7 @@ const App = () => {
     }));
   };
 
-  const handleToggleExpand = (jobId) => {
-    // Toggle individual do estado de expansão
+  const handleToggleExpand = (jobId: any) => {
     settoggleExpandInfo(prev => ({
       ...prev,
       [jobId]: !prev[jobId],
@@ -821,14 +905,14 @@ const App = () => {
   };
 
   // Função para exibir o seletor de data
-  const onChangeDate = (event, selectedDate) => {
+  const onChangeDate = (selectedDate: any) => {
     const currentDate = selectedDate || date;
     setShowDatePicker(false);
     setDate(currentDate);
   };
 
   // Função para exibir o seletor de hora
-  const onChangeTime = (event, selectedTime) => {
+  const onChangeTime = (selectedTime: any) => {
     const currentTime = selectedTime || time;
     setShowTimePicker(false);
     setTime(currentTime);
@@ -843,7 +927,7 @@ const App = () => {
   };
 
   // Função para abrir o modal
-  const openModal = async (candidate, jobId) => {
+  const openModal = async (candidate: any, jobId: any) => {
     console.log('Candidato selecionado para o modal:', candidate);
     console.log('ID da vaga:', jobId);
     setSelectedCandidate(candidate);
@@ -884,7 +968,7 @@ const App = () => {
   };
 
   // Função para obter o nome do local a partir das coordenadas
-  const getLocationName = async (latitude, longitude) => {
+  const getLocationName = async (latitude: any, longitude: any) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
         method: 'GET',
@@ -908,7 +992,7 @@ const App = () => {
   };
 
   // Função para obter coordenadas a partir do nome do local
-  const getCoordinatesFromLocationName = async (locationName) => {
+  const getCoordinatesFromLocationName = async (locationName: any) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`, {
         method: 'GET',
@@ -936,7 +1020,7 @@ const App = () => {
   };
 
   // Função para lidar com a mudança de texto no input de endereço
-  const handleInputChange = async (text) => {
+  const handleInputChange = async (text: any) => {
     setLocation(text);
 
     // Limpar o timeout anterior, se houver
@@ -973,14 +1057,15 @@ const App = () => {
     setTypingTimeout(newTimeout);
   };
 
-  const handleSuggestionSelect = (suggestion) => {
-    setLocation(suggestion); // Atualiza o campo de entrada com a sugestão escolhida
-    setSuggestions([]); // Limpa as sugestões
+  // pensando se vou ultilizar ou nao, ate o momento nao sei 
+  const handleSuggestionSelect = (suggestion: any) => {
+    setLocation(suggestion);
+    setSuggestions([]);
   };
 
 
   // Função para lidar com o toque no mapa
-  const handleMapPress = async (event) => {
+  const handleMapPress = async (event: any) => {
     const { coordinate } = event.nativeEvent;
     setMapLocation(coordinate);
     await getLocationName(coordinate.latitude, coordinate.longitude);
@@ -1148,6 +1233,7 @@ const App = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+
         <View style={styles.top}>
           <Image
             source={profileImage ? { uri: profileImage } : require('../../assets/perfil.png')}
@@ -1164,12 +1250,15 @@ const App = () => {
               />
             </View>
             {userData.nome && (
-              <View style={styles.nameContainer}>
+              <View>
                 <Text style={styles.text2}>{userData.nome}</Text>
               </View>
             )}
           </View>
-          <StatusBar style="auto" />
+          <StatusBar
+            barStyle="light-content"
+            backgroundColor="#ff8c00"
+          />
         </View>
         <View style={styles.chartContainer}>
           <Text style={styles.title}>Quantidade de entrevistas oferecidas</Text>
@@ -1228,7 +1317,6 @@ const App = () => {
                           strokeDasharray: "5,5",
                           stroke: "#ccc",
                         },
-                        withVerticalLines: true,
                         withHorizontalLines: true,
                         fromZero: true,
                         formatYLabel: (value) => `${value}`,
@@ -1257,9 +1345,6 @@ const App = () => {
           <Text style={styles.errorText}>{error.message || 'Erro desconhecido'}</Text>
         ) : (
           <>
-            {console.log('Job Offers:', jobOffers)}
-            {console.log('Candidates:', candidates)}
-
             {jobOffers.filter(job => candidates.some(candidate => candidate.vagas.id === job.id)).length > 0 ? (
               jobOffers
                 .filter(job => candidates.some(candidate => candidate.vagas.id === job.id))
@@ -1316,7 +1401,7 @@ const App = () => {
           <>
             {/* Renderiza as instruções apenas se a lista estiver expandida */}
             {Object.keys(toggleExpandInfo).some(jobId => toggleExpandInfo[jobId]) && (
-              <View style={styles.instructionContainer}>
+              <View>
                 <Text style={styles.instructionText}>
                   👈 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.rejectText}>recusar</Text>.
                 </Text>
@@ -1355,17 +1440,15 @@ const App = () => {
                         const panResponder = panResponders[inscricao.id_candidato];
                         const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
                         return (
-                          <Animatable.View
+                          <Animated.View
                             key={inscricao.id_candidato}
                             style={[
                               styles.candidateContainer,
                               {
                                 transform: [{ translateX: animatedValue }],
-                                backgroundColor: animatedValue ? (feedbackMessage === 'Aceito' ? 'lightgreen' : feedbackMessage === 'Recusado' ? 'lightcoral' : 'white') : 'white',
-                              }
+                                backgroundColor: getBackgroundColor(animatedValue, feedbackMessage),
+                              },
                             ]}
-                            animation={shakeCandidateIndex === candidateIndex ? 'shake' : undefined}
-                            duration={1600}
                             {...(panResponder ? panResponder.panHandlers : {})}
                           >
                             <TouchableOpacity onPress={() => {
@@ -1392,11 +1475,11 @@ const App = () => {
                                 </View>
                               </View>
                             </TouchableOpacity>
-                          </Animatable.View>
+                          </Animated.View>
                         );
                       })
                     ) : (
-                      <Text>Nenhum candidato inscrito nesta vaga.</Text>
+                      <Text style={styles.noJobOffersText}>Nenhum inscrito nessa vaga</Text>
                     )}
                   </View>
                 )}
@@ -1605,12 +1688,15 @@ const App = () => {
               />
             </View>
             {userData.nome && (
-              <View style={styles.nameContainer}>
+              <View>
                 <Text style={styles.text2}>{userData.nome}</Text>
               </View>
             )}
           </View>
-          <StatusBar style="auto" />
+          <StatusBar
+            barStyle="light-content"
+            backgroundColor="#ff8c00"
+          />
         </View>
 
         {/*  Seção de informações do usuário focada no Gráfico cujo tem que ser refinado mais ainda*/}

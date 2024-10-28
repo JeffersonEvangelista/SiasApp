@@ -14,6 +14,7 @@ export const styles = StyleSheet.create({
         fontSize: 24,
         color: "white",
         fontWeight: "bold",
+        marginTop: '4%'
     },
     interviewListContainer: {
         padding: 10,
