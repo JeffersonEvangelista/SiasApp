@@ -3,6 +3,21 @@ import colors from './colors';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
+    inputName: {
+        width: '100%',
+        textAlign: 'center',
+        paddingVertical: 5,
+        fontSize: 16,
+        borderRadius: 5,
+        borderBottomWidth: 2,
+        borderBottomColor: '#ff8c00',
+    },
+    photo: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        marginRight: 10,
+    },
     header: {
         flexDirection: "row",
         justifyContent: "space-between",

@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, Modal, FlatList, Animated, PanResponder, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, Modal, FlatList, Animated, PanResponder, Image, ActivityIndicator, Button } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { ScrollView } from "react-native-gesture-handler";
@@ -15,10 +15,13 @@ import { useNavigation } from '@react-navigation/native';
 import LottieView from "lottie-react-native";
 import NetInfo from '@react-native-community/netinfo';
 import { sendPushNotification } from "../components/Notificacao";
+import { TextInput } from "react-native";
 
 
 
 export default function Agenda() {
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const db = getFirestore();
   const navigation = useNavigation();
@@ -47,6 +50,22 @@ export default function Agenda() {
   const truncateText = (text, maxLength) => {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
+  const [selectedCandidate, setSelectedCandidate] = useState(null); // Estado para armazenar o candidato selecionado
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const filteredInterviews = interviewDetails.filter(interview => {
+    const matchesSearchTerm = interview.candidate.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus ? interview.status.toLowerCase() === selectedStatus : true;
+    const matchesDate = (!startDate || new Date(interview.date) >= new Date(startDate)) &&
+      (!endDate || new Date(interview.date) <= new Date(endDate));
+
+    return matchesSearchTerm && matchesStatus && matchesDate;
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -517,7 +536,7 @@ export default function Agenda() {
     } catch (error) {
       console.error('Erro inesperado:', error);
       updateInterviewStatus(interview.id, 'pendente'); // Reverte a atualização local em caso de erro
-    } 
+    }
   };
 
 
@@ -754,6 +773,14 @@ export default function Agenda() {
   };
 
 
+  const buttons = [
+    { title: 'Todas', status: '', color: '#007BFF' },
+    { title: 'Pendentes', status: 'pendente', color: '#ff8c00' },
+    { title: 'Aceitas', status: 'aceita', color: '#009e23' },
+    { title: 'Recusadas', status: 'recusada', color: '#a30000' },
+  ];
+
+
   // Função para determinar a cor e o estilo do ponto com base no status
   const getDotStyle = (status) => {
     switch (status) {
@@ -825,8 +852,60 @@ export default function Agenda() {
       )
     );
   };
+  // Função para filtrar entrevistas
+  const filterInterviews = (interviews) => {
+    return interviews.filter(interview => {
+      const matchesSearchTerm = interview.candidate.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = selectedStatus ? interview.status.toLowerCase() === selectedStatus : true;
+      const matchesDate = (!startDate || new Date(interview.date) >= new Date(startDate)) &&
+        (!endDate || new Date(interview.date) <= new Date(endDate));
+      return matchesSearchTerm && matchesStatus && matchesDate;
+    });
+  };
 
-  // Renderização da Home para ambos os tipos de usuário
+  // Função para buscar candidatos com base na pesquisa
+  const searchCandidates = async (query) => {
+    if (!query) {
+      setSuggestions([]);
+      return;
+    }
+
+    try {
+      // Primeiro, obtenha os IDs dos candidatos que estão inscritos em vagas
+      const { data: enrolledCandidates, error: enrollmentError } = await supabase
+        .from('inscricoes_vagas')
+        .select('id_candidato');
+
+      if (enrollmentError) throw enrollmentError;
+
+      // Extrai os IDs dos candidatos inscritos
+      const candidateIds = enrolledCandidates.map((enrollment) => enrollment.id_candidato);
+
+      const { data: candidates, error } = await supabase
+        .from('candidatos')
+        .select('id, nome, email, foto_perfil')
+        .ilike('nome', `%${query}%`)
+        .in('id', candidateIds)
+        .limit(5);
+
+      console.log(`Consulta: ilike(nome, %${query}%)`);
+      console.log('Resultados:', candidates);
+
+      if (error) throw error;
+
+      setSuggestions(candidates);
+    } catch (error) {
+      console.error('Erro ao buscar candidatos:', error);
+    }
+  };
+
+
+  // Use o useEffect para buscar entrevistas quando o recrutadorId mudar
+  useEffect(() => {
+    handleRecruiterProfile(userId); // Chama sua função existente para buscar entrevistas
+  }, [userId]);
+
+
   if (userType === 'recrutador') {
     return (
       <View style={{ flex: 1 }}>
@@ -841,12 +920,104 @@ export default function Agenda() {
             <View style={styles.header}>
               <Text style={styles.headerText}>Agenda</Text>
             </View>
-            <StatusBar
-              backgroundColor="#ff8c00"
-            />
+            <StatusBar backgroundColor="#ff8c00" />
 
-            {/* Necessário arrumar essa questão pois o calendário está afetando o reload da página */}
-            {renderCalendar()}
+            <View style={{ flex: 1, padding: 20 }}>
+              {/* Botões de filtro */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                {buttons.map((button) => (
+                  <TouchableOpacity
+                    key={button.status}
+                    onPress={() => setSelectedStatus(button.status)}
+                    style={{
+                      paddingVertical: 10,
+                      paddingHorizontal: 10,
+                      borderRadius: 5,
+                      backgroundColor: selectedStatus === button.status ? button.color : '#E0E0E0',
+                      marginHorizontal: 5,
+                    }}
+                  >
+                    <Text style={{ color: selectedStatus === button.status ? '#FFFFFF' : '#000000' }}>
+                      {button.title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Filtros */}
+              <View style={{ marginBottom: 20 }}>
+                <TextInput
+                  style={styles.inputName}
+                  placeholder="Buscar Candidatos"
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    searchCandidates(text);
+                  }}
+                />
+
+                {/* Lista de sugestões */}
+                <FlatList
+                  data={suggestions}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSearchQuery(item.nome);
+                        setSuggestions([]);
+                      }}
+                    >
+                      <View style={{ padding: 10, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center' }}>
+                        {item.foto_perfil ? (
+                          <Image source={{ uri: item.foto_perfil }} style={styles.photo} />
+                        ) : (
+                          <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                        )}
+
+                        <View style={{ marginLeft: 10 }}>
+                          <Text>{item.nome}</Text>
+                          <Text>{item.email}</Text>
+                        </View>
+                      </View>
+
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+
+              {/* Componente de calendário */}
+              <View style={{
+                flex: 1,
+                borderRadius: 10,
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
+              }}>
+                <Calendar
+                  style={{ flex: 1 }}
+                  theme={{
+                    backgroundColor: '#ffffff',
+                    calendarBackground: '#ffffff',
+                    textSectionTitleColor: '#b6c1cd',
+                    selectedDayTextColor: '#ffffff',
+                    todayTextColor: '#00adf5',
+                    dayTextColor: '#2d4150',
+                    textDisabledColor: '#d77906',
+                    arrowColor: '#d77906',
+                  }}
+                  markedDates={markedDates}
+                  onDayPress={(day) => {
+                    console.log('Selected day', day);
+                  }}
+                />
+              </View>
+            </View>
 
             <TouchableOpacity style={styles.toggleButton} onPress={toggleLegend}>
               <Ionicons
@@ -876,12 +1047,13 @@ export default function Agenda() {
                 </View>
               </View>
             )}
+
             <View style={styles.interviewListContainer}>
               {/* Seção para entrevistas pendentes */}
               <Text style={styles.monthTitle}>Entrevistas a serem confirmadas</Text>
-              {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente').length > 0 ? (
+              {filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'pendente').length > 0 ? (
                 <FlatList
-                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente')}
+                  data={filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'pendente')}
                   keyExtractor={item => item.id.toString()}
                   renderItem={({ item }) => (
                     <View style={styles.interviewItemPedentes}>
@@ -916,9 +1088,9 @@ export default function Agenda() {
 
               {/* Seção para entrevistas aceitas */}
               <Text style={styles.monthTitle}>Entrevistas Aceitas</Text>
-              {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
+              {filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
                 <FlatList
-                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita')}
+                  data={filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'aceita')}
                   keyExtractor={item => item.id.toString()}
                   renderItem={({ item }) => (
                     <View style={styles.interviewItem}>
@@ -953,9 +1125,9 @@ export default function Agenda() {
 
               {/* Seção para entrevistas recusadas */}
               <Text style={styles.monthTitle}>Entrevistas Recusadas</Text>
-              {Array.isArray(interviewDetails) && interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada').length > 0 ? (
+              {filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'recusada').length > 0 ? (
                 <FlatList
-                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada')}
+                  data={filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'recusada')}
                   keyExtractor={item => item.id.toString()}
                   renderItem={({ item }) => (
                     <View style={styles.interviewItem}>
@@ -988,7 +1160,6 @@ export default function Agenda() {
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista recusada.</Text>
               )}
             </View>
-
 
             {/* Animação de Conexão (Modal) */}
             <Modal transparent={true} visible={showNoConnection}>
