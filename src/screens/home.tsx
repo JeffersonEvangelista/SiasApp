@@ -64,9 +64,9 @@ interface Job {
   inscricoes_vagas: Inscricao[];
 }
 interface JobOffer {
-  id: string; 
+  id: string;
   titulo: string;
-  inscricoes_vagas: InscricaoVaga[]; 
+  inscricoes_vagas: InscricaoVaga[];
 }
 interface InscricaoVaga {
   id_candidato: string;
@@ -153,6 +153,32 @@ const App = () => {
       borderWidth: 0,
       fill: false,
     }],
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [filtersVisible, setFiltersVisible] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [minInscritos, setMinInscritos] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
+  const increment = () => setMinInscritos(minInscritos + 1);
+  const decrement = () => {
+    if (minInscritos > 0) {
+      setMinInscritos(minInscritos - 1);
+    }
+  };
+  const [showOnlyWithCandidates, setShowOnlyWithCandidates] = useState(false);
+  const [sortOrder, setSortOrder] = useState('desc');
+  // Filtra as ofertas de trabalho
+  const filteredJobOffers = jobOffersWithCandidates.filter(job => {
+    return showOnlyWithCandidates ? job.inscricoes_vagas && job.inscricoes_vagas.length > 0 : true;
+  });
+  // Ordena as ofertas filtradas com base na data de criação
+  const sortedJobOffers = filteredJobOffers.sort((a, b) => {
+    if (sortOrder === 'asc') {
+      return new Date(a.data_criacao) - new Date(b.data_criacao);
+    } else {
+      return new Date(b.data_criacao) - new Date(a.data_criacao);
+    }
   });
 
   useEffect(() => {
@@ -1341,154 +1367,297 @@ const App = () => {
         <Text style={styles.text1}>
           Entrevistas Agendadas
         </Text>
-        {error ? (
-          <Text style={styles.errorText}>{error.message || 'Erro desconhecido'}</Text>
-        ) : (
-          <>
-            {jobOffers.filter(job => candidates.some(candidate => candidate.vagas.id === job.id)).length > 0 ? (
-              jobOffers
-                .filter(job => candidates.some(candidate => candidate.vagas.id === job.id))
-                .map((job, index) => (
-                  <Animatable.View
-                    key={job.id}
-                    style={[
-                      styles.jobContainer,
-                      { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
-                    ]}
-                    animation="bounceIn"
-                    duration={500}
-                  >
-                    <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
-                      <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-                      <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
-                    </TouchableOpacity>
-
-                    {expandedJobs[job.id] && (
-                      candidates
-                        .filter(candidate => candidate.vagas.id === job.id)
-                        .map(candidate => (
-                          <View key={candidate.id} style={styles.candidateContainer}>
-                            <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
-                              <View style={styles.candidateDetails}>
-                                {candidate.candidatos.foto_perfil ? (
-                                  <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
-                                ) : (
-                                  <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                                )}
-                                <View style={styles.infoContainer}>
-                                  {candidate.status === 'aceita' && <Text style={styles.statusText}>✔️ Aceito</Text>}
-                                  {candidate.status === 'recusada' && <Text style={styles.statusText}>❌ Recusado</Text>}
-                                  {candidate.status === 'pendente' && <Text style={styles.statusText}>⏳ Pendente</Text>}
-                                  <Text style={styles.name}>{candidate.candidatos.nome}</Text>
-                                  <Text style={styles.email}>{candidate.candidatos.email}</Text>
-                                  <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
-                                </View>
-                              </View>
-                            </TouchableOpacity>
-                          </View>
-                        ))
-                    )}
-                  </Animatable.View>
-                ))
-            ) : (
-              <Text style={styles.noJobOffersText}>Nenhuma vaga disponível.</Text>
-            )}
-          </>
-        )}
-
-        <Text style={styles.text1}>Suas Ofertas de Trabalho:</Text>
-        {jobOffersWithCandidates.length > 0 ? (
-          <>
-            {/* Renderiza as instruções apenas se a lista estiver expandida */}
-            {Object.keys(toggleExpandInfo).some(jobId => toggleExpandInfo[jobId]) && (
-              <View>
-                <Text style={styles.instructionText}>
-                  👈 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.rejectText}>recusar</Text>.
-                </Text>
-                <Text style={styles.instructionText}>
-                  Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.acceptText}>aceitar 👉</Text>.
-                </Text>
-              </View>
-            )}
-
-            {jobOffersWithCandidates.map((job, index) => (
-              <Animatable.View
-                key={job.id}
-                style={[
-                  styles.jobContainer,
-                  { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
-                ]}
-                animation="bounceIn"
-                duration={500}
-              >
-                <TouchableOpacity style={styles.jobTitleContainer} onPress={() => handleToggleExpand(job.id)}>
-                  <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
-                  <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{toggleExpandInfo[job.id] ? '▼' : '▲'}</Text>
+        <View style={styles.containeragenda}>
+          {error ? (
+            <Text style={styles.errorText}>{error.message || 'Erro desconhecido'}</Text>
+          ) : (
+            <>
+              {/* Filtros */}
+              <View style={styles.filtersContainer}>
+                <TouchableOpacity
+                  onPress={() => setFiltersVisible(!filtersVisible)}
+                  style={[
+                    styles.toggleButton,
+                    filtersVisible ? styles.buttonActive : styles.buttonInactive
+                  ]}
+                >
+                  <Text style={styles.toggleButtonText}>{filtersVisible ? 'Ocultar Filtros' : 'Mostrar Filtros'}</Text>
+                  <Ionicons name={filtersVisible ? 'chevron-up' : 'chevron-down'} size={20} color="#fff" />
                 </TouchableOpacity>
 
-                {toggleExpandInfo[job.id] && (
-                  <View>
-                    <Text style={{ fontWeight: 'bold', color: '#FFFFFF' }}>Inscritos:</Text>
-                    {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
-                      job.inscricoes_vagas.map((inscricao, candidateIndex) => {
-                        const candidato = inscricao.candidatos;
-                        if (!candidato) {
-                          console.warn('Inscrição sem candidatos:', inscricao);
-                          return null;
-                        }
-                        const animatedValue = animatedValues[inscricao.id_candidato] || new Animated.Value(0);
-                        const panResponder = panResponders[inscricao.id_candidato];
-                        const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
-                        return (
-                          <Animated.View
-                            key={inscricao.id_candidato}
-                            style={[
-                              styles.candidateContainer,
-                              {
-                                transform: [{ translateX: animatedValue }],
-                                backgroundColor: getBackgroundColor(animatedValue, feedbackMessage),
-                              },
-                            ]}
-                            {...(panResponder ? panResponder.panHandlers : {})}
-                          >
-                            <TouchableOpacity onPress={() => {
-                              setFeedbackVisibleByCandidate((prev) => ({
-                                ...prev,
-                                [inscricao.id_candidato]: true,
-                              }));
-                              setFeedbackMessageByCandidate((prev) => ({
-                                ...prev,
-                              }));
-                            }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                {candidato.foto_perfil ? (
-                                  <Image source={{ uri: candidato.foto_perfil }} style={styles.photo} />
-                                ) : (
-                                  <Image source={require('../../assets/perfil.png')} style={styles.photo} />
-                                )}
-                                <View style={{ marginLeft: 10 }}>
-                                  <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
-                                  <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
-                                  {candidato.cpf && (
-                                    <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
-                                  )}
-                                </View>
-                              </View>
-                            </TouchableOpacity>
-                          </Animated.View>
-                        );
-                      })
-                    ) : (
-                      <Text style={styles.noJobOffersText}>Nenhum inscrito nessa vaga</Text>
-                    )}
-                  </View>
+                {filtersVisible && ( // Renderiza os filtros apenas se estiver visível
+                  <>
+                    <TextInput
+                      style={styles.inputtitulo}
+                      placeholder="Título da vaga"
+                      value={searchTerm}
+                      onChangeText={setSearchTerm}
+                    />
+                    <View>
+                      <Text style={styles.label}>Quantidade mínima de candidatos na vaga:</Text>
+                      <View style={styles.containerNumber}>
+                        <TouchableOpacity onPress={decrement} style={styles.button}>
+                          <Text style={styles.buttonText}>-</Text>
+                        </TouchableOpacity>
+                        <TextInput
+                          style={styles.inputNumber}
+                          keyboardType="numeric"
+                          value={minInscritos.toString()}
+                          onChangeText={(text) => setMinInscritos(parseInt(text) || 0)}
+                        />
+                        <TouchableOpacity onPress={increment} style={styles.button}>
+                          <Text style={styles.buttonText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <View style={styles.statusFilter}>
+                      <Text style={styles.headerText}>Status da solicitação:</Text>
+                      <View style={styles.buttonContainer}>
+                        <TouchableOpacity onPress={() => setSelectedStatus('aceita')} style={styles.button}>
+                          <Ionicons name="checkmark-circle" size={20} color={selectedStatus === 'aceita' ? '#fff' : '#333'} />
+                          <Text style={selectedStatus === 'aceita' ? styles.selectedStatus : styles.status}>Aceito</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setSelectedStatus('recusada')} style={styles.button}>
+                          <Ionicons name="close-circle" size={20} color={selectedStatus === 'recusada' ? '#fff' : '#333'} />
+                          <Text style={selectedStatus === 'recusada' ? styles.selectedStatus : styles.status}>Recusado</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setSelectedStatus('pendente')} style={styles.button}>
+                          <Ionicons name="hourglass" size={20} color={selectedStatus === 'pendente' ? '#fff' : '#333'} />
+                          <Text style={selectedStatus === 'pendente' ? styles.selectedStatus : styles.status}>Pendente</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setSelectedStatus('')} style={styles.button}>
+                          <Ionicons name="list" size={20} color={selectedStatus === '' ? '#fff' : '#333'} />
+                          <Text style={selectedStatus === '' ? styles.selectedStatus : styles.status}>Todos</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </>
                 )}
+              </View>
+
+              {/* Filtrando e exibindo as ofertas de emprego */}
+              {jobOffers.filter(job => {
+                const inscritosCount = candidates.filter(candidate => candidate.vagas.id === job.id).length;
+
+                return (
+                  inscritosCount >= minInscritos &&
+                  (selectedStatus ? candidates.some(candidate => candidate.vagas.id === job.id && candidate.status === selectedStatus) : true) &&
+                  (searchTerm ? job.titulo.toLowerCase().includes(searchTerm.toLowerCase()) : true)
+                );
+              }).length > 0 ? (
+                jobOffers
+                  .filter(job => {
+                    const inscritosCount = candidates.filter(candidate => candidate.vagas.id === job.id).length;
+
+                    return (
+                      inscritosCount >= minInscritos &&
+                      (selectedStatus ? candidates.some(candidate => candidate.vagas.id === job.id && candidate.status === selectedStatus) : true) &&
+                      (searchTerm ? job.titulo.toLowerCase().includes(searchTerm.toLowerCase()) : true)
+                    );
+                  })
+                  .map((job, index) => (
+                    <Animatable.View
+                      key={job.id}
+                      style={[
+                        styles.jobContainer,
+                        { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+                      ]}
+                      animation="bounceIn"
+                      duration={500}
+                    >
+                      <TouchableOpacity style={styles.jobTitleContainer} onPress={() => toggleExpand(job.id)}>
+                        <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                        <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
+                      </TouchableOpacity>
+
+                      {expandedJobs[job.id] && (
+                        candidates
+                          .filter(candidate => candidate.vagas.id === job.id && (selectedStatus ? candidate.status === selectedStatus : true)) // Filtra os candidatos com base no status selecionado ou não
+                          .map(candidate => (
+                            <View key={candidate.id} style={styles.candidateContainer}>
+                              <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
+                                <View style={styles.candidateDetails}>
+                                  {candidate.candidatos.foto_perfil ? (
+                                    <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
+                                  ) : (
+                                    <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                                  )}
+                                  <View style={styles.infoContainer}>
+                                    {candidate.status === 'aceita' && <Text style={styles.statusText}>✔️ Aceito</Text>}
+                                    {candidate.status === 'recusada' && <Text style={styles.statusText}>❌ Recusado</Text>}
+                                    {candidate.status === 'pendente' && <Text style={styles.statusText}>⏳ Pendente</Text>}
+                                    <Text style={styles.name}>{candidate.candidatos.nome}</Text>
+                                    <Text style={styles.email}>{candidate.candidatos.email}</Text>
+                                    <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                                  </View>
+                                </View>
+                              </TouchableOpacity>
+                            </View>
+                          ))
+                      )}
+                    </Animatable.View>
+                  ))
+              ) : (
+                <Text style={styles.noJobOffersText}>Nenhuma vaga disponível com os filtros aplicados.</Text>
+              )}
+            </>
+          )}
+        </View>
+
+        <Text style={styles.text1}>Suas Ofertas de Trabalho:</Text>
+        <View style={styles.containeragenda}>
+          {/* Botão para mostrar/ocultar filtros */}
+          <View style={styles.filtersContainer}>
+
+
+
+            <TouchableOpacity
+              onPress={() => setShowFilters(!showFilters)}
+              style={[
+                styles.toggleButton,
+                filtersVisible ? styles.buttonActive : styles.buttonInactive,
+                { backgroundColor: filtersVisible ? '#F07A26' : '#1F1F3F' },
+              ]}
+            >
+              <Text style={[styles.toggleButtonText, { color: filtersVisible ? '#fff' : '#ccc' }]}>
+                {filtersVisible ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+              </Text>
+              <Ionicons
+                name={filtersVisible ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#fff"
+              />
+            </TouchableOpacity>
+
+
+            {/* Contêiner de filtros, que será mostrado ou oculto */}
+            {showFilters && (
+              <Animatable.View style={styles.filtersContainersuasJobs} animation="fadeIn" duration={300}>
+                {/* Botão para mostrar/ocultar vagas */}
+                <TouchableOpacity
+                  style={[styles.toggleButton, styles.suasjobOfferButton]}
+                  onPress={() => setShowOnlyWithCandidates(!showOnlyWithCandidates)}
+                >
+                  <Ionicons name="briefcase" size={20} color="#FFFFFF" />
+                  <Text style={styles.buttonText}>
+                    {showOnlyWithCandidates ? "Mostrar Todas as Vagas" : "Mostrar Apenas Vagas com Inscritos"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Botão para ordenar vagas */}
+                <TouchableOpacity
+                  style={[styles.toggleButton, styles.suasjobOfferButton]}
+                  onPress={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  <Ionicons
+                    name={sortOrder === 'asc' ? "arrow-up" : "arrow-down"}
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.buttonText}>
+                    {sortOrder === 'asc' ? "Ordenar da Mais Antiga para a Mais Recente" : "Ordenar da Mais Recente para a Mais Antiga"}
+                  </Text>
+                </TouchableOpacity>
               </Animatable.View>
-            ))}
-          </>
-        ) : (
-          <Text>Nenhuma vaga disponível.</Text>
-        )}
+            )}
+          </View>
+          {sortedJobOffers.length > 0 ? (
+            <>
+              {/* Renderiza as instruções apenas se a lista estiver expandida */}
+              {Object.keys(toggleExpandInfo).some(jobId => toggleExpandInfo[jobId]) && (
+                <View>
+                  <Text style={styles.instructionText}>
+                    👈 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.rejectText}>recusar</Text>.
+                  </Text>
+                  <Text style={styles.instructionText}>
+                    Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.acceptText}>aceitar 👉</Text>.
+                  </Text>
+                </View>
+              )}
+
+              {sortedJobOffers.map((job, index) => (
+                <Animatable.View
+                  key={job.id}
+                  style={[
+                    styles.jobContainer,
+                    { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+                  ]}
+                  animation="bounceIn"
+                  duration={500}
+                >
+                  <TouchableOpacity style={styles.jobTitleContainer} onPress={() => handleToggleExpand(job.id)}>
+                    <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
+                    <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{toggleExpandInfo[job.id] ? '▼' : '▲'}</Text>
+                  </TouchableOpacity>
+
+                  {toggleExpandInfo[job.id] && (
+                    <View>
+                      <Text style={{ fontWeight: 'bold', color: '#FFFFFF' }}>Inscritos:</Text>
+                      {Array.isArray(job.inscricoes_vagas) && job.inscricoes_vagas.length > 0 ? (
+                        job.inscricoes_vagas.map((inscricao, candidateIndex) => {
+                          const candidato = inscricao.candidatos;
+                          if (!candidato) {
+                            console.warn('Inscrição sem candidatos:', inscricao);
+                            return null;
+                          }
+                          const animatedValue = animatedValues[inscricao.id_candidato] || new Animated.Value(0);
+                          const panResponder = panResponders[inscricao.id_candidato];
+                          const feedbackMessage = feedbackMessageByCandidate[inscricao.id_candidato];
+                          return (
+                            <Animated.View
+                              key={inscricao.id_candidato}
+                              style={[
+                                styles.candidateContainer,
+                                {
+                                  transform: [{ translateX: animatedValue }],
+                                  backgroundColor: getBackgroundColor(animatedValue, feedbackMessage),
+                                },
+                              ]}
+                              {...(panResponder ? panResponder.panHandlers : {})}
+                            >
+                              <TouchableOpacity onPress={() => {
+                                setFeedbackVisibleByCandidate((prev) => ({
+                                  ...prev,
+                                  [inscricao.id_candidato]: true,
+                                }));
+                                setFeedbackMessageByCandidate((prev) => ({
+                                  ...prev,
+                                }));
+                              }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                  {candidato.foto_perfil ? (
+                                    <Image source={{ uri: candidato.foto_perfil }} style={styles.photo} />
+                                  ) : (
+                                    <Image source={require('../../assets/perfil.png')} style={styles.photo} />
+                                  )}
+                                  <View style={{ marginLeft: 10 }}>
+                                    <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
+                                    <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
+                                    {candidato.cpf && (
+                                      <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
+                                    )}
+                                  </View>
+                                </View>
+                              </TouchableOpacity>
+                            </Animated.View>
+                          );
+                        })
+                      ) : (
+                        <Text style={styles.noJobOffersText}>Nenhum inscrito nessa vaga</Text>
+                      )}
+                    </View>
+                  )}
+                </Animatable.View>
+              ))}
+            </>
+          ) : (
+            <Text>Nenhuma vaga disponível.</Text>
+          )}
+        </View>
+
+
+
+
         <View>
           {/* Animação de Conexão (Modal) */}
           <Modal transparent={true} visible={showNoConnection}>
@@ -1659,7 +1828,7 @@ const App = () => {
             </View>
           </Modal>
         </View>
-      </ScrollView>
+      </ScrollView >
 
     );
   } else {

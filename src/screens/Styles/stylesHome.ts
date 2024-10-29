@@ -1,8 +1,216 @@
 import { StyleSheet, Dimensions } from 'react-native';
-import colors from './colors';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
+    containerSuasJobs: {
+        flex: 1,
+    },
+    filtersContainersuasJobs: {
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 15,
+    },
+    jobContainer: {
+        marginVertical: 5,
+        borderRadius: 10,
+        overflow: 'hidden',
+        padding: 15,
+    },
+    jobTitleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    buttonContainerJobs: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginVertical: 10,
+    },
+    jobOfferButton: {
+        flex: 1,
+        marginHorizontal: 5,
+        backgroundColor: '#F07A26',
+        paddingVertical: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.5,
+        elevation: 5,
+    },
+    toggleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 10,
+        borderRadius: 8,
+        marginVertical: 10,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    buttonActive: {
+        backgroundColor: '#F07A26',
+    },
+    buttonInactive: {
+        backgroundColor: '#1F1F3F',
+    },
+    toggleButtonText: {
+        fontSize: 16,
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    containeragenda: {
+        flex: 1,
+        width: '100%',
+        padding: 10,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    containerNumber: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 10,
+    },
+    label: {
+        marginTop: '7%',
+        fontSize: 16,
+        marginLeft: '8%',
+        color: '#333',
+        marginBottom: 5,
+    },
+    inputNumber: {
+        width: '84%',
+        textAlign: 'center',
+        paddingVertical: 5,
+        fontSize: 16,
+        borderRadius: 5,
+        borderBottomWidth: 2,
+        borderBottomColor: '#ff8c00',
+    },
+    filtersContainer: {
+        width: '100%',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ccc',
+    },
+    inputtitulo: {
+        width: '100%',
+        height: 35,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        backgroundColor: '#fff',
+        fontSize: 16,
+        color: '#333',
+        paddingLeft: 10,
+        shadowColor: '#ff8c00',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 3,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    statusFilter: {
+        backgroundColor: '#fffcfc',
+        padding: 15,
+        borderRadius: 8,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    selectedStatus: {
+        color: '#ffffff',
+    },
+    status: {
+        color: '#333',
+    },
+
+
+    jobTitleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    jobTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    arrow: {
+        fontSize: 18,
+    },
+    candidateContainer: {
+        padding: 10,
+        marginVertical: 5,
+        borderRadius: 5,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+    },
+    candidateDetails: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    photo: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        marginRight: 10,
+    },
+    infoContainer: {
+        flex: 1,
+    },
+    statusText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    name: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    email: {
+        fontSize: 14,
+        color: '#666',
+    },
+    cpf: {
+        fontSize: 14,
+        color: '#666',
+    },
+    noJobOffersText: {
+        fontSize: 18,
+        color: '#900404',
+        textAlign: 'center',
+        padding: 20,
+    },
+    errorText: {
+        fontSize: 18,
+        color: 'red',
+        textAlign: 'center',
+        padding: 20,
+    },
     container: {
         flexGrow: 1,
         backgroundColor: 'white',
@@ -10,9 +218,7 @@ export const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         paddingBottom: '33%'
     },
-    noJobOffersText: {
-        color: '#ffff'
-    },
+
     chartContainer: {
         height: 330,
         marginBottom: 8,
@@ -259,6 +465,7 @@ export const styles = StyleSheet.create({
         borderRadius: 5,
         alignItems: 'center',
         marginTop: 10,
+        marginHorizontal: 10,
     },
     buttonText: {
         color: '#fff',
