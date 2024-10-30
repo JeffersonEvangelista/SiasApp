@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { View, Text, TouchableOpacity, RefreshControl, Modal, FlatList, Animated, PanResponder, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, Modal, FlatList, Animated, PanResponder, Image, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { ScrollView } from "react-native-gesture-handler";
@@ -17,74 +17,26 @@ import NetInfo from '@react-native-community/netinfo';
 import { sendPushNotification } from "../components/Notificacao";
 import { TextInput } from "react-native";
 
-interface UserLocation {
-  latitude: number;
-  longitude: number;
-}
-interface Interview {
-  id: string;
-  date: Date;
-  title: string;
-  candidate: string;
-  location: string;
-  status: string;
-}
-interface Candidate {
-  id: string;
-  nome: string;
-  email: string;
-  foto_perfil: string;
-}
 
-interface Job {
-  id: string;
-  titulo: string;
-}
-
-interface Recruiter {
-  id: string;
-  nome: string;
-  email: string;
-  foto_perfil: string;
-}
-
-interface Job {
-  id: string;
-  titulo: string;
-  recrutadores: Recruiter[];
-}
-
-interface Candidate {
-  id: string;
-  nome: string;
-  email: string;
-  foto_perfil: string;
-}
-
-interface InterviewRequest {
-  id: string;
-  id_candidato: string;
-  data_entrevista: string;
-  horario: string;
-  local: string;
-  status: string;
-  candidatos: Candidate;
-  vagas: Job;
-}
 
 export default function Agenda() {
-  const [interviewDetails, setInterviewDetails] = useState<Interview[]>([]);
-  const [distance, setDistance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const db = getFirestore();
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const navigation = useNavigation();
   const [showNoConnection, setShowNoConnection] = useState(false);
   const pan = useRef(new Animated.ValueXY()).current;
+  const [userId, setUserId] = useState(null);
+  const [userType, setUserType] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [markedDates, setMarkedDates] = useState({});
   const [showLegend, setShowLegend] = useState(false);
+  const [interviewDetails, setInterviewDetails] = useState([]);
+  const [selectedDate, setSelectedDate] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [distance, setDistance] = useState(null);
   const [error, setError] = useState<string | null>(null);
   LocaleConfig.locales['pt'] = {
     monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
@@ -97,28 +49,6 @@ export default function Agenda() {
   const truncateText = (text, maxLength) => {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
-  const filteredInterviews = interviewDetails.filter((interview: Interview) => {
-    const matchesSearchTerm = interview.candidate.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus ? interview.status.toLowerCase() === selectedStatus : true;
-    const matchesDate = (!startDate || new Date(interview.date) >= new Date(startDate)) &&
-      (!endDate || new Date(interview.date) <= new Date(endDate));
-
-    return matchesSearchTerm && matchesStatus && matchesDate;
-  });
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [suggestions, setSuggestions] = useState<Candidate[]>([]);
-  const [selectedCandidateId, setSelectedCandidateId] = useState(null);
-  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userType, setUserType] = useState<string | null>(null);
-  const [isSearchEmpty, setIsSearchEmpty] = useState(true);
-  const marked: { [key: string]: { marked: boolean; dotColor: string; dotStyle: { borderColor: string; borderWidth: number; width: number; height: number; }; selected: boolean; selectedColor: string; }; } = {};
-  const recruiterName = interview.recruiter ? interview.recruiter.toLowerCase() : '';
-
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -158,15 +88,16 @@ export default function Agenda() {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      setModalVisible(false);
+      setModalVisible(false); // Redefine o modal ao voltar para a tela
     });
 
+    // Limpa o listener ao desmontar
     return unsubscribe;
   }, [navigation]);
 
   // Função que carrega os dados do usuário
   const fetchProfile = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); // Começa o carregamento
     try {
       const { id: userId } = await getUserNameAndId();
       setUserId(userId);
@@ -203,7 +134,7 @@ export default function Agenda() {
   }, []);
 
   // Função para lidar com o perfil do recrutador e buscar entrevistas relacionadas
-  const handleRecruiterProfile = async (recruiterId: any) => {
+  const handleRecruiterProfile = async (recruiterId) => {
     try {
       // Buscar as entrevistas associadas ao recrutador
       const { data: interviewRequests, error } = await supabase
@@ -235,20 +166,8 @@ export default function Agenda() {
       }
 
       // Certificar que interviewRequests é um array antes de acessar o length
-      const marked: { [key: string]: { marked: boolean; dotColor: string; dotStyle: { borderColor: string; borderWidth: number; width: number; height: number; }; selected: boolean; selectedColor: string; }; } = {};
-      const details: {
-        id: string;
-        title: string;
-        candidate: string;
-        candidateEmail: string;
-        candidateId: string;
-        profileImg: string;
-        date: string;
-        time: string;
-        location: string;
-        status: string;
-      }[] = [];
-
+      const marked = {};
+      const details = [];
 
       // Filtrar entrevistas por status
       const statuses = ['pendente', 'aceita', 'recusada'];
@@ -320,28 +239,29 @@ export default function Agenda() {
   };
 
 
-  const handleCandidateProfile = async (candidateId: any) => {
+  // Função para lidar com o perfil do candidato e marcar as datas no calendário
+  const handleCandidateProfile = async (candidateId) => {
     try {
       // Buscar solicitações de entrevista para o candidato
       const { data: interviewRequests, error } = await supabase
         .from('solicitacoes_entrevista')
         .select(`
+        id,
+        data_entrevista,
+        horario,
+        local,
+        status,
+        vagas (
           id,
-          data_entrevista,
-          horario,
-          local,
-          status,
-          vagas (
+          titulo,
+          recrutadores (
             id,
-            titulo,
-            recrutadores (
-              id,
-              nome,
-              email,
-              foto_perfil
-            )
+            nome,
+            email,
+            foto_perfil
           )
-        `)
+        )
+      `)
         .eq('id_candidato', candidateId);
 
       console.log('Dados de solicitações de entrevista:', interviewRequests);
@@ -350,36 +270,23 @@ export default function Agenda() {
         throw error;
       }
 
-      const marked: { [key: string]: { marked: boolean; dotColor: string; dotStyle: { borderColor: string; borderWidth: number; width: number; height: number; }; selected: boolean; selectedColor: string; }; } = {};
-      const details: {
-        id: string;
-        title: string;
-        candidate: string;
-        candidateEmail: string;
-        candidateId: string;
-        profileImg: string;
-        date: string;
-        time: string;
-        location: string;
-        status: string;
-        recruiterEmail: string | null;
-      }[] = [];
-
-      const today = new Date();
+      const marked = {};
+      const details = [];
 
       if (interviewRequests.length > 0) {
         console.log('Solicitações de entrevista encontradas:', interviewRequests);
 
+        const today = new Date();
+
         for (const request of interviewRequests) {
           const interviewDate = new Date(request.data_entrevista);
           const dateString = request.data_entrevista;
+          const dotStyle = getDotStyle(request.status);
 
-          // Verifique se request.status existe antes de chamar toLowerCase()
-          if (request.status && request.status.toLowerCase() === 'pendente' && interviewDate < today) {
+
+          if (request.status.toLowerCase() === 'pendente' && interviewDate < today) {
             handleExpiredInterview(request, candidateId);
           }
-
-          const dotStyle = getDotStyle(request.status || '');
 
           // Adiciona marcação ao calendário
           marked[dateString] = {
@@ -401,7 +308,6 @@ export default function Agenda() {
 
           // Chama a função para obter o ID do recrutador no Firebase
           const firebaseRecruiterId = await getRecruiterIdByEmail(recruiterEmail);
-
           // Adiciona detalhes da entrevista ao array
           details.push({
             id: request.id,
@@ -423,27 +329,39 @@ export default function Agenda() {
           );
         }
 
-        setInterviewDetails(details);
+        setInterviewDetails(details); // Atualiza o estado com os detalhes das entrevistas
         setMarkedDates(marked);
       } else {
         console.log('Nenhuma solicitação de entrevista encontrada para este candidato.');
       }
+
     } catch (error) {
       console.error('Erro ao buscar solicitações de entrevista:', error);
     } finally {
-      setLoading(false);
+      setLoading(false); // Finaliza o carregamento
     }
   };
 
-  const getRecruiterIdByEmail = async (recruiterEmail: any) => {
+
+  const getRecruiterIdByEmail = async (recruiterEmail) => {
     try {
+      // Log do email que está sendo buscado
       console.log(`Buscando ID do recrutador para o email: ${recruiterEmail}`);
+
+      // Referência à coleção "recruiters" no Firestore
       const usersRef = collection(db, "users");
+
+      // Criação da query para encontrar um documento com o campo "email" igual ao email fornecido
       const q = query(usersRef, where("email", "==", recruiterEmail));
+
+      // Executa a consulta e obtém os documentos
       const querySnapshot = await getDocs(q);
+
+      // Verifica se encontrou algum documento
       if (!querySnapshot.empty) {
         const recruiterDoc = querySnapshot.docs[0];
         const recruiterId = recruiterDoc.id;
+
         console.log(`ID do recrutador encontrado no Firebase: ${recruiterId}`);
         return recruiterId;
       } else {
@@ -457,7 +375,7 @@ export default function Agenda() {
   };
 
   // Função para dar animação na questão da entrevista
-  const createPanResponderForInterview = useCallback((animatedValue: any, interview: any, userId: any) => {
+  const createPanResponderForInterview = useCallback((animatedValue, interview, userId) => {
     return PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
         return Math.abs(gestureState.dx) > 20;
@@ -495,8 +413,8 @@ export default function Agenda() {
   }, []);
 
   // Função para aceitar a entrevista
-  const handleAcceptCandidate = async (interview: any, userId: any) => {
-    updateInterviewStatus(interview.id, 'aceita');
+  const handleAcceptCandidate = async (interview, userId) => {
+    updateInterviewStatus(interview.id, 'aceita'); // Atualiza o estado localmente
 
     try {
       // Chamada ao banco de dados
@@ -507,11 +425,13 @@ export default function Agenda() {
 
       if (updateError) {
         console.error('Erro ao atualizar status da entrevista:', updateError);
-        updateInterviewStatus(interview.id, 'pendente');
+        updateInterviewStatus(interview.id, 'pendente'); // Reverte a atualização local
         return;
       }
 
       console.log('Status da entrevista atualizado para "aceita"');
+
+      // Verificar se já existe uma resposta para a solicitação e candidato
       const { data: existingResponse, error: fetchError } = await supabase
         .from('respostas_candidatos')
         .select('*')
@@ -523,7 +443,7 @@ export default function Agenda() {
         return;
       }
 
-      console.log('Resposta existente:', existingResponse);
+      console.log('Resposta existente:', existingResponse); // Log da resposta existente
 
       // Se não houver resposta existente, insira uma nova
       if (existingResponse.length === 0) {
@@ -548,9 +468,9 @@ export default function Agenda() {
       // Buscar informações do recrutador responsável pela solicitação
       const { data: recruiterInfo, error: recruiterError } = await supabase
         .from('solicitacoes_entrevista')
-        .select('*, recrutadores(*)')
+        .select('*, recrutadores(*)') // Seleciona a tabela de recrutadores relacionada
         .eq('id', interview.id)
-        .single();
+        .single(); // Usa .single() para obter apenas um registro
 
       if (recruiterError) {
         console.error('Erro ao buscar informações do recrutador:', recruiterError);
@@ -558,11 +478,11 @@ export default function Agenda() {
       }
 
       if (recruiterInfo) {
-        console.log('Informações do recrutador:', recruiterInfo.recrutadores);
+        console.log('Informações do recrutador:', recruiterInfo.recrutadores); // Log das informações do recrutador
 
         // Obter o ID do recrutador
         const recruiterId = recruiterInfo.id_recrutador;
-        console.log('ID do recrutador:', recruiterId);
+        console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
 
         // 1. Buscar o token do recrutador
         const { data: recrutadorTokenData, error: tokenError } = await supabase
@@ -573,11 +493,11 @@ export default function Agenda() {
 
         if (tokenError || !recrutadorTokenData) {
           console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
-          return;
+          return; // Se não houver token, não envia notificação
         }
 
         const recrutadorToken = recrutadorTokenData.token;
-        console.log('Token do recrutador:', recrutadorToken);
+        console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
 
         // 2. Enviar a notificação apenas se o token existir
         if (recrutadorToken) {
@@ -598,15 +518,15 @@ export default function Agenda() {
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
-      updateInterviewStatus(interview.id, 'pendente');
+      updateInterviewStatus(interview.id, 'pendente'); // Reverte a atualização local em caso de erro
     }
   };
 
 
   // Função para recusar a entrevista
-  const handleRecusar = async (interview: any, userId: any) => {
+  const handleRecusar = async (interview, userId) => {
     console.log('Candidate ID:', userId);
-    console.log('Entrevista recebida:', interview);
+    console.log('Entrevista recebida:', interview); // Log dos dados da entrevista
 
     try {
       console.log(`Candidato recursado:`, interview);
@@ -636,7 +556,7 @@ export default function Agenda() {
         return;
       }
 
-      console.log('Resposta existente:', existingResponse);
+      console.log('Resposta existente:', existingResponse); // Log da resposta existente
 
       // Se não houver resposta existente, insira uma nova
       if (existingResponse.length === 0) {
@@ -661,9 +581,9 @@ export default function Agenda() {
       // Buscar informações do recrutador responsável pela solicitação
       const { data: recruiterInfo, error: recruiterError } = await supabase
         .from('solicitacoes_entrevista')
-        .select('*, recrutadores(*)')
+        .select('*, recrutadores(*)') // Seleciona a tabela de recrutadores relacionada
         .eq('id', interview.id)
-        .single();
+        .single(); // Usa .single() para obter apenas um registro
 
       if (recruiterError) {
         console.error('Erro ao buscar informações do recrutador:', recruiterError);
@@ -671,11 +591,11 @@ export default function Agenda() {
       }
 
       if (recruiterInfo) {
-        console.log('Informações do recrutador:', recruiterInfo.recrutadores);
+        console.log('Informações do recrutador:', recruiterInfo.recrutadores); // Log das informações do recrutador
 
         // Obter o ID do recrutador
         const recruiterId = recruiterInfo.id_recrutador;
-        console.log('ID do recrutador:', recruiterId);
+        console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
 
         // 1. Buscar o token do recrutador
         const { data: recrutadorTokenData, error: tokenError } = await supabase
@@ -690,7 +610,7 @@ export default function Agenda() {
         }
 
         const recrutadorToken = recrutadorTokenData.token;
-        console.log('Token do recrutador:', recrutadorToken);
+        console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
 
         // 2. Enviar a notificação apenas se o token existir
         if (recrutadorToken) {
@@ -713,9 +633,8 @@ export default function Agenda() {
       console.error('Erro inesperado:', error);
     }
   };
-
   // Função para lidar com entrevistas pendentes cujo prazo já passou
-  const handleExpiredInterview = async (interview: any, candidateId: any) => {
+  const handleExpiredInterview = async (interview, candidateId) => {
     console.log('Entrevista pendente com data já passada:', interview);
 
     try {
@@ -750,7 +669,7 @@ export default function Agenda() {
           .from('respostas_candidatos')
           .insert({
             id_solicitacao: interview.id,
-            id_candidato: candidateId,
+            id_candidato: candidateId, // Usa o ID do candidato passado
             resposta: 'recusada',
           });
 
@@ -764,8 +683,8 @@ export default function Agenda() {
       }
 
       // Obter o ID do recrutador
-      const recruiterId = interview.id_recrutador;
-      console.log('ID do recrutador:', recruiterId);
+      const recruiterId = interview.id_recrutador; // Assume que o ID do recrutador está na entrevista
+      console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
 
       // 1. Buscar o token do recrutador
       const { data: recrutadorTokenData, error: tokenError } = await supabase
@@ -776,11 +695,11 @@ export default function Agenda() {
 
       if (tokenError || !recrutadorTokenData) {
         console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
-        return;
+        return; // Se não houver token, não envia notificação
       }
 
       const recrutadorToken = recrutadorTokenData.token;
-      console.log('Token do recrutador:', recrutadorToken);
+      console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
 
       // 2. Enviar a notificação apenas se o token existir
       if (recrutadorToken) {
@@ -804,7 +723,7 @@ export default function Agenda() {
   };
 
   // Função para obter coordenadas a partir do nome do local
-  const getCoordinatesFromLocationName = async (locationName: any) => {
+  const getCoordinatesFromLocationName = async (locationName) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`, {
         method: 'GET',
@@ -837,16 +756,8 @@ export default function Agenda() {
   };
 
 
-  const buttons = [
-    { title: 'Todas', status: '', color: '#007BFF' },
-    { title: 'Pendentes', status: 'pendente', color: '#ff8c00' },
-    { title: 'Aceitas', status: 'aceita', color: '#009e23' },
-    { title: 'Recusadas', status: 'recusada', color: '#a30000' },
-  ];
-
-
   // Função para determinar a cor e o estilo do ponto com base no status
-  const getDotStyle = (status: any) => {
+  const getDotStyle = (status) => {
     switch (status) {
       case 'pendente':
         return { color: '#ff8c00', borderColor: 'black', borderWidth: 1, borderRadius: 5, width: 12, height: 12 };
@@ -869,15 +780,37 @@ export default function Agenda() {
   };
 
 
+  // Função que retorna o componente Calendar
+  const renderCalendar = () => {
+    return (
+      <Calendar
+        style={{ flex: 1 }}
+        theme={{
+          backgroundColor: '#ffffff',
+          calendarBackground: '#ffffff',
+          textSectionTitleColor: '#b6c1cd',
+          selectedDayTextColor: '#ffffff',
+          todayTextColor: '#00adf5',
+          dayTextColor: '#2d4150',
+          textDisabledColor: '#d77906',
+          arrowColor: '#d77906',
+        }}
+        markedDates={markedDates}
+        onDayPress={(day) => {
+          console.log('Selected day', day);
+        }}
+      />
+    );
+  };
 
-  const openModal = (interview: any) => {
+  const openModal = (interview) => {
     setSelectedInterview(interview);
     if (userLocation && interview.coordinates) {
       const distance = getDistance(
         { latitude: userLocation.latitude, longitude: userLocation.longitude },
         { latitude: interview.coordinates.latitude, longitude: interview.coordinates.longitude }
       );
-      setDistance(distance);
+      setDistance(distance); // Distância em metros
     }
     setModalVisible(true);
   };
@@ -887,13 +820,17 @@ export default function Agenda() {
   };
 
   // Função para atualizar o estado local
-  const updateInterviewStatus = (interviewId: any, newStatus: any) => {
+  const updateInterviewStatus = (interviewId, newStatus) => {
     setInterviewDetails(prevDetails =>
       prevDetails.map(interview =>
         interview.id === interviewId ? { ...interview, status: newStatus } : interview
       )
     );
   };
+
+  const [suggestions, setSuggestions] = useState<Candidate[]>([]);
+  const [isSearchEmpty, setIsSearchEmpty] = useState(true);
+
 
   // Função para filtrar entrevistas
   const filterInterviews = (interviews) => {
@@ -946,8 +883,25 @@ export default function Agenda() {
   useEffect(() => {
     handleRecruiterProfile(userId);
   }, [userId]);
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const filteredInterviews = interviewDetails.filter((interview: Interview) => {
+    const matchesSearchTerm = interview.candidate.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus ? interview.status.toLowerCase() === selectedStatus : true;
+    const matchesDate = (!startDate || new Date(interview.date) >= new Date(startDate)) &&
+      (!endDate || new Date(interview.date) <= new Date(endDate));
+
+    return matchesSearchTerm && matchesStatus && matchesDate;
+  });
+
+  const buttons = [
+    { title: 'Todas', status: '', color: '#007BFF' },
+    { title: 'Pendentes', status: 'pendente', color: '#ff8c00' },
+    { title: 'Aceitas', status: 'aceita', color: '#009e23' },
+    { title: 'Recusadas', status: 'recusada', color: '#a30000' },
+  ];
 
 
+  // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
     return (
       <View style={{ flex: 1 }}>
@@ -1231,7 +1185,6 @@ export default function Agenda() {
         {loading ? (
           <ActivityIndicator size="large" color="#ff8c00" />
         ) : (
-
           <ScrollView
             refreshControl={
               <RefreshControl
@@ -1307,12 +1260,14 @@ export default function Agenda() {
             )}
             <View style={styles.interviewListContainer}>
               {/* Seção para entrevistas pendentes */}
-              {interviewDetails.filter(interview => interview.status && interview.status.toLowerCase() === 'pendente').length > 0 ? (
+              <Text style={styles.monthTitle}>Entrevistas a serem confirmadas</Text>
+              {interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente').length > 0 ? (
                 <FlatList
-                  data={interviewDetails.filter(interview => interview.status && interview.status.toLowerCase() === 'pendente')}
+                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente')}
                   keyExtractor={item => item.id.toString()}
                   renderItem={({ item }) => {
                     const animatedValue = new Animated.Value(0);
+                    // Passando o userId para a função panResponder
                     const panResponder = createPanResponderForInterview(animatedValue, item, userId);
 
                     const backgroundColor = animatedValue.interpolate({
@@ -1338,7 +1293,7 @@ export default function Agenda() {
                             </View>
                             <View style={styles.detailsContainer}>
                               <Text style={styles.interviewTitle}>
-                                {truncateText(item.title, 20)}
+                                {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
                               </Text>
                               <Text style={styles.interviewRecruiter}>
                                 Empresa: {truncateText(item.recruiter, 20)}
@@ -1356,15 +1311,15 @@ export default function Agenda() {
               ) : (
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista pendente.</Text>
               )}
-
               {/* Seção para entrevistas aceitas */}
               <Text style={styles.monthTitle}>Entrevistas aceitas</Text>
-              {interviewDetails.filter(interview => interview.status && interview.status.toLowerCase() === 'aceita').length > 0 ? (
+              {interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
                 <FlatList
-                  data={interviewDetails.filter(interview => interview.status && interview.status.toLowerCase() === 'aceita')}
+                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita')}
                   keyExtractor={item => item.id.toString()}
                   renderItem={({ item }) => (
                     <TouchableOpacity onPress={() => openModal(item)}>
+
                       <View style={styles.interviewItem}>
                         <View style={styles.dateContainer}>
                           <View style={styles.dateBarAceita} />
@@ -1379,7 +1334,7 @@ export default function Agenda() {
                         </View>
                         <View style={styles.detailsContainer}>
                           <Text style={styles.interviewTitleAceita}>
-                            {truncateText(item.title, 20)}
+                            {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
                           </Text>
                           <Text style={styles.interviewRecruiter}>
                             Empresa: {truncateText(item.recruiter, 20)}
@@ -1398,9 +1353,9 @@ export default function Agenda() {
 
               {/* Seção para entrevistas recusadas */}
               <Text style={styles.monthTitle}>Entrevistas recusadas</Text>
-              {interviewDetails.filter(inter => inter.status && inter.status.toLowerCase() === 'recusada').length > 0 ? (
+              {interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada').length > 0 ? (
                 <FlatList
-                  data={interviewDetails.filter(inter => inter.status && inter.status.toLowerCase() === 'recusada')}
+                  data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada')}
                   keyExtractor={item => item.id.toString()}
                   renderItem={({ item }) => (
                     <View style={styles.interviewItem}>
@@ -1417,7 +1372,7 @@ export default function Agenda() {
                       </View>
                       <View style={styles.detailsContainer}>
                         <Text style={styles.interviewTitleRecursada}>
-                          {truncateText(item.title, 20)}
+                          {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
                         </Text>
                         <Text style={styles.interviewRecruiter}>
                           Empresa: {truncateText(item.recruiter, 20)}
@@ -1433,6 +1388,7 @@ export default function Agenda() {
                 <Text style={styles.noInterviewsMessage}>Nenhuma entrevista recusada.</Text>
               )}
             </View>
+
 
             {selectedInterview && (
               <Modal
@@ -1549,7 +1505,6 @@ export default function Agenda() {
           </ScrollView>
         )}
       </View>
-
     );
   }
 }
