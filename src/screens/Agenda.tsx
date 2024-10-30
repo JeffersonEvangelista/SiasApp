@@ -50,7 +50,7 @@ export default function Agenda() {
   const truncateText = (text, maxLength) => {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
-  const [selectedCandidate, setSelectedCandidate] = useState(null); // Estado para armazenar o candidato selecionado
+  const [selectedCandidate, setSelectedCandidate] = useState(null); 
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -66,6 +66,8 @@ export default function Agenda() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState(null);
+  const [isSearchEmpty, setIsSearchEmpty] = useState(true);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -855,30 +857,34 @@ export default function Agenda() {
   // Função para filtrar entrevistas
   const filterInterviews = (interviews) => {
     return interviews.filter(interview => {
-      const matchesSearchTerm = interview.candidate.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearchTerm = searchTerm ?
+        interview.candidate.toLowerCase().includes(searchTerm.toLowerCase()) : true;
       const matchesStatus = selectedStatus ? interview.status.toLowerCase() === selectedStatus : true;
+      const matchesCandidate = selectedCandidateId ? interview.candidateId === selectedCandidateId : true;
       const matchesDate = (!startDate || new Date(interview.date) >= new Date(startDate)) &&
         (!endDate || new Date(interview.date) <= new Date(endDate));
-      return matchesSearchTerm && matchesStatus && matchesDate;
+
+      return matchesSearchTerm && matchesStatus && matchesCandidate && matchesDate;
     });
   };
 
   // Função para buscar candidatos com base na pesquisa
   const searchCandidates = async (query) => {
-    if (!query) {
-      setSuggestions([]);
-      return;
-    }
-
     try {
-      // Primeiro, obtenha os IDs dos candidatos que estão inscritos em vagas
+      if (!query.trim()) {
+        setSuggestions([]);
+        setIsSearchEmpty(true); 
+        return;
+      }
+
+      setIsSearchEmpty(false); 
+
       const { data: enrolledCandidates, error: enrollmentError } = await supabase
         .from('inscricoes_vagas')
         .select('id_candidato');
 
       if (enrollmentError) throw enrollmentError;
 
-      // Extrai os IDs dos candidatos inscritos
       const candidateIds = enrolledCandidates.map((enrollment) => enrollment.id_candidato);
 
       const { data: candidates, error } = await supabase
@@ -888,9 +894,6 @@ export default function Agenda() {
         .in('id', candidateIds)
         .limit(5);
 
-      console.log(`Consulta: ilike(nome, %${query}%)`);
-      console.log('Resultados:', candidates);
-
       if (error) throw error;
 
       setSuggestions(candidates);
@@ -899,10 +902,8 @@ export default function Agenda() {
     }
   };
 
-
-  // Use o useEffect para buscar entrevistas quando o recrutadorId mudar
   useEffect(() => {
-    handleRecruiterProfile(userId); // Chama sua função existente para buscar entrevistas
+    handleRecruiterProfile(userId);
   }, [userId]);
 
 
@@ -953,6 +954,9 @@ export default function Agenda() {
                   onChangeText={(text) => {
                     setSearchQuery(text);
                     searchCandidates(text);
+                    if (text.trim() === '') {
+                      setSelectedCandidateId(null);
+                    }
                   }}
                 />
 
@@ -964,6 +968,7 @@ export default function Agenda() {
                     <TouchableOpacity
                       onPress={() => {
                         setSearchQuery(item.nome);
+                        setSelectedCandidateId(item.id);
                         setSuggestions([]);
                       }}
                     >
@@ -973,13 +978,11 @@ export default function Agenda() {
                         ) : (
                           <Image source={require('../../assets/perfil.png')} style={styles.photo} />
                         )}
-
                         <View style={{ marginLeft: 10 }}>
                           <Text>{item.nome}</Text>
                           <Text>{item.email}</Text>
                         </View>
                       </View>
-
                     </TouchableOpacity>
                   )}
                 />
@@ -1030,7 +1033,6 @@ export default function Agenda() {
                 {showLegend ? ' Ocultar' : ' Legendas'}
               </Text>
             </TouchableOpacity>
-
             {showLegend && (
               <View style={styles.legendContainer}>
                 <View style={styles.legendItem}>
