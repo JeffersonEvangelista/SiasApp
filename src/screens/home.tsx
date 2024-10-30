@@ -57,7 +57,6 @@ interface LineChartProps {
 interface Inscricao {
   id_candidato: string;
 }
-
 interface Job {
   titulo: string;
   id: string;
@@ -75,11 +74,9 @@ interface InscricaoVaga {
 interface Props {
   jobOffersWithCandidates: Job[];
 }
-
 interface CustomChartConfig extends AbstractChartConfig {
   withVerticalLines?: boolean;
 }
-
 interface CustomError {
   message: string;
 }
@@ -207,7 +204,6 @@ const App = () => {
     setPanResponders(newPanResponders);
   }, [jobOffersWithCandidates]);
 
-
   useEffect(() => {
     fetchProfile();
   }, [userType, currentDate]);
@@ -237,13 +233,12 @@ const App = () => {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      setModalVisible(false); // Redefine o modal ao voltar para a tela
+      setModalVisible(false);
     });
 
     // Limpa o listener ao desmontar
     return unsubscribe;
   }, [navigation]);
-
 
   // Função que carrega os dados do usuário
   const fetchProfile = async () => {
@@ -309,7 +304,6 @@ const App = () => {
     try {
       let query;
 
-      // Diferenciar a consulta dependendo do tipo de usuário
       if (userType === 'recrutador') {
         query = supabase
           .from('vagas')
@@ -378,13 +372,13 @@ const App = () => {
   };
 
   // Funções para recursar um candidato
-  const handleRecusar = async (vaga: any, candidato: any) => {
+  const handleRecusar = async (jobId: any, candidateId: any,) => {
     console.log("O item foi recusado!");
-    console.log("Vaga recusada:", vaga);
-    console.log("Candidato recusado:", candidato);
+    console.log("Vaga recusada:", jobId);
+    console.log("Candidato recusado:", candidateId);
 
     // Verifique se o ID da vaga e do candidato estão definidos
-    if (!vaga || !candidato) {
+    if (!jobId || !candidateId) {
       console.error("ID da vaga ou do candidato não estão definidos.");
       return;
     }
@@ -393,13 +387,12 @@ const App = () => {
       const { data, error } = await supabase
         .from('inscricoes_vagas')
         .update({ status: 'recusada' })
-        .match({ id_vaga: vaga, id_candidato: candidato });
+        .match({ id_vaga: jobId, id_candidato: candidateId });
 
       if (error) {
         console.error("Erro ao atualizar a vaga:", error);
         return;
       }
-      // Enviar notificação ao candidato
       // 1. Buscar o token do candidato
       const { data: candidateTokenData, error: tokenError } = await supabase
         .from('device_tokens')
@@ -439,6 +432,7 @@ const App = () => {
     }
   };
 
+  // Busca de locais frequentes para o user
   const getMostFrequentLocation = async (userId: any) => {
     const { data, error } = await supabase
       .from('solicitacoes_entrevista')
@@ -462,7 +456,6 @@ const App = () => {
     return mostFrequentLocation || null;
   };
 
-  // Função para aceitar um candidato 
   const handleAcceptCandidate = async (jobId: any, candidateId: any, userId: any) => {
     // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
@@ -1248,7 +1241,10 @@ const App = () => {
       setRefreshing(false);
     }
   };
-
+  const truncateText = (text:any, limit:any) => {
+    if (!text) return 'Nome não disponível';
+    return text.length > limit ? text.substring(0, limit) + '...' : text;
+  };
 
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
@@ -1511,28 +1507,9 @@ const App = () => {
 
 
 
-            <TouchableOpacity
-              onPress={() => setShowFilters(!showFilters)}
-              style={[
-                styles.toggleButton,
-                filtersVisible ? styles.buttonActive : styles.buttonInactive,
-                { backgroundColor: filtersVisible ? '#F07A26' : '#1F1F3F' },
-              ]}
-            >
-              <Text style={[styles.toggleButtonText, { color: filtersVisible ? '#fff' : '#ccc' }]}>
-                {filtersVisible ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-              </Text>
-              <Ionicons
-                name={filtersVisible ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color="#fff"
-              />
-            </TouchableOpacity>
 
-
-            {/* Contêiner de filtros, que será mostrado ou oculto */}
-            {showFilters && (
-              <Animatable.View style={styles.filtersContainersuasJobs} animation="fadeIn" duration={300}>
+            <Animatable.View style={styles.filtersContainersuasJobs} animation="fadeIn" duration={300}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {/* Botão para mostrar/ocultar vagas */}
                 <TouchableOpacity
                   style={[styles.toggleButton, styles.suasjobOfferButton]}
@@ -1540,13 +1517,13 @@ const App = () => {
                 >
                   <Ionicons name="briefcase" size={20} color="#FFFFFF" />
                   <Text style={styles.buttonText}>
-                    {showOnlyWithCandidates ? "Mostrar Todas as Vagas" : "Mostrar Apenas Vagas com Inscritos"}
+                    {showOnlyWithCandidates ? "Exibir Todas as Vagas" : "Exibir Somente Vagas com Candidatos Inscritos"}
                   </Text>
                 </TouchableOpacity>
 
                 {/* Botão para ordenar vagas */}
                 <TouchableOpacity
-                  style={[styles.toggleButton, styles.suasjobOfferButton]}
+                  style={[styles.toggleButton, styles.suasjobOfferButton, { marginLeft: 10 }]}
                   onPress={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                 >
                   <Ionicons
@@ -1555,11 +1532,13 @@ const App = () => {
                     color="#FFFFFF"
                   />
                   <Text style={styles.buttonText}>
-                    {sortOrder === 'asc' ? "Ordenar da Mais Antiga para a Mais Recente" : "Ordenar da Mais Recente para a Mais Antiga"}
+                    {sortOrder === 'asc' ? "Ordenar do Mais Antigo ao Mais Recente" : "Ordenar do Mais Recente ao Mais Antigo"}
                   </Text>
                 </TouchableOpacity>
-              </Animatable.View>
-            )}
+              </ScrollView>
+            </Animatable.View>
+
+
           </View>
           {sortedJobOffers.length > 0 ? (
             <>
@@ -1631,7 +1610,9 @@ const App = () => {
                                     <Image source={require('../../assets/perfil.png')} style={styles.photo} />
                                   )}
                                   <View style={{ marginLeft: 10 }}>
-                                    <Text style={styles.name}>{candidato.nome || 'Nome não disponível'}</Text>
+                                    <Text style={styles.name}>
+                                      {truncateText(candidato.nome, 30)}
+                                    </Text>                                    
                                     <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
                                     {candidato.cpf && (
                                       <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>

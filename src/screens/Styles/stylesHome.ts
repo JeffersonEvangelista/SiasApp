@@ -6,9 +6,10 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
     filtersContainersuasJobs: {
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 15,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 10,
     },
     jobContainer: {
         marginVertical: 5,
