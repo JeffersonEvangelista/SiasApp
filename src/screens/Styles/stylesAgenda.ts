@@ -95,7 +95,7 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 5,
-        backgroundColor: '#f9f9f9',
+
     },
     legendItem: {
         flexDirection: 'row',

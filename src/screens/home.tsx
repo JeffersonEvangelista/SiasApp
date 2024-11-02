@@ -1,4 +1,4 @@
-// Importações do codigo 
+// Importações do codigo
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Alert, Animated, RefreshControl, Text, StatusBar, Image, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Dimensions, PanResponder } from 'react-native';
 import { getUserNameAndId, supabase, getJobInscriptions, countSolicitacoes } from '../services/userService';
@@ -17,6 +17,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { sendPushNotification } from '../components/Notificacao';
 import { AbstractChartConfig } from 'react-native-chart-kit/dist/AbstractChart';
+
+import { useColorScheme } from 'nativewind';
 
 interface Candidate {
   candidatos: any;
@@ -83,6 +85,7 @@ interface CustomError {
 
 const App = () => {
   const [userId, setUserId] = useState<string | null>(null);
+  const { colorScheme, toggleColorScheme } = useColorScheme(); // Para o Dark Mode
   const animatedValue = useRef(new Animated.Value(0)).current;
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
@@ -545,15 +548,15 @@ const App = () => {
       const { data: jobOffers, error } = await supabase
         .from('vagas')
         .select(`
-          id, 
-          titulo, 
-          descricao, 
-          localizacao, 
-          requisitos, 
-          salario, 
-          data_criacao, 
+          id,
+          titulo,
+          descricao,
+          localizacao,
+          requisitos,
+          salario,
+          data_criacao,
           inscricoes_vagas (
-            id_candidato, 
+            id_candidato,
             status,
             candidatos (id, nome, email, foto_perfil, cpf)
           )
@@ -686,7 +689,7 @@ const App = () => {
     setIsLoading(true);
 
     try {
-      //  Buscar as solicitações de entrevista sera usado para o candidato e RH viu 
+      //  Buscar as solicitações de entrevista sera usado para o candidato e RH viu
       console.log('userId:', userId);
       console.log('userType:', userType);
       console.log('startDate:', startDate);
@@ -782,7 +785,7 @@ const App = () => {
     }
   };
 
-  //  Rederizacao do modo diario, ocorreu a separacao dos modos para uma facil manuntencao 
+  //  Rederizacao do modo diario, ocorreu a separacao dos modos para uma facil manuntencao
   const renderDailyChart = (countsByDay: any) => {
     const labels = Object.keys(countsByDay);
     const dataCounts = Object.values(countsByDay);
@@ -890,10 +893,10 @@ const App = () => {
   // Função para carregamento da pagina
   if (loading) {
     return (
-      <View style={styles.loaderContainer}>
+      <View style={[styles.loaderContainer, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }]}>
         <Animatable.View animation="zoomIn" duration={1000} style={styles.loaderContent}>
           <ActivityIndicator size="large" color="#F07A26" />
-          <Text>Carregando...</Text>
+          <Text style={{ color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>Carregando...</Text>
         </Animatable.View>
       </View>
     );
@@ -916,7 +919,7 @@ const App = () => {
   };
 
 
-  //=========================================================  Funções do modal ======================================================= 
+  //=========================================================  Funções do modal =======================================================
   // Função para fechar o modal
   const closeModal = () => {
     setModalVisible(false);
@@ -1076,7 +1079,7 @@ const App = () => {
     setTypingTimeout(newTimeout);
   };
 
-  // pensando se vou ultilizar ou nao, ate o momento nao sei 
+  // pensando se vou ultilizar ou nao, ate o momento nao sei
   const handleSuggestionSelect = (suggestion: any) => {
     setLocation(suggestion);
     setSuggestions([]);
@@ -1091,7 +1094,7 @@ const App = () => {
 
   };
 
-  // Função para salvar as informações do modal no banco de dados 
+  // Função para salvar as informações do modal no banco de dados
   const handleSave = async () => {
     try {
       const { id: userId } = await getUserNameAndId();
@@ -1222,7 +1225,7 @@ const App = () => {
   };
 
 
-  //=================================================================================================================================================== 
+  //===================================================================================================================================================
 
 
   // Funcao para recarregar a pagina
@@ -1250,7 +1253,10 @@ const App = () => {
   if (userType === 'recrutador') {
     return (
       <ScrollView
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[
+          styles.container,
+          { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }, // Altera a cor de fundo
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -1283,7 +1289,7 @@ const App = () => {
           />
         </View>
         <View style={styles.chartContainer}>
-          <Text style={styles.title}>Quantidade de entrevistas oferecidas</Text>
+          <Text style={[styles.title, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Quantidade de entrevistas oferecidas</Text>
           {isLoading ? (
             <ActivityIndicator size="large" color="#ffa726" />
           ) : chartData.labels.length > 0 ? (
@@ -1353,23 +1359,23 @@ const App = () => {
             </GestureHandlerRootView>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text>Aguardando dados</Text>
+              <Text style={{ color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>Aguardando dados</Text>
               {/*     <PulsingDots />    */}
             </View>
           )}
         </View>
 
 
-        <Text style={styles.text1}>
+        <Text style={[styles.text1, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
           Entrevistas Agendadas
         </Text>
-        <View style={styles.containeragenda}>
+        <View style={[styles.containeragenda, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#FFFFFF' }]}>
           {error ? (
             <Text style={styles.errorText}>{error.message || 'Erro desconhecido'}</Text>
           ) : (
             <>
               {/* Filtros */}
-              <View style={styles.filtersContainer}>
+              <View style={[styles.filtersContainer, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#FFFFFF' }]}>
                 <TouchableOpacity
                   onPress={() => setFiltersVisible(!filtersVisible)}
                   style={[
@@ -1384,19 +1390,20 @@ const App = () => {
                 {filtersVisible && ( // Renderiza os filtros apenas se estiver visível
                   <>
                     <TextInput
-                      style={styles.inputtitulo}
+                      style={[styles.inputtitulo, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#FFFFFF', color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}
                       placeholder="Título da vaga"
+                      placeholderTextColor={colorScheme === 'dark' ? '#CCCCCC' : '#888888'}
                       value={searchTerm}
                       onChangeText={setSearchTerm}
                     />
                     <View>
-                      <Text style={styles.label}>Quantidade mínima de candidatos na vaga:</Text>
+                      <Text style={[styles.label, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>Quantidade mínima de candidatos na vaga:</Text>
                       <View style={styles.containerNumber}>
                         <TouchableOpacity onPress={decrement} style={styles.button}>
-                          <Text style={styles.buttonText}>-</Text>
+                          <Text style={[styles.buttonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>-</Text>
                         </TouchableOpacity>
                         <TextInput
-                          style={styles.inputNumber}
+                          style={[styles.inputNumber, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}
                           keyboardType="numeric"
                           value={minInscritos.toString()}
                           onChangeText={(text) => setMinInscritos(parseInt(text) || 0)}
@@ -1406,9 +1413,9 @@ const App = () => {
                         </TouchableOpacity>
                       </View>
                     </View>
-                    <View style={styles.statusFilter}>
-                      <Text style={styles.headerText}>Status da solicitação:</Text>
-                      <View style={styles.buttonContainer}>
+                    <View style={[styles.statusFilter, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#FFFFFF' }]}>
+                      <Text style={[styles.headerText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>Status da solicitação:</Text>
+                      <View style={[styles.buttonContainer, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#FFFFFF' }]}>
                         <TouchableOpacity onPress={() => setSelectedStatus('aceita')} style={styles.button}>
                           <Ionicons name="checkmark-circle" size={20} color={selectedStatus === 'aceita' ? '#fff' : '#333'} />
                           <Text style={selectedStatus === 'aceita' ? styles.selectedStatus : styles.status}>Aceito</Text>
@@ -1494,14 +1501,14 @@ const App = () => {
                     </Animatable.View>
                   ))
               ) : (
-                <Text style={styles.noJobOffersText}>Nenhuma vaga disponível com os filtros aplicados.</Text>
+                <Text style={[styles.noJobOffersText, { color: colorScheme === 'dark' ? '#FF4500' : 'red' }]}>Nenhuma vaga disponível com os filtros aplicados.</Text>
               )}
             </>
           )}
         </View>
 
-        <Text style={styles.text1}>Suas Ofertas de Trabalho:</Text>
-        <View style={styles.containeragenda}>
+        <Text style={[styles.text1, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>Suas Ofertas de Trabalho:</Text>
+        <View style={[styles.containeragenda, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#FFFFFF' }]}>
           {/* Botão para mostrar/ocultar filtros */}
           <View style={styles.filtersContainer}>
 
@@ -1545,10 +1552,10 @@ const App = () => {
               {/* Renderiza as instruções apenas se a lista estiver expandida */}
               {Object.keys(toggleExpandInfo).some(jobId => toggleExpandInfo[jobId]) && (
                 <View>
-                  <Text style={styles.instructionText}>
+                  <Text style={[styles.instructionText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
                     👈 Arraste o candidato para a <Text style={styles.highlightText}>esquerda</Text> para <Text style={styles.rejectText}>recusar</Text>.
                   </Text>
-                  <Text style={styles.instructionText}>
+                  <Text style={[styles.instructionText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
                     Arraste para a <Text style={styles.highlightText}>direita</Text> para <Text style={styles.acceptText}>aceitar 👉</Text>.
                   </Text>
                 </View>
@@ -1612,7 +1619,7 @@ const App = () => {
                                   <View style={{ marginLeft: 10 }}>
                                     <Text style={styles.name}>
                                       {truncateText(candidato.nome, 30)}
-                                    </Text>                                    
+                                    </Text>
                                     <Text style={styles.email}>{candidato.email || 'Email não disponível'}</Text>
                                     {candidato.cpf && (
                                       <Text style={styles.cpf}>CPF: {candidato.cpf.replace(/.(?=.{4})/g, '*')}</Text>
@@ -1813,10 +1820,13 @@ const App = () => {
 
     );
   } else {
-    // Se o usario for do tipo Candidato 
+    // Se o usario for do tipo Candidato
     return (
       <ScrollView
-        contentContainerStyle={styles.container}
+      contentContainerStyle={[
+        styles.container,
+        { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }, // Altera a cor de fundo
+      ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -1851,7 +1861,7 @@ const App = () => {
 
         {/*  Seção de informações do usuário focada no Gráfico cujo tem que ser refinado mais ainda*/}
         <View style={styles.chartContainer}>
-          <Text style={styles.title}>Contagem de Entrevistas</Text>
+          <Text style={[styles.title, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Contagem de Entrevistas</Text>
           {isLoading ? (
             <ActivityIndicator size="large" color="#ffa726" />
           ) : chartData.labels.length > 0 ? (
@@ -1922,8 +1932,8 @@ const App = () => {
                   </View>
                 </PanGestureHandler>
 
-                {/* Exibindo informações de texto  apenas para melhor edicao do grafico e suas funcionalidades 
-                
+                {/* Exibindo informações de texto  apenas para melhor edicao do grafico e suas funcionalidades
+
                 <View style={{ marginTop: 16 }}>
                   <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Detalhes das Entrevistas:</Text>
                   {chartData.labels.map((label, index) => (
@@ -1932,19 +1942,19 @@ const App = () => {
                     </Text>
                   ))}
                 </View>
-              
+
                 */}
 
               </View>
             </GestureHandlerRootView>
           ) : (
-            <Text>Aguardando dados...</Text>
+            <Text style={{ color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>Aguardando dados...</Text>
           )}
         </View>
 
 
         {/* Carregamento das últimas inscrições do candidato */}
-        <Text style={styles.text1}>Últimas Inscrições</Text>
+        <Text style={[styles.text1, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Últimas Inscrições</Text>
 
         {error ? (
           <Text style={styles.errorText}>{error}</Text>

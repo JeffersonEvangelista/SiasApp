@@ -17,9 +17,11 @@ import NetInfo from '@react-native-community/netinfo';
 import { sendPushNotification } from "../components/Notificacao";
 import { TextInput } from "react-native";
 
-
+import { useColorScheme } from 'nativewind';
+import colors from "./Styles/colors";
 
 export default function Agenda() {
+  const { colorScheme, toggleColorScheme } = useColorScheme(); // Para o Dark Mode
   const [loading, setLoading] = useState(true);
   const db = getFirestore();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -784,17 +786,17 @@ export default function Agenda() {
   const renderCalendar = () => {
     return (
       <Calendar
-        style={{ flex: 1 }}
-        theme={{
-          backgroundColor: '#ffffff',
-          calendarBackground: '#ffffff',
-          textSectionTitleColor: '#b6c1cd',
-          selectedDayTextColor: '#ffffff',
-          todayTextColor: '#00adf5',
-          dayTextColor: '#2d4150',
-          textDisabledColor: '#d77906',
-          arrowColor: '#d77906',
-        }}
+                style={{ flex: 1 }}
+                theme={{
+                  backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
+                  calendarBackground: colorScheme === 'dark' ? '#000000' : '#ffffff',
+                  textSectionTitleColor: colorScheme === 'dark' ? '#e0e0e0' : '#b6c1cd',
+                  selectedDayTextColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
+                  todayTextColor: colorScheme === 'dark' ? '#f57c00' : '#00adf5', // Laranja no dark mode
+                  dayTextColor: colorScheme === 'dark' ? '#ffffff' : '#2d4150',
+                  textDisabledColor: colorScheme === 'dark' ? '#555555' : '#d77906',
+                  arrowColor: colorScheme === 'dark' ? '#f57c00' : '#d77906', // Setas laranjas no dark mode
+                }}
         markedDates={markedDates}
         onDayPress={(day) => {
           console.log('Selected day', day);
@@ -904,7 +906,7 @@ export default function Agenda() {
   // Renderização da Home para ambos os tipos de usuário
   if (userType === 'recrutador') {
     return (
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }}>
         {loading ? (
           <ActivityIndicator size="large" color="#ff8c00" />
         ) : (
@@ -929,7 +931,9 @@ export default function Agenda() {
                       paddingVertical: 10,
                       paddingHorizontal: 10,
                       borderRadius: 5,
-                      backgroundColor: selectedStatus === button.status ? button.color : '#E0E0E0',
+                      backgroundColor: selectedStatus === button.status
+                        ? colorScheme === 'dark' ? '#ff8c00' : button.color // Laranja no dark mode
+                        : '#E0E0E0',
                       marginHorizontal: 5,
                     }}
                   >
@@ -943,7 +947,7 @@ export default function Agenda() {
               {/* Filtros */}
               <View style={{ marginBottom: 20 }}>
                 <TextInput
-                  style={styles.inputName}
+                  style={[styles.inputName, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}
                   placeholder="Buscar Candidatos"
                   value={searchQuery}
                   onChangeText={(text) => {
@@ -1026,18 +1030,21 @@ export default function Agenda() {
               </Text>
             </TouchableOpacity>
             {showLegend && (
-              <View style={styles.legendContainer}>
+              <View style={[
+                styles.legendContainer,
+                { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' } // Fundo preto no dark mode
+              ]}>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#ff8c00' }]} />
-                  <Text style={styles.legendText}>Pendente</Text>
+                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Pendente</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#009e23' }]} />
-                  <Text style={styles.legendText}>Aceita</Text>
+                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Aceita</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#a30000' }]} />
-                  <Text style={styles.legendText}>Recusada</Text>
+                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Recusada</Text>
                 </View>
               </View>
             )}
@@ -1080,7 +1087,7 @@ export default function Agenda() {
               )}
 
               {/* Seção para entrevistas aceitas */}
-              <Text style={styles.monthTitle}>Entrevistas Aceitas</Text>
+              <Text style={[styles.monthTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Entrevistas Aceitas</Text>
               {filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
                 <FlatList
                   data={filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'aceita')}
@@ -1113,11 +1120,11 @@ export default function Agenda() {
                   )}
                 />
               ) : (
-                <Text>Nenhuma entrevista aceita.</Text>
+                <Text style={{ color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>Nenhuma entrevista aceita.</Text>
               )}
 
               {/* Seção para entrevistas recusadas */}
-              <Text style={styles.monthTitle}>Entrevistas Recusadas</Text>
+              <Text style={[styles.monthTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Entrevistas Recusadas</Text>
               {filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'recusada').length > 0 ? (
                 <FlatList
                   data={filterInterviews(interviewDetails).filter(interview => interview.status.toLowerCase() === 'recusada')}
@@ -1150,7 +1157,7 @@ export default function Agenda() {
                   )}
                 />
               ) : (
-                <Text>Nenhuma entrevista recusada.</Text>
+                <Text style={{ color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>Nenhuma entrevista recusada.</Text>
               )}
             </View>
 
@@ -1181,7 +1188,7 @@ export default function Agenda() {
     );
   } else {
     return (
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }}>
         {loading ? (
           <ActivityIndicator size="large" color="#ff8c00" />
         ) : (
@@ -1196,7 +1203,7 @@ export default function Agenda() {
             <View style={styles.header}>
               <Text style={styles.headerText}>Agenda</Text>
             </View>
-            {/* Necessário arrumar essa questão pois o calendário esta afetando o reload da pagina  
+            {/* Necessário arrumar essa questão pois o calendário esta afetando o reload da pagina
           */}
             <View style={{
               flex: 1,
@@ -1212,20 +1219,20 @@ export default function Agenda() {
               elevation: 5,
             }}>
               <Calendar
-                style={{ flex: 1 }}
-                theme={{
-                  backgroundColor: '#ffffff',
-                  calendarBackground: '#ffffff',
-                  textSectionTitleColor: '#b6c1cd',
-                  selectedDayTextColor: '#ffffff',
-                  todayTextColor: '#00adf5',
-                  dayTextColor: '#2d4150',
-                  textDisabledColor: '#d77906',
-                  arrowColor: '#d77906',
-                }}
-                markedDates={markedDates}
-                hideExtraDays={true}
-              />
+                  style={{ flex: 1 }}
+                  theme={{
+                    backgroundColor: '#ffffff',
+                    calendarBackground: '#ffffff',
+                    textSectionTitleColor: '#b6c1cd',
+                    selectedDayTextColor: '#ffffff',
+                    todayTextColor: '#00adf5',
+                    dayTextColor: '#2d4150',
+                    textDisabledColor: '#d77906',
+                    arrowColor: '#d77906',
+                  }}
+                  markedDates={markedDates}
+                  hideExtraDays={true}
+                />
             </View>
 
 
@@ -1246,21 +1253,21 @@ export default function Agenda() {
               <View style={styles.legendContainer}>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#ff8c00' }]} />
-                  <Text style={styles.legendText}>Pendente</Text>
+                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Pendente</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#009e23' }]} />
-                  <Text style={styles.legendText}>Aceita</Text>
+                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Aceita</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#a30000' }]} />
-                  <Text style={styles.legendText}>Recusada</Text>
+                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Recusada</Text>
                 </View>
               </View>
             )}
             <View style={styles.interviewListContainer}>
               {/* Seção para entrevistas pendentes */}
-              <Text style={styles.monthTitle}>Entrevistas a serem confirmadas</Text>
+              <Text style={[styles.monthTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Entrevistas a serem confirmadas</Text>
               {interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente').length > 0 ? (
                 <FlatList
                   data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'pendente')}
@@ -1309,10 +1316,10 @@ export default function Agenda() {
                   }}
                 />
               ) : (
-                <Text style={styles.noInterviewsMessage}>Nenhuma entrevista pendente.</Text>
+                <Text style={[styles.noInterviewsMessage, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Nenhuma entrevista pendente.</Text>
               )}
               {/* Seção para entrevistas aceitas */}
-              <Text style={styles.monthTitle}>Entrevistas aceitas</Text>
+              <Text style={[styles.monthTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Entrevistas aceitas</Text>
               {interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita').length > 0 ? (
                 <FlatList
                   data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'aceita')}
@@ -1348,11 +1355,11 @@ export default function Agenda() {
                   )}
                 />
               ) : (
-                <Text style={styles.noInterviewsMessage}>Nenhuma entrevista aceita.</Text>
+                <Text style={[styles.noInterviewsMessage, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Nenhuma entrevista aceita.</Text>
               )}
 
               {/* Seção para entrevistas recusadas */}
-              <Text style={styles.monthTitle}>Entrevistas recusadas</Text>
+              <Text style={[styles.monthTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Entrevistas recusadas</Text>
               {interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada').length > 0 ? (
                 <FlatList
                   data={interviewDetails.filter(interview => interview.status.toLowerCase() === 'recusada')}
@@ -1385,7 +1392,7 @@ export default function Agenda() {
                   )}
                 />
               ) : (
-                <Text style={styles.noInterviewsMessage}>Nenhuma entrevista recusada.</Text>
+                <Text style={[styles.noInterviewsMessage, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Nenhuma entrevista recusada.</Text>
               )}
             </View>
 

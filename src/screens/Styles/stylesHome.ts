@@ -214,7 +214,6 @@ export const styles = StyleSheet.create({
     },
     container: {
         flexGrow: 1,
-        backgroundColor: 'white',
         alignItems: 'center',
         justifyContent: 'flex-start',
         paddingBottom: '33%'
