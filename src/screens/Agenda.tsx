@@ -21,7 +21,8 @@ import { useColorScheme } from 'nativewind';
 import colors from "./Styles/colors";
 
 export default function Agenda() {
-  const { colorScheme, toggleColorScheme } = useColorScheme(); // Para o Dark Mode
+  const { colorScheme, toggleColorScheme } = useColorScheme();
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const db = getFirestore();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -30,6 +31,10 @@ export default function Agenda() {
   const pan = useRef(new Animated.ValueXY()).current;
   const [userId, setUserId] = useState(null);
   const [userType, setUserType] = useState(null);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [selectedCandidateId, setSelectedCandidateId] = useState(null);
+
   const [refreshing, setRefreshing] = useState(false);
   const [markedDates, setMarkedDates] = useState({});
   const [showLegend, setShowLegend] = useState(false);
@@ -786,17 +791,17 @@ export default function Agenda() {
   const renderCalendar = () => {
     return (
       <Calendar
-                style={{ flex: 1 }}
-                theme={{
-                  backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
-                  calendarBackground: colorScheme === 'dark' ? '#000000' : '#ffffff',
-                  textSectionTitleColor: colorScheme === 'dark' ? '#e0e0e0' : '#b6c1cd',
-                  selectedDayTextColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
-                  todayTextColor: colorScheme === 'dark' ? '#f57c00' : '#00adf5', // Laranja no dark mode
-                  dayTextColor: colorScheme === 'dark' ? '#ffffff' : '#2d4150',
-                  textDisabledColor: colorScheme === 'dark' ? '#555555' : '#d77906',
-                  arrowColor: colorScheme === 'dark' ? '#f57c00' : '#d77906', // Setas laranjas no dark mode
-                }}
+        style={{ flex: 1 }}
+        theme={{
+          backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
+          calendarBackground: colorScheme === 'dark' ? '#000000' : '#ffffff',
+          textSectionTitleColor: colorScheme === 'dark' ? '#e0e0e0' : '#b6c1cd',
+          selectedDayTextColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
+          todayTextColor: colorScheme === 'dark' ? '#f57c00' : '#00adf5', // Laranja no dark mode
+          dayTextColor: colorScheme === 'dark' ? '#ffffff' : '#2d4150',
+          textDisabledColor: colorScheme === 'dark' ? '#555555' : '#d77906',
+          arrowColor: colorScheme === 'dark' ? '#f57c00' : '#d77906', // Setas laranjas no dark mode
+        }}
         markedDates={markedDates}
         onDayPress={(day) => {
           console.log('Selected day', day);
@@ -932,7 +937,7 @@ export default function Agenda() {
                       paddingHorizontal: 10,
                       borderRadius: 5,
                       backgroundColor: selectedStatus === button.status
-                        ? colorScheme === 'dark' ? '#ff8c00' : button.color // Laranja no dark mode
+                        ? button.color
                         : '#E0E0E0',
                       marginHorizontal: 5,
                     }}
@@ -947,8 +952,15 @@ export default function Agenda() {
               {/* Filtros */}
               <View style={{ marginBottom: 20 }}>
                 <TextInput
-                  style={[styles.inputName, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}
+                  style={[
+                    styles.inputName,
+                    {
+                      color: colorScheme === 'dark' ? '#ffffff' : '#000000',
+                      textAlign: 'center'
+                    }
+                  ]}
                   placeholder="Buscar Candidatos"
+                  placeholderTextColor={colorScheme === 'dark' ? '#ffffff' : '#797777FF'}
                   value={searchQuery}
                   onChangeText={(text) => {
                     setSearchQuery(text);
@@ -978,9 +990,14 @@ export default function Agenda() {
                           <Image source={require('../../assets/perfil.png')} style={styles.photo} />
                         )}
                         <View style={{ marginLeft: 10 }}>
-                          <Text>{item.nome}</Text>
-                          <Text>{item.email}</Text>
+                          <Text style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}>
+                            {item.nome}
+                          </Text>
+                          <Text style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}>
+                            {item.email}
+                          </Text>
                         </View>
+
                       </View>
                     </TouchableOpacity>
                   )}
@@ -1008,7 +1025,7 @@ export default function Agenda() {
                     calendarBackground: '#ffffff',
                     textSectionTitleColor: '#b6c1cd',
                     selectedDayTextColor: '#ffffff',
-                    todayTextColor: '#00adf5',
+                    todayTextColor: '#1E012E71',
                     dayTextColor: '#2d4150',
                     textDisabledColor: '#d77906',
                     arrowColor: '#d77906',
@@ -1036,15 +1053,15 @@ export default function Agenda() {
               ]}>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#ff8c00' }]} />
-                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Pendente</Text>
+                  <Text style={[styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Pendente</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#009e23' }]} />
-                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Aceita</Text>
+                  <Text style={[styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Aceita</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#a30000' }]} />
-                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Recusada</Text>
+                  <Text style={[styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Recusada</Text>
                 </View>
               </View>
             )}
@@ -1219,20 +1236,20 @@ export default function Agenda() {
               elevation: 5,
             }}>
               <Calendar
-                  style={{ flex: 1 }}
-                  theme={{
-                    backgroundColor: '#ffffff',
-                    calendarBackground: '#ffffff',
-                    textSectionTitleColor: '#b6c1cd',
-                    selectedDayTextColor: '#ffffff',
-                    todayTextColor: '#00adf5',
-                    dayTextColor: '#2d4150',
-                    textDisabledColor: '#d77906',
-                    arrowColor: '#d77906',
-                  }}
-                  markedDates={markedDates}
-                  hideExtraDays={true}
-                />
+                style={{ flex: 1 }}
+                theme={{
+                  backgroundColor: '#ffffff',
+                  calendarBackground: '#ffffff',
+                  textSectionTitleColor: '#b6c1cd',
+                  selectedDayTextColor: '#ffffff',
+                  todayTextColor: '#51047A71',
+                  dayTextColor: '#2d4150',
+                  textDisabledColor: '#d77906',
+                  arrowColor: '#d77906',
+                }}
+                markedDates={markedDates}
+                hideExtraDays={true}
+              />
             </View>
 
 
@@ -1253,15 +1270,15 @@ export default function Agenda() {
               <View style={styles.legendContainer}>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#ff8c00' }]} />
-                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Pendente</Text>
+                  <Text style={[styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Pendente</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#009e23' }]} />
-                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Aceita</Text>
+                  <Text style={[styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Aceita</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#a30000' }]} />
-                  <Text style={[ styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' } ]}>Recusada</Text>
+                  <Text style={[styles.legendText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Recusada</Text>
                 </View>
               </View>
             )}

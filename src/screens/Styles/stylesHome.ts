@@ -202,7 +202,7 @@ export const styles = StyleSheet.create({
     },
     noJobOffersText: {
         fontSize: 18,
-        color: '#900404',
+        color: '#ffffff',
         textAlign: 'center',
         padding: 20,
     },

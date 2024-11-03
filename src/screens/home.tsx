@@ -158,7 +158,7 @@ const App = () => {
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [minInscritos, setMinInscritos] = useState(0);
+  const [minInscritos, setMinInscritos] = useState(1);
   const [isFocused, setIsFocused] = useState(false);
   const increment = () => setMinInscritos(minInscritos + 1);
   const decrement = () => {
@@ -168,17 +168,16 @@ const App = () => {
   };
   const [showOnlyWithCandidates, setShowOnlyWithCandidates] = useState(false);
   const [sortOrder, setSortOrder] = useState('desc');
-  // Filtra as ofertas de trabalho
-  const filteredJobOffers = jobOffersWithCandidates.filter(job => {
+  // Garante que jobOffersWithCandidates é um array, evitando erros se estiver indefinido
+  const filteredJobOffers = (jobOffersWithCandidates || []).filter(job => {
     return showOnlyWithCandidates ? job.inscricoes_vagas && job.inscricoes_vagas.length > 0 : true;
   });
-  // Ordena as ofertas filtradas com base na data de criação
+
   const sortedJobOffers = filteredJobOffers.sort((a, b) => {
-    if (sortOrder === 'asc') {
-      return new Date(a.data_criacao) - new Date(b.data_criacao);
-    } else {
-      return new Date(b.data_criacao) - new Date(a.data_criacao);
-    }
+    const dateA = a.data_criacao ? new Date(a.data_criacao) : new Date(0);
+    const dateB = b.data_criacao ? new Date(b.data_criacao) : new Date(0);
+
+    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
   });
 
   useEffect(() => {
@@ -374,6 +373,64 @@ const App = () => {
     }
   };
 
+  // Busca de locais frequentes para o user
+  const getMostFrequentLocation = async (userId: any) => {
+    const { data, error } = await supabase
+      .from('solicitacoes_entrevista')
+      .select('local')
+      .eq('id_recrutador', userId);
+
+    if (error) {
+      console.error("Erro ao buscar os locais:", error);
+      return null; // Retorna null em caso de erro
+    }
+
+    // Verifique se `data` é um array antes de continuar
+    if (!Array.isArray(data)) {
+      console.warn('Os dados retornados não são um array:', data);
+      return null; // Retorna null se não for um array
+    }
+
+    if (data.length === 0) {
+      console.warn('Nenhum local encontrado para o usuário:', userId);
+      return null; // Retorna null se não houver locais
+    }
+
+    // Contar a frequência de cada local
+    const locationCount = data.reduce((acc, { local }) => {
+      acc[local] = (acc[local] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Obter o local mais frequente
+    const mostFrequentLocation = Object.keys(locationCount).reduce((a, b) => locationCount[a] > locationCount[b] ? a : b);
+
+    return mostFrequentLocation || null;
+  };
+
+
+  const handleAcceptOrReject = (jobId: any, candidateId: any, isAccepted: any) => {
+    setFeedbackMessageByCandidate((prev) => ({
+      ...prev,
+      [candidateId]: isAccepted ? 'Aceito' : 'Recusado',
+    }));
+
+    // Aqui, você pode chamar a função de aceitação ou recusa
+    if (isAccepted) {
+      handleAcceptCandidate(jobId, candidateId, userId);
+    } else {
+      handleRecusar(jobId, candidateId);
+    }
+
+    // Reseta o feedback message após a animação de deslizamento.
+    setTimeout(() => {
+      setFeedbackMessageByCandidate((prev) => ({
+        ...prev,
+        [candidateId]: null,
+      }));
+    }, 50);
+  };
+
   // Funções para recursar um candidato
   const handleRecusar = async (jobId: any, candidateId: any,) => {
     console.log("O item foi recusado!");
@@ -435,30 +492,6 @@ const App = () => {
     }
   };
 
-  // Busca de locais frequentes para o user
-  const getMostFrequentLocation = async (userId: any) => {
-    const { data, error } = await supabase
-      .from('solicitacoes_entrevista')
-      .select('local')
-      .eq('id_recrutador', userId);
-
-    if (error) {
-      console.error("Erro ao buscar os locais:", error);
-      return null;
-    }
-
-    // Contar a frequência de cada local
-    const locationCount = data.reduce((acc, { local }) => {
-      acc[local] = (acc[local] || 0) + 1;
-      return acc;
-    }, {});
-
-    // Obter o local mais frequente
-    const mostFrequentLocation = Object.keys(locationCount).reduce((a, b) => locationCount[a] > locationCount[b] ? a : b);
-
-    return mostFrequentLocation || null;
-  };
-
   const handleAcceptCandidate = async (jobId: any, candidateId: any, userId: any) => {
     // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
@@ -467,11 +500,15 @@ const App = () => {
     }
 
     try {
+      console.log(`Tentando aceitar o candidato: ID da Vaga: ${jobId}, ID do Candidato: ${candidateId}, ID do Recrutador: ${userId}`);
+
       // Defina os detalhes da entrevista
       const dataEntrevista = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
       const dataEntrevistaFormatada = dataEntrevista.toISOString().split('T')[0]; // Formato YYYY-MM-DD
       const horario = '10:00:00';
       const local = await getMostFrequentLocation(userId) || '';
+
+      console.log(`Data da Entrevista: ${dataEntrevistaFormatada}, Horário: ${horario}, Local: ${local}`);
 
       // Atualiza o status do candidato e insere a solicitação de entrevista em paralelo
       const [updateResponse, interviewResponse] = await Promise.all([
@@ -499,11 +536,15 @@ const App = () => {
 
       if (updateError || interviewError) {
         console.error("Erro ao atualizar a vaga ou criar a solicitação de entrevista:", updateError || interviewError);
+        console.log("Resposta da atualização:", updateResponse);
+        console.log("Resposta da inserção da entrevista:", interviewResponse);
         return;
       }
 
       console.log("Vaga atualizada e solicitação de entrevista criada com sucesso.");
       alert('Candidato aceito com sucesso, você pode editar os detalhes logo acima!');
+
+      // Fetch de dados adicionais
       fetchProfile();
       fetchJobOffersWithCandidates(userId);
       fetchJobOffers(userId);
@@ -521,6 +562,8 @@ const App = () => {
       }
 
       const candidateToken = candidateTokenData?.token;
+      console.log("Token do candidato encontrado:", candidateToken);
+
       if (candidateToken) {
         const notificationTitle = 'Boa notícia!';
         const notificationBody = 'Parabéns! Você foi aceito para uma entrevista. Confira os detalhes em seu aplicativo.';
@@ -537,7 +580,6 @@ const App = () => {
 
     } catch (error) {
       console.error('Erro ao processar a aceitação do candidato:', error);
-      // Aqui você pode lidar com erros, como exibir uma mensagem de erro
     }
   };
 
@@ -599,27 +641,6 @@ const App = () => {
   };
 
 
-  const handleAcceptOrReject = (jobId: any, candidateId: any, isAccepted: any) => {
-    setFeedbackMessageByCandidate((prev) => ({
-      ...prev,
-      [candidateId]: isAccepted ? 'Aceito' : 'Recusado',
-    }));
-
-    // Aqui, você pode chamar a função de aceitação ou recusa
-    if (isAccepted) {
-      handleAcceptCandidate(jobId, candidateId, userId);
-    } else {
-      handleRecusar(jobId, candidateId);
-    }
-
-    // Reseta o feedback message após a animação de deslizamento.
-    setTimeout(() => {
-      setFeedbackMessageByCandidate((prev) => ({
-        ...prev,
-        [candidateId]: null,
-      }));
-    }, 50);
-  };
 
   const getBackgroundColor = (animatedValue: any, feedbackMessage: any) => {
     if (feedbackMessage === 'Aceito') {
@@ -1244,7 +1265,7 @@ const App = () => {
       setRefreshing(false);
     }
   };
-  const truncateText = (text:any, limit:any) => {
+  const truncateText = (text: any, limit: any) => {
     if (!text) return 'Nome não disponível';
     return text.length > limit ? text.substring(0, limit) + '...' : text;
   };
@@ -1380,10 +1401,17 @@ const App = () => {
                   onPress={() => setFiltersVisible(!filtersVisible)}
                   style={[
                     styles.toggleButton,
-                    filtersVisible ? styles.buttonActive : styles.buttonInactive
+                    {
+                      backgroundColor: filtersVisible
+                        ? (colorScheme === 'dark' ? '#F07A26' : '#1F1F3F') 
+                        : (colorScheme === 'dark' ? '#4141A5FF' : '#F07A26'), 
+                      borderWidth: 1,
+                    },
                   ]}
                 >
-                  <Text style={styles.toggleButtonText}>{filtersVisible ? 'Ocultar Filtros' : 'Mostrar Filtros'}</Text>
+                  <Text style={{ color: filtersVisible ? '#FFFFFF' : (colorScheme === 'dark' ? '#FFFFFF' : '#000000') }}>
+                    {filtersVisible ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+                  </Text>
                   <Ionicons name={filtersVisible ? 'chevron-up' : 'chevron-down'} size={20} color="#fff" />
                 </TouchableOpacity>
 
@@ -1397,18 +1425,20 @@ const App = () => {
                       onChangeText={setSearchTerm}
                     />
                     <View>
-                      <Text style={[styles.label, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>Quantidade mínima de candidatos na vaga:</Text>
+                      <Text style={[styles.label, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+                        Quantidade mínima de candidatos na vaga:
+                      </Text>
                       <View style={styles.containerNumber}>
-                        <TouchableOpacity onPress={decrement} style={styles.button}>
+                        <TouchableOpacity onPress={() => setMinInscritos(prev => Math.max(1, prev - 1))} style={styles.button}>
                           <Text style={[styles.buttonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>-</Text>
                         </TouchableOpacity>
                         <TextInput
                           style={[styles.inputNumber, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}
                           keyboardType="numeric"
                           value={minInscritos.toString()}
-                          onChangeText={(text) => setMinInscritos(parseInt(text) || 0)}
+                          onChangeText={(text) => setMinInscritos(Math.max(1, parseInt(text) || 1))}
                         />
-                        <TouchableOpacity onPress={increment} style={styles.button}>
+                        <TouchableOpacity onPress={() => setMinInscritos(prev => prev + 1)} style={styles.button}>
                           <Text style={styles.buttonText}>+</Text>
                         </TouchableOpacity>
                       </View>
@@ -1463,7 +1493,7 @@ const App = () => {
                       key={job.id}
                       style={[
                         styles.jobContainer,
-                        { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+                        { backgroundColor: colorScheme === 'dark' ? (index % 2 === 0 ? '#4141A5FF' : '#F07A26') : (index % 2 === 0 ? '#1F1F3F' : '#F07A26') }
                       ]}
                       animation="bounceIn"
                       duration={500}
@@ -1566,7 +1596,7 @@ const App = () => {
                   key={job.id}
                   style={[
                     styles.jobContainer,
-                    { backgroundColor: index % 2 === 0 ? '#1F1F3F' : '#F07A26' }
+                    { backgroundColor: colorScheme === 'dark' ? (index % 2 === 0 ? '#4141A5FF' : '#F07A26') : (index % 2 === 0 ? '#1F1F3F' : '#F07A26') }
                   ]}
                   animation="bounceIn"
                   duration={500}
@@ -1660,8 +1690,7 @@ const App = () => {
                 style={styles.customButton}
                 onPress={() => {
                   setShowNoConnection(false);
-                  // Você pode adicionar lógica aqui para tentar recarregar os dados
-                  fetchInterviewCounts(userId); // Tenta recarregar os dados
+                  fetchInterviewCounts(userId);
                 }}
               >
                 <Text style={styles.buttonText}>Tentar novamente</Text>
@@ -1677,10 +1706,12 @@ const App = () => {
             onRequestClose={closeModal}
           >
             <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
+              <View style={[styles.modalContent, { backgroundColor: colorScheme === 'dark' ? '#1F1F3F' : '#FFFFFF' }]}>
                 {selectedCandidate && (
                   <>
-                    <Text style={styles.modalTitle}>Detalhes do Candidato</Text>
+                    <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+                      Detalhes do Candidato
+                    </Text>
                     <View style={styles.imageContainer}>
                       <Image
                         source={selectedCandidate.candidatos.foto_perfil ? { uri: selectedCandidate.candidatos.foto_perfil } : require('../../assets/perfil.png')}
@@ -1702,30 +1733,39 @@ const App = () => {
                       }}
                     >
                       <View style={styles.buttonContent}>
-                        <Ionicons name="chatbubble-outline" size={20} color="#ff8c00" />
+                        <Ionicons name="chatbubble-outline" size={20} color="#FF8D02FF" />
                         <Text style={styles.buttonTexnavegacao}>Conversar com o Candidato</Text>
                       </View>
 
                     </TouchableOpacity>
-                    <Text style={styles.modalText}>
+                    <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
                       <Text style={styles.modalLabel}>Nome: </Text>
                       {selectedCandidate.candidatos.nome || 'Nome não disponível'}
                     </Text>
-                    <Text style={styles.modalText}>
+                    <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
                       <Text style={styles.modalLabel}>Email: </Text>
                       {selectedCandidate.candidatos.email || 'Email não disponível'}
                     </Text>
 
                     {/* Campo de input para digitar o local */}
                     <TextInput
-                      style={{ borderColor: '#FF8C00', borderWidth: 1, height: 40, padding: 10 }}
-                      placeholder="Digite o local"
+                      style={[
+                        {
+                          color: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+                          borderColor: '#FF8C00',
+                          borderWidth: 1,
+                          height: 40,
+                          padding: 10,
+                          marginBottom: 30
+                        }
+                      ]} placeholder="Digite o local"
                       value={location}
                       onChangeText={handleInputChange}
-                      placeholderTextColor="#888"
+                      placeholderTextColor={colorScheme === 'dark' ? '#FFFFFF' : '#888'}
                       selectionColor="#FF8C00"
                       underlineColorAndroid="transparent"
                     />
+
                     {/* Mapa para seleção do local */}
                     <View style={{ height: 300 }}>
                       <MapView
@@ -1823,10 +1863,10 @@ const App = () => {
     // Se o usario for do tipo Candidato
     return (
       <ScrollView
-      contentContainerStyle={[
-        styles.container,
-        { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }, // Altera a cor de fundo
-      ]}
+        contentContainerStyle={[
+          styles.container,
+          { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }, // Altera a cor de fundo
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
