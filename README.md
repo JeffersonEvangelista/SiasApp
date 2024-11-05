@@ -113,29 +113,15 @@ Para fazer essa mudança:
 
 ## Imagens do APP
 
-<div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
-  <div style="flex: 0 0 48%; margin-bottom: 10px;">
-    <img src="/img/cadastro.jpg" alt="Tela de Cadastro" style="width: 100%;"/>
-  </div>
-  <div style="flex: 0 0 48%; margin-bottom: 10px;">
-    <img src="/img/login.jpg" alt="Tela de Login" style="width: 100%;"/>
-  </div>
-  <div style="flex: 0 0 48%; margin-bottom: 10px;">
-    <img src="/img/home.jpg" alt="Tela de Home" style="width: 100%;"/>
-  </div>
-  <div style="flex: 0 0 48%; margin-bottom: 10px;">
-    <img src="/img/Agenda.jpg" alt="Tela de Agenda" style="width: 100%;"/>
-  </div>
-  <div style="flex: 0 0 48%; margin-bottom: 10px;">
-    <img src="/img/Chat.jpg" alt="Tela de Chat" style="width: 100%;"/>
-  </div>
-  <div style="flex: 0 0 48%; margin-bottom: 10px;">
-    <img src="/img/chatbot.jpg" alt="Tela de Chatbot" style="width: 100%;"/>
-  </div>
-  <div style="flex: 0 0 48%; margin-bottom: 10px;">
-    <img src="/img/Configuração.jpg" alt="Tela de Configuração" style="width: 100%;"/>
-  </div>
-</div>
+| Tela de Cadastro | Tela de Login |
+|------------------|---------------|
+| ![Tela de Cadastro](/img/cadastro.jpg) | ![Tela de Login](/img/login.jpg) |
+| Tela de Home     | Tela de Agenda |
+| ![Tela de Home](/img/home.jpg) | ![Tela de Agenda](/img/Agenda.jpg) |
+| Tela de Chat     | Tela de Chatbot |
+| ![Tela de Chat](/img/Chat.jpg) | ![Tela de Chatbot](/img/chatbot.jpg) |
+| Tela de Configuração |       |
+| ![Tela de Configuração](/img/Configuração.jpg) |       |
 
 
 
