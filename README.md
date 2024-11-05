@@ -1,159 +1,198 @@
-
-# Sias App 
+# Sias App
 
 Este repositório é dedicado ao desenvolvimento do aplicativo SIAS.
 
 Para garantir a eficiência e a clareza ao longo do projeto, adotamos uma abordagem colaborativa envolvendo todos os membros da equipe. Utilizamos a metodologia de arquitetura C4 (Context, Containers, Components, and Code), que nos proporcionou uma estrutura robusta e bem-organizada. Essa abordagem ajudou a estruturar o desenvolvimento de forma coesa e a gerenciar o sistema de maneira eficaz.
 
+**Aviso:** Este projeto é uma extensão da versão web do SIAS, que lida com entrevistas, solicitações de entrevistas e agendamentos. No entanto, no aplicativo, as funcionalidades de criação de vagas e inscrição nelas não estão disponíveis. Portanto, contas novas podem não ter acesso a todas as funcionalidades que estão presentes "em contas mais antigas".
 
-## Pré-requisitos
+## Descrição das Funcionalidades
 
-Antes de rodar o projeto, certifique-se de que você tem as seguintes ferramentas instaladas na sua máquina:
-
-- [Node.js](https://nodejs.org/) (versão recomendada: LTS)
-- [npm](https://www.npmjs.com/) ou [Yarn](https://yarnpkg.com/) (gerenciador de pacotes)
-- [Expo CLI](https://docs.expo.dev/get-started/installation/) (se você estiver usando Expo)
-- [Git](https://git-scm.com/) (para versionamento e controle de código)
-- [Expo GO](https://expo.dev/go) (para versionamento e controle de código)
-- Ou 
-- [Android Studio](https://developer.android.com/studio?hl=pt-br) (para versionamento e controle de código)
-
-
-## Instalação
-
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/JeffersonEvangelista/SiasApp 
-   ```
-
-2. Navegue até o diretório do projeto:
- ```bash
-   cd seu-repositorio 
-   ```
-
-3. Abra o seu terminal:
- ```bash
-   1. npm install expo
-   2. npm install -g expo-cli  (Opcional) Instale o Expo CLI globalmente, se ainda não o fez: 
-   3. npm install
-   4. npx expo start
-   ```
-   
-
-## Rodando localmente
-
-### Usando Expo Go
-
-1. Inicie o servidor de desenvolvimento:
-   ```bash
-   npm run start
-   ```
-ou, se você tiver o Expo CLI instalado globalmente:
- ```bash
-    expo start
-   ```
-
-2. Abra o Expo Go
-- No seu dispositivo móvel: Instale o aplicativo [Expo Go](https://expo.dev/go) da Play Store (Android) ou App Store (iOS).
-- No Expo Go: Use o aplicativo para escanear o QR code exibido no terminal ou na página que se abrirá no seu navegador após iniciar o servidor.
-
-3. Teste o aplicativo:
-- O aplicativo será carregado e exibido no seu dispositivo móvel.
-
-
-###  Usando Android Studio
-
-1. Inicie o servidor de desenvolvimento:
-
-```bash
-    npm run start
-   ``` 
-   ou, se você tiver o Expo CLI instalado globalmente:
-```bash
-    expo start
-
-``` 
-
-2. Configure o emulador Android:
-
-- Abra o Android Studio e inicie um emulador Android. Se você ainda não tiver um emulador configurado, você pode criar um novo dispositivo virtual através do Android Studio.
-3. Inicie o aplicativo no emulador:
-
-- No terminal onde o servidor de desenvolvimento está rodando, pressione a para abrir o aplicativo no emulador Android.
-4. Teste o aplicativo:
-
-- O aplicativo será carregado e exibido no emulador Android.
-
-### Atenção
-
-Ao iniciar o projeto, ele pode aparecer como **"Using development build"**. Para que funcione corretamente no Expo Go, é necessário estar no modo **"Using Expo Go"**.
-
-Para fazer essa mudança:
-
-- Clique na letra **"S"** no canto inferior direito da tela do Expo.
-## Visão Geral
-
-O **SIAS** é projetado para otimizar a gestão de entrevistas realizadas pelo setor de Recursos Humanos. Nosso objetivo é proporcionar facilidade e agilidade tanto para o RH quanto para os candidatos.
+O **SIAS** é projetado para otimizar a gestão de entrevistas realizadas pelo setor de Recursos Humanos, proporcionando facilidade e agilidade tanto para o RH quanto para os candidatos.
 
 ### Funcionalidades
 
 #### Para o RH
-- **Envio de Solicitações**: O RH pode enviar solicitações detalhadas para candidatos qualificados.
-- **Detalhes das Solicitações**: As solicitações incluem informações como data, horário e local da entrevista.
+ - **Envio de Solicitações**: O RH pode enviar solicitações detalhadas para candidatos qualificados.
+  - **Detalhes das Solicitações**: Cada solicitação inclui informações como data, horário e local da entrevista, garantindo que o candidato tenha todos os dados necessários.
 
 #### Para os Candidatos
-- **Gerenciamento de Solicitações**: Os candidatos podem acessar a aba de gerenciamento para visualizar e gerenciar as solicitações recebidas.
-- **Respostas**: Os candidatos podem aceitar ou recusar as solicitações recebidas de uma determinada empresa.
+ - **Gerenciamento de Solicitações**: Os candidatos podem acessar uma aba de gerenciamento para visualizar e acompanhar todas as solicitações recebidas.
+ - **Respostas às Solicitações**: Os candidatos têm a opção de aceitar ou recusar as solicitações recebidas de uma empresa específica.
+
+#### Funcionalidades Comuns
+- **Chatbot de Suporte**: Disponível para RH e candidatos, o chatbot responde às dúvidas mais frequentes relacionadas à conta e uso da plataforma, proporcionando suporte rápido e acessível.
+- **Modo de Treinamento para Entrevistas**: Uma ferramenta prática que auxilia candidatos a se prepararem para entrevistas, com perguntas simuladas e orientações úteis, aumentando a confiança e o preparo dentro do chatbot.
 
 ### Benefícios
+- **Facilidade e Agilidade**: Facilita o processo de agendamento de entrevistas e melhora a comunicação entre RH e candidatos, tornando o fluxo mais eficiente para ambas as partes.
+- **Suporte Prático**: Com o chatbot integrado e o modo de treino, o SIAS oferece suporte e orientação contínua para candidatos e RH, aprimorando a experiência de uso.
 
-- **Facilidade e Agilidade**: Facilita o processo de agendamento de entrevistas e a comunicação entre RH e candidatos.
+## Instalação
+
+1. Clone o repositório:
+
+```bash
+git clone https://github.com/JeffersonEvangelista/SiasApp
+```
+
+2. Navegue até o diretório do projeto:
+```bash
+cd SiasApp
+```
+3. Instale as dependências e configure o ambiente:
+- Instale o Expo (se ainda não o fez):
+```bash
+npm install expo
+```
+- Instale o Expo CLI globalmente
+ ```bash
+npm install -g expo-cli
+```
+- Instale as dependências do projeto:
+```bash
+npm install
+```
+- Inicie o servidor de desenvolvimento:
+```bash
+npx expo start
+```
+Ou se preferir, inicie sem login com o modo anônimo
+```bash
+npx expo start --no-auth
+```
+
+
+
+## Rodando Localmente
+
+### Usando Expo Go
+
+1. Inicie o servidor de desenvolvimento:
+
+- Com login no Expo
+```bash
+npx expo start 
+```
+- Sem login, no modo anônimo:
+```bash
+npx expo start --no-auth  
+```
+2. Abra o Expo Go:
+- **No dispositivo móvel:** Instale o aplicativo Expo Go pela Play Store (Android) ou App Store (iOS).
+- **No Expo Go:** Use o aplicativo para escanear o QR code exibido no terminal ou na página que abrirá no navegador.
+
+3. Teste o aplicativo:
+
+- O aplicativo será carregado e exibido no seu dispositivo móvel.
+
+### Usando Android Studio
+
+1. Inicie o servidor de desenvolvimento:
+
+- Com login no Expo
+```bash
+npx expo start 
+```
+- Sem login, no modo anônimo:
+```bash
+npx expo start --no-auth  
+```
+2. Configure o emulador Android:
+- **Abra o Android Studio** e inicie um emulador Android. Se ainda não tiver um emulador configurado, você pode criar um novo dispositivo virtual através do Android Studio
+
+3. Inicie o aplicativo no emulador:
+
+- No terminal onde o servidor de desenvolvimento está rodando, pressione "a" para abrir o aplicativo no emulador Android.
+
+### Atenção
+Ao iniciar o projeto, ele pode aparecer como "Using development build". Para que funcione corretamente no Expo Go, é necessário estar no modo "Using Expo Go".
+
+Para fazer essa mudança:
+  - Clique na letra **"S"** no canto inferior direito da tela do Expo.
+
+## Imagens do APP
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
+  <div style="flex: 0 0 48%; margin-bottom: 10px;">
+    <img src="/img/cadastro.jpg" alt="Tela de Cadastro" style="width: 100%;"/>
+  </div>
+  <div style="flex: 0 0 48%; margin-bottom: 10px;">
+    <img src="/img/login.jpg" alt="Tela de Login" style="width: 100%;"/>
+  </div>
+  <div style="flex: 0 0 48%; margin-bottom: 10px;">
+    <img src="/img/home.jpg" alt="Tela de Home" style="width: 100%;"/>
+  </div>
+  <div style="flex: 0 0 48%; margin-bottom: 10px;">
+    <img src="/img/Agenda.jpg" alt="Tela de Agenda" style="width: 100%;"/>
+  </div>
+  <div style="flex: 0 0 48%; margin-bottom: 10px;">
+    <img src="/img/Chat.jpg" alt="Tela de Chat" style="width: 100%;"/>
+  </div>
+  <div style="flex: 0 0 48%; margin-bottom: 10px;">
+    <img src="/img/chatbot.jpg" alt="Tela de Chatbot" style="width: 100%;"/>
+  </div>
+  <div style="flex: 0 0 48%; margin-bottom: 10px;">
+    <img src="/img/Configuração.jpg" alt="Tela de Configuração" style="width: 100%;"/>
+  </div>
+</div>
+
+
 
 ## Ferramentas Utilizadas
 
 O desenvolvimento do **SIAS Mobile** envolve várias ferramentas essenciais que garantem o funcionamento eficiente do aplicativo. As ferramentas incluem tecnologias para a interface do usuário, linguagens de programação e bancos de dados para gerenciar a lógica do servidor e o armazenamento de dados, além de ferramentas adicionais para desenvolvimento e testes.
 
-| Ferramenta     | Descrição                                                         | Uso no Projeto                                                 |
-|----------------|-------------------------------------------------------------------|----------------------------------------------------------------|
-| **Firebase**   | Plataforma de desenvolvimento do Google com diversas ferramentas e serviços. | Utilizado para autenticação e gerenciamento de dados em tempo real. |
-| **Supabase**   | Plataforma de banco de dados de código aberto.                    | Utilizado para gerenciamento de banco de dados e autenticação. |
-| **Expo Go**    | Aplicativo que permite visualizar e testar aplicativos Expo no dispositivo móvel. | Utilizado para testar e visualizar o aplicativo durante o desenvolvimento. |
-| **Postman**    | Ferramenta para testar APIs e endpoints.                           | Utilizado para testar e depurar chamadas de API durante o desenvolvimento. |
-| **Visual Studio Code (VSCode)** | Editor de código fonte leve e poderoso da Microsoft. | Utilizado como IDE principal para desenvolvimento do código-fonte do aplicativo. |
-| **Figma**      | Ferramenta de design colaborativo para criação de interfaces de usuário. | Utilizada para design e prototipagem das interfaces do SIAS.    |
-| **Android Studio** | Ambiente de desenvolvimento integrado (IDE) para Android.        | Utilizado para desenvolvimento e testes do aplicativo Android. |
-| **Trello**     | Ferramenta de gestão de projetos e tarefas.                       | Utilizada para organização e acompanhamento do progresso do projeto. |
+| **Ferramenta**               | **Descrição**                                                         | **Uso no Projeto**                                           |
+|------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------|
+| **Firebase**                 | Plataforma do Google que oferece diversas ferramentas e serviços.     | Utilizada para autenticação e gerenciamento de dados em tempo real. |
+| **Supabase**                 | Plataforma de banco de dados de código aberto, alternativa ao Firebase.| Utilizada para gerenciamento de banco de dados. |
+| **Expo Go**                  | Aplicativo que permite visualizar e testar aplicativos Expo em dispositivos móveis. | Utilizado para testar e visualizar o aplicativo durante o desenvolvimento. |
+| **Postman**                  | Ferramenta para testar APIs e seus endpoints.                         | Utilizada para testar e depurar chamadas de API durante o desenvolvimento. |
+| **Visual Studio Code (VSCode)** | Editor de código-fonte leve e poderoso da Microsoft.               | Utilizado como IDE principal para desenvolvimento do código-fonte do aplicativo. |
+| **Figma**                    | Ferramenta de design colaborativo para criação de interfaces de usuário. | Utilizada para design e prototipagem das interfaces do SIAS. |
+| **Android Studio**           | Ambiente de desenvolvimento integrado (IDE) para aplicativos Android.  | Utilizado para desenvolvimento e testes do aplicativo Android. |
+| **Trello**                   | Ferramenta de gestão de projetos e tarefas.                           | Utilizada para organizar e acompanhar o progresso do projeto. |
 
 ## Tecnologias Fundamentais
 
 O **SIAS Mobile** utiliza uma combinação de tecnologias modernas para proporcionar uma experiência rica e interativa no aplicativo. A principal tecnologia utilizada é o **React Native** com o **Expo**, que facilita o desenvolvimento e o teste do aplicativo em dispositivos móveis.
 
-| Tecnologia              | Descrição                                                        | Uso no Projeto                                                 |
-|-------------------------|------------------------------------------------------------------|----------------------------------------------------------------|
-| **React Native**        | Framework de desenvolvimento de aplicativos móveis usando JavaScript e React. | Utilizado para construir a interface do usuário e a lógica do aplicativo de forma nativa para Android e iOS. |
-| **Expo**                | Conjunto de ferramentas e serviços para desenvolvimento com React Native. | Facilita o desenvolvimento, testes e construção do aplicativo, fornecendo APIs e ferramentas adicionais para melhorar a produtividade. |
-| **React Navigation**    | Biblioteca para gerenciamento de navegação em aplicativos React Native. | Utilizada para criar e gerenciar a navegação entre telas e rotas no aplicativo. |
-| **React Native Paper**  | Biblioteca de componentes UI para React Native, seguindo as diretrizes do Material Design. | Utilizada para construir interfaces de usuário com componentes estilizados e consistentes. |
-| **React Native Elements** | Biblioteca de componentes UI para React Native com um design unificado. | Utilizada para fornecer componentes prontos para uso e customizáveis, melhorando a consistência e eficiência do desenvolvimento. |
-| **Google Calendar API** | API para integração com o Google Calendar.                       | Utilizada para gerenciamento e sincronização de eventos no calendário. |
-| **ChatBot**             | API para integração com chatbots e serviços de mensagem.          | Utilizada para suporte e interação com os usuários através de chatbots. |
- e Etc 
+| **Tecnologia**                      | **Descrição**                                                        | **Uso no Projeto**                                                 |
+|-------------------------------------|--------------------------------------------------------------------|-------------------------------------------------------------------|
+| **React Native**                    | Framework de desenvolvimento de aplicativos móveis usando JavaScript e React. | Utilizado para construir a interface do usuário e a lógica do aplicativo de forma nativa para Android e iOS. |
+| **Expo**                            | Conjunto de ferramentas e serviços para desenvolvimento com React Native. | Facilita o desenvolvimento, testes e construção do aplicativo, fornecendo APIs e ferramentas adicionais para melhorar a produtividade. |
+| **Nominatim**                       | Serviço de geolocalização baseado em dados do OpenStreetMap.       | Utilizado para obter informações de localização e nomes de ruas a partir de coordenadas geográficas. |
+| **Push Notifications API (https://exp.host/--/api/v2/push/send)** | API para envio de notificações push em aplicativos Expo.           | Utilizada para enviar notificações aos usuários sobre eventos importantes, como lembretes de entrevistas. |
+| **Gemini**                          | API para simulação de entrevistas e modo de treino.                | Utilizada para preparar candidatos através de simulações de entrevistas, ajudando-os a praticar suas respostas. |
+| **@react-navigation/native**        | Biblioteca para gerenciamento de navegação em aplicativos React Native. | Usada para implementar a navegação entre diferentes telas do aplicativo, permitindo uma experiência de usuário fluida. |
+| **@react-native-firebase/auth**     | Biblioteca para autenticação usando Firebase.                        | Utilizada para gerenciar o registro e autenticação de usuários, oferecendo login com e-mail e redes sociais. |
+| **expo-location**                   | API para acessar informações de localização e geolocalização.      | Utilizada para obter a localização atual do usuário e permitir funcionalidades baseadas em localização, como agendamento de entrevistas. |
+| **expo-notifications**              | API para gerenciar e enviar notificações push.                     | Utilizada para configurar e disparar notificações para os usuários em diferentes eventos do aplicativo. |
+| **react-native-maps**               | Biblioteca para integração de mapas no aplicativo.                  | Usada para exibir mapas e permitir que os usuários selecionem locais de entrevistas. |
+| **react-native-elements**           | Biblioteca de componentes de UI para React Native.                  | Utilizada para criar uma interface visualmente atraente e consistente, utilizando componentes prontos. |
+| **lottie-react-native**             | Biblioteca para animações Lottie em aplicativos React Native.        | Utilizada para adicionar animações dinâmicas e interativas, melhorando a experiência do usuário. |
+| **@supabase/supabase-js**          | Biblioteca para interação com o Supabase, gerenciando dados e autenticação. | Utilizada para operações CRUD no banco de dados e gerenciamento de autenticação de usuários. |
+
+
+Outras dependências incluem suporte a armazenamento assíncrono, controle de estado e manipulação de animações, que contribuem para uma experiência de usuário fluida e agradável.
+
 
  ## Equipe de Desenvolvimento
 
 O projeto **SIAS Mobile** é desenvolvido por um time talentoso de estudantes da FATEC Zona Sul. Cada membro traz habilidades únicas e desempenha um papel essencial para o sucesso do projeto. Conheça nossa equipe:
 
-- **[Davi de Brito Junior](https://github.com/DaveBrito)** - *Líder, Desenvolvedor Full-Stack*
+- **[Davi de Brito Junior](https://github.com/DaveBrito)** 
   
 
-- **[Eric Peneres Carneiro](https://github.com/EricW900)** - *Desenvolvedor Full-Stack*
+- **[Eric Peneres Carneiro](https://github.com/EricW900)** 
  
 
-- **[Pedro Borges de Jesus](https://github.com/B0rga)** - *Desenvolvedor Full-Stack*
+- **[Pedro Borges de Jesus](https://github.com/B0rga)** 
  
-- **[Jefferson Moreira Evangelista](https://github.com/JeffersonEvangelista)** - *Desenvolvedor Full-Stack*
+- **[Jefferson Moreira Evangelista](https://github.com/JeffersonEvangelista)** 
  
-- **[Wesley Silva dos Santos](https://github.com/WesleyS08)** - *Líder, Desenvolvedor Full-Stack*
+- **[Wesley Silva dos Santos](https://github.com/WesleyS08)** 
 
 
 Cada membro da equipe traz uma combinação de habilidades técnicas e criatividade para garantir que o **SIAS Mobile** ofereça a melhor experiência possível para os usuários. Estamos comprometidos em criar um aplicativo eficiente e inovador, aproveitando ao máximo as habilidades e o conhecimento de cada um.
