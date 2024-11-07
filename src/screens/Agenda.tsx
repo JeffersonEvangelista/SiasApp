@@ -16,11 +16,10 @@ import LottieView from "lottie-react-native";
 import NetInfo from '@react-native-community/netinfo';
 import { sendPushNotification } from "../components/Notificacao";
 import { TextInput } from "react-native";
-
 import { useColorScheme } from 'nativewind';
-import colors from "./Styles/colors";
 
 export default function Agenda() {
+  const [isFocused, setIsFocused] = useState(false);
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -969,6 +968,8 @@ export default function Agenda() {
                       setSelectedCandidateId(null);
                     }
                   }}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
                 />
 
                 {/* Lista de sugestões */}
@@ -983,7 +984,15 @@ export default function Agenda() {
                         setSuggestions([]);
                       }}
                     >
-                      <View style={{ padding: 10, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center' }}>
+                      <View
+                        style={{
+                          padding: 10,
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#d77906',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                        }}
+                      >
                         {item.foto_perfil ? (
                           <Image source={{ uri: item.foto_perfil }} style={styles.photo} />
                         ) : (
@@ -997,11 +1006,11 @@ export default function Agenda() {
                             {item.email}
                           </Text>
                         </View>
-
                       </View>
                     </TouchableOpacity>
                   )}
                 />
+
               </View>
 
               {/* Componente de calendário */}
@@ -1049,7 +1058,7 @@ export default function Agenda() {
             {showLegend && (
               <View style={[
                 styles.legendContainer,
-                { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' } // Fundo preto no dark mode
+                { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' } 
               ]}>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#ff8c00' }]} />
@@ -1100,7 +1109,7 @@ export default function Agenda() {
                   )}
                 />
               ) : (
-                <Text>Nenhuma entrevista pendente.</Text>
+                <Text style={{ color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>Nenhuma entrevista pendente.</Text>
               )}
 
               {/* Seção para entrevistas aceitas */}

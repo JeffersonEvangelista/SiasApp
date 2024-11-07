@@ -117,7 +117,7 @@ export default function App() {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
             Alert.alert('Permissão necessária', 'Desculpe, precisamos de permissões para acessar sua galeria.');
-            return; // Se não houver permissão, interrompa a execução
+            return;
           }
         }
 
@@ -136,7 +136,7 @@ export default function App() {
           if (candidato) {
             setUserId(candidato.id);
             setIsCandidato(true);
-            setUserType('candidato'); // Define o tipo de usuário como 'candidato'
+            setUserType('candidato');
             console.log(`Candidato encontrado: ${candidato.nome}`);
 
             // Salvar os dados em variáveis globais
@@ -434,68 +434,48 @@ export default function App() {
 
     return trainVariations.some(variation => message.toLowerCase().includes(variation));
   };
-// Função para gerar a pergunta de entrevista baseada no perfil do entrevistado
-const generateInterviewQuestionPrompt = (interviewState: any) => {
-  console.log("Gerando prompt de pergunta de entrevista...");
+  // Função para gerar a pergunta de entrevista baseada no perfil do entrevistado
+  const generateInterviewQuestionPrompt = (interviewState: any) => {
+    console.log("Gerando prompt de pergunta de entrevista Candidato...");
 
-  // Variável para armazenar o prompt de maneira condicional
-  let prompt = '';
-
-  // Verifica se o usuário é um "candidato" ou um "recrutador"
-  if (interviewState.userType === "candidato") {
-    prompt = `
+    // Variável para armazenar o prompt de maneira condicional
+    let prompt = '';
+    if (interviewState.userType === "candidato") {
+      prompt = `
     Você é um entrevistador experiente que está conduzindo uma entrevista para a posição de ${interviewState.userPosition}.
     O candidato tem ${interviewState.userExperienceLevel} anos de experiência e formação em ${interviewState.userEducation}.
     Me gere apenas uma pergunta de cada vez, sem a necessidade de explicar o motivo, mas leve em consideração os elementos anteriores para que a pergunta esteja alinhada com o nível do candidato e a vaga desejada.
     `;
-  } else if (interviewState.userType === "recrutador") {
-    prompt = `
-    Você é um entrevistador experiente que está conduzindo uma entrevista para a posição de Recrutador (${interviewState.userPosition}).
-    O entrevistado tem ${interviewState.userExperienceLevel} anos de experiência em recrutamento e formação em ${interviewState.userEducation}.
-    Me gere apenas uma pergunta de cada vez, sem a necessidade de explicar o motivo, mas leve em consideração os elementos anteriores para que a pergunta aborde tópicos relevantes para a área de recrutamento, como:
-    - Avaliação de competências dos candidatos
-    - Comunicação interpessoal
-    - Gestão de processos de seleção
-    - Experiência com ferramentas de recrutamento
-    `;
-  }
+    } else {
+      console.log("Gerando prompt de pergunta de entrevista RH...");
 
-  console.log("Prompt de pergunta de entrevista gerado:", prompt);
-  return prompt;
-};
+      let prompt = '';
+      prompt = `
+      Você deve atuar como um entrevistador de RH para uma posição de recrutador ${interviewState.userExperienceLevel} com foco em  ${interviewState.userPosition}.
+      Gere uma pergunta que avalie a capacidade do candidato em ${interviewState.userExperienceLevel} e que esteja alinhada com os valores da empresa, que são: inovação, colaboração e resultado.
+      Porém, não precisa de título, e nem da explicação da pergunta, apenas a pergunta em si.
+      `;
+    }
+    console.log("Prompt de pergunta de entrevista gerado:", prompt);
+    return prompt;
+  };
 
-// Função para coletar informações do usuário durante a entrevista
-const getCollectInfoMessage = (message: string) => {
-  if (interviewState.step === 0) {
-    setInterviewState((prev) => ({ ...prev, userType: message.toLowerCase() === "recrutador" ? "recrutador" : "candidato", step: 1 }));
-    return { id: uuidv4(), text: "Para qual posição você está se candidatando?", sender: "bot" };
-  } else if (interviewState.step === 1) {
-    setInterviewState((prev) => ({ ...prev, userPosition: message, step: 2 }));
-    return { id: uuidv4(), text: "Qual é o seu nível de experiência para essa posição?", sender: "bot" };
-  } else if (interviewState.step === 2) {
-    setInterviewState((prev) => ({ ...prev, userExperienceLevel: message, step: 3 }));
-    return { id: uuidv4(), text: "Qual é a sua formação?", sender: "bot" };
-  } else if (interviewState.step === 3 && !interviewState.informationCollected) {
-    setInterviewState((prev) => ({ ...prev, userEducation: message, informationCollected: true }));
-    return { id: uuidv4(), text: "Agora que tenho suas informações, vamos começar a sua entrevista, ok?", sender: "bot" };
-  }
-  return null;
-};
 
-// Função para gerar o prompt de feedback com base no desempenho
-const generateFeedbackPrompt = (interviewState: any) => {
-  console.log("Gerando prompt de feedback...");
 
-  // Formatação das perguntas e respostas
-  const questionsAnswersText = interviewState.questionsAndAnswers
-    .map((q) => `Pergunta: ${q.question}\nResposta: ${q.answer || "Resposta não fornecida"}`)
-    .join("\n\n");
+  // Função para gerar o prompt de feedback com base no desempenho
+  const generateFeedbackPrompt = (interviewState: any) => {
+    console.log("Gerando prompt de feedback...");
 
-  // Gerar o prompt de feedback com base no tipo de usuário (candidato ou recrutador)
-  let feedbackPrompt = '';
+    // Formatação das perguntas e respostas
+    const questionsAnswersText = interviewState.questionsAndAnswers
+      .map((q) => `Pergunta: ${q.question}\nResposta: ${q.answer || "Resposta não fornecida"}`)
+      .join("\n\n");
 
-  if (interviewState.userType === "recrutador") {
-    feedbackPrompt = `
+    // Gerar o prompt de feedback com base no tipo de usuário (candidato ou recrutador)
+    let feedbackPrompt = '';
+
+    if (interviewState.userType === "recrutador") {
+      feedbackPrompt = `
     Você é um entrevistador experiente que acabou de conduzir uma entrevista com base nas seguintes informações:
     - Posição: ${interviewState.userPosition}
     - Nível de experiência: ${interviewState.userExperienceLevel} anos em recrutamento
@@ -507,8 +487,8 @@ const generateFeedbackPrompt = (interviewState: any) => {
     Informe os pontos fortes, as áreas a melhorar, e uma avaliação geral de como o recrutador lidaria com o processo de seleção e gestão de candidatos.
     Use um tom construtivo e oriente se você recomendaria o recrutador para a vaga.
     `;
-  } else {
-    feedbackPrompt = `
+    } else {
+      feedbackPrompt = `
     Você é um entrevistador experiente que acabou de conduzir uma entrevista com base nas seguintes informações:
     - Posição: ${interviewState.userPosition}
     - Nível de experiência: ${interviewState.userExperienceLevel} anos
@@ -525,12 +505,11 @@ const generateFeedbackPrompt = (interviewState: any) => {
 
     Use um tom construtivo e, por fim, informe se você contrataria esse candidato ou não.
     `;
-  }
+    }
 
-  console.log("Prompt de feedback gerado:", feedbackPrompt);
-  return feedbackPrompt;
-};
-
+    console.log("Prompt de feedback gerado:", feedbackPrompt);
+    return feedbackPrompt;
+  };
   const handleTrainRequest = async (message: string) => {
     console.log("Iniciando treinamento...");
     setIsTrainingMode(true);
@@ -539,16 +518,7 @@ const generateFeedbackPrompt = (interviewState: any) => {
     startTypingAnimation();
 
     try {
-      // Verifica se as mensagens de explicação já foram exibidas
-      if (!interviewState.explanationGiven) {
-        const botMessages = [
-          { id: uuidv4(), text: "Lembre-se isso é apenas um treino", sender: 'bot' },
-          { id: uuidv4(), text: "Não significa nada.", sender: 'bot' },
-          { id: uuidv4(), text: "Quando quiser terminar o treino basta escrever 'Encerrar'.", sender: 'bot' },
-        ];
-        setMessages(prevMessages => [...prevMessages, ...botMessages]);
-        setInterviewState({ ...interviewState, explanationGiven: true });
-      }
+
 
       // Inicializa a instância do GoogleGenerativeAI
       const API_KEY = 'AIzaSyAipfv2TKBNwxjDyCbW8iol0PgBFYB9LYY';
@@ -604,20 +574,71 @@ const generateFeedbackPrompt = (interviewState: any) => {
     }
   };
 
+
   // Função para gerar uma introdução amigável
   const generateIntroduction = async (genAI: any) => {
     const introPrompt = `
     Crie uma mensagem de boas-vindas para iniciar uma entrevista de emprego.
         O tom deve ser amigável e profissional.
         A mensagem deve incluir os seguintes elementos:
-        1. Uma apresentação do entrevistador, incluindo um nome fictício (ex: "Olá, eu sou o Lucas Pereira").
-        2. Crie Um nome fictício para a empresa, que seja inivador e criativo.
-        3. Uma expressão de entusiasmo para conhecer o candidato
-        Certifique-se de que a mensagem seja acolhedora e incentive o candidato a se sentir à vontade durante a entrevista.
-  `;
+        1. Um nome fictício para o entrevistador, seguido de uma breve apresentação. Sendo do cargo de RH da empresa.
+        2. Me gere um nome para essa empresa também, caso não tenha nenhuma ideia use a empresa "Sias".
+        3. Uma expressão de entusiasmo para conhecer o candidato, porém não precisa falar o nome dele.
+        A mensagem deve ser acolhedora e incentivar o candidato a se sentir à vontade durante a entrevista.
+    `;
+
     const introResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }).generateContent(introPrompt);
-    return introResult?.response?.text?.();
+    const introText = introResult?.response?.text?.();
+
+    const trainingMessage = "Lembre-se, isso é apenas um treino.\nNão significa nada.\nQuando quiser terminar o treino, basta escrever 'Encerrar'.";
+
+    return `${introText}\n\n${trainingMessage}`;
   };
+
+
+
+  // Função para coletar informações do usuário durante a entrevista
+  const getCollectInfoMessage = (message: string) => {
+    console.log('Função getCollectInfoMessage chamada com a mensagem:', message);
+
+    if (interviewState.step === 0) {
+      console.log('Definindo tipo de usuário e passo 1');
+      setInterviewState((prev) => ({ ...prev, userType: message.toLowerCase() === "recrutador" ? "recrutador" : "candidato", step: 1 }));
+      console.log('Retornando mensagem para o passo 1');
+      if (interviewState.userType === "recrutador") {
+        return {
+          id: uuidv4(),
+          text: "A empresa cujo você quer se candidatar tem qual temática?",
+          sender: "bot"
+        };
+      } else {
+        return {
+          id: uuidv4(),
+          text: "Para qual posição você está se candidatando?",
+          sender: "bot"
+        };
+      }
+    } else if (interviewState.step === 1) {
+      console.log('Definindo posição do usuário e passo 2');
+      setInterviewState((prev) => ({ ...prev, userPosition: message, step: 2 }));
+      console.log('Retornando mensagem para o passo 2');
+      return { id: uuidv4(), text: "Qual é o seu nível de experiência para essa posição?", sender: "bot" };
+    } else if (interviewState.step === 2) {
+      console.log('Definindo nível de experiência do usuário e passo 3');
+      setInterviewState((prev) => ({ ...prev, userExperienceLevel: message, step: 3 }));
+      console.log('Retornando mensagem para o passo 3');
+      return { id: uuidv4(), text: "Qual é a sua formação?", sender: "bot" };
+    } else if (interviewState.step === 3 && !interviewState.informationCollected) {
+      console.log('Definindo formação do usuário e informações coletadas');
+      setInterviewState((prev) => ({ ...prev, userEducation: message, informationCollected: true }));
+      console.log('Retornando mensagem para informações coletadas');
+      return { id: uuidv4(), text: "Agora que tenho suas informações, vamos começar a sua entrevista, ok?", sender: "bot" };
+    }
+    console.log('Retornando null');
+    return null;
+  };
+
+
 
   const handleInterviewEnd = async (genAI: any, prevMessages: any) => {
     console.log("Entrou na função handleInterviewEnd");
@@ -640,7 +661,6 @@ const generateFeedbackPrompt = (interviewState: any) => {
         throw new Error("Não foi possível gerar o feedback.");
       }
 
-      // Construção da mensagem do bot com formatação Markdown
       const botMessage = {
         id: uuidv4(),
         text: `## Seu feedback é:\n\n${feedbackText}`,
@@ -648,13 +668,12 @@ const generateFeedbackPrompt = (interviewState: any) => {
       };
       console.log("Mensagem do bot:", botMessage);
 
-      // Adicionar a mensagem ao estado e garantir que ela será interpretada como Markdown
       setMessages((prevMessages) => [...prevMessages, botMessage]);
       console.log("Mensagens atualizadas:", prevMessages);
 
       console.log("Resetando estado da entrevista...");
       setIsTrainingMode(false);
-      setInterviewState({}); // Reinicia o estado da entrevista
+      setInterviewState({});
     } catch (error) {
       console.log("Erro ao gerar feedback:", error);
       const errorMessage = error.message || "Erro desconhecido.";
@@ -787,7 +806,7 @@ const generateFeedbackPrompt = (interviewState: any) => {
         handleDuvidasDoSistema(setIsBotTyping, setMessages);
         break;
       case "2. Relatar algum Bug":
-        sendBugReport(); // Chama a função para enviar o relatório de bug
+        sendBugReport();
         break;
       case "3. Dúvidas sobre sua conta":
         handleDuvidasSobreConta(setIsBotTyping, setMessages);
@@ -799,13 +818,11 @@ const generateFeedbackPrompt = (interviewState: any) => {
     setIsBotTyping(true);
     startTypingAnimation();
 
-    // Limpar subopções e a opção selecionada
     setSubOptions([]);
     setSelectedOption(null);
   };
 
 
-  // Função que verifica se a imagem e a descrição estão definidas
   useEffect(() => {
     if (description && imageUri) {
       setIsReadyToSend(true);
@@ -826,7 +843,6 @@ const generateFeedbackPrompt = (interviewState: any) => {
     return lastMessage;
   };
 
-  // Função para habilitar o upload de imagem
   const enableImageUpload = () => {
     const userMessage = { id: uuidv4(), text: `Mande uma imagem e uma descrição para dar continuidade`, sender: 'bot' };
     setMessages(prevMessages => [...prevMessages, userMessage]);
@@ -836,17 +852,15 @@ const generateFeedbackPrompt = (interviewState: any) => {
 
 
   const sendBugReport = (imageUri, description) => {
-    console.log('userId:', userId); // Verifique se o userId está sendo definido
+    console.log('userId:', userId);
     if (!userId) {
       console.error('User id não está definido! Verifique a inicialização do usuário.');
       return;
     }
 
-    // Verificar se a imagem e a descrição estão presentes antes de salvar
     console.log('Imagem URI:', imageUri);
     console.log('Descrição:', description);
 
-    // Processar e salvar o relatório de bug
     processAndSaveBugReport(userId, userType, description, imageUri)
       .then((success) => {
         if (success) {
@@ -856,7 +870,6 @@ const generateFeedbackPrompt = (interviewState: any) => {
             sender: 'bot',
           };
 
-          // Adicionar a mensagem do bot ao array de mensagens
           setMessages((prevMessages) => [...prevMessages, userMessage]);
           setIsImageUploadEnabled(false);
         } else {
@@ -866,7 +879,6 @@ const generateFeedbackPrompt = (interviewState: any) => {
             sender: 'bot',
           };
 
-          // Adicionar a mensagem do bot ao array de mensagens
           setMessages((prevMessages) => [...prevMessages, userMessage]);
         }
       })
@@ -878,7 +890,6 @@ const generateFeedbackPrompt = (interviewState: any) => {
           sender: 'bot',
         };
 
-        // Adicionar a mensagem do bot ao array de mensagens
         setMessages((prevMessages) => [...prevMessages, userMessage]);
       });
   };
@@ -894,7 +905,7 @@ const generateFeedbackPrompt = (interviewState: any) => {
       if (!result.canceled) {
         const uri = result.assets[0].uri;
         setImageUri(uri);
-        setIsDescriptionRequired(true); // Seta um estado para solicitar a descrição
+        setIsDescriptionRequired(true);
       }
     } catch (error) {
       console.error('Erro ao selecionar imagem:', error);
@@ -910,14 +921,12 @@ const generateFeedbackPrompt = (interviewState: any) => {
         sender: 'user',
       };
 
-      // Adicionar a mensagem do usuário ao array de mensagens
       setMessages((prevMessages) => [...prevMessages, userMessage]);
 
       console.log(`Mensagem enviada: ${description}`);
 
       setIsImageUploadEnabled(false);
 
-      // Chama as funções para lidar com a primeira mensagem do usuário e a resposta do bot
       if (isReportingBug) {
         handleFirstMessage();
       } else {
@@ -939,7 +948,7 @@ const generateFeedbackPrompt = (interviewState: any) => {
     setSelectedImageUri(uri);
   };
 
-  const { colorScheme, toggleColorScheme } = useColorScheme(); // Para o Dark Mode
+  const { colorScheme, toggleColorScheme } = useColorScheme();
 
   return (
     <KeyboardAvoidingView
@@ -948,10 +957,10 @@ const generateFeedbackPrompt = (interviewState: any) => {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
 
-    <StatusBar
-      style={colorScheme === 'dark' ? 'light' : 'dark'}
-      backgroundColor="#ff8c00"
-    />
+      <StatusBar
+        style={colorScheme === 'dark' ? 'light' : 'dark'}
+        backgroundColor="#ff8c00"
+      />
 
 
       {showAnimation && (
@@ -1000,7 +1009,6 @@ const generateFeedbackPrompt = (interviewState: any) => {
                     <Animated.Text style={[stylesAssistente.botText, { transform: [{ translateY: typingTranslateY(dot3Animation) }] }]}>.</Animated.Text>
                   </View>
                 ) : item.imageUri ? (
-                  // Exibe imagem, se disponível
                   <TouchableOpacity onPress={() => setImageModalVisible(true, item.imageUri)}>
                     <View>
                       <Image source={{ uri: item.imageUri }} style={{ width: 100, height: 100 }} />
@@ -1008,12 +1016,9 @@ const generateFeedbackPrompt = (interviewState: any) => {
                     </View>
                   </TouchableOpacity>
                 ) : (
-                  // Exibe texto ou Markdown, dependendo do conteúdo
                   item.sender === 'bot' && item.text.includes("##") ? (
-                    // Exibe mensagem do bot como Markdown
                     <Markdown style={markdownStyles}>{item.text}</Markdown>
                   ) : (
-                    // Exibe texto simples
                     <Text style={{ color: item.sender === 'user' ? 'white' : 'black' }}>
                       {item.text}
                     </Text>

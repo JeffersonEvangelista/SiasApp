@@ -2,6 +2,14 @@ import { StyleSheet, Dimensions } from 'react-native';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
+    dragIndicator: {
+        position: 'absolute',
+        top: -20,
+        left: 10,
+        color: '#FFFFFF',
+        fontSize: 12,
+        opacity: 0.8,
+    },
     containerSuasJobs: {
         flex: 1,
     },

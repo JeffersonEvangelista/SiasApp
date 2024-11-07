@@ -19,6 +19,7 @@ import { sendPushNotification } from '../components/Notificacao';
 import { AbstractChartConfig } from 'react-native-chart-kit/dist/AbstractChart';
 
 import { useColorScheme } from 'nativewind';
+import PulsingDots from '../components/PulsingDots';
 
 interface Candidate {
   candidatos: any;
@@ -1316,7 +1317,7 @@ const App = () => {
           ) : chartData.labels.length > 0 ? (
             <GestureHandlerRootView>
               <View style={{ padding: 16 }}>
-                <Text style={{ fontSize: 16, marginBottom: 10, fontWeight: 'bold' }}>
+                <Text style={{ fontSize: 16, marginBottom: 10, fontWeight: 'bold', color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>
                   Solicitações de Entrevista - {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
                 </Text>
                 <TouchableOpacity style={styles.toggleButton} onPress={toggleViewMode}>
@@ -1381,7 +1382,7 @@ const App = () => {
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>Aguardando dados</Text>
-              {/*     <PulsingDots />    */}
+              <PulsingDots />
             </View>
           )}
         </View>
@@ -1403,8 +1404,8 @@ const App = () => {
                     styles.toggleButton,
                     {
                       backgroundColor: filtersVisible
-                        ? (colorScheme === 'dark' ? '#F07A26' : '#1F1F3F') 
-                        : (colorScheme === 'dark' ? '#4141A5FF' : '#F07A26'), 
+                        ? (colorScheme === 'dark' ? '#F07A26' : '#1F1F3F')
+                        : (colorScheme === 'dark' ? '#4141A5FF' : '#F07A26'),
                       borderWidth: 1,
                     },
                   ]}
@@ -1546,6 +1547,17 @@ const App = () => {
 
 
             <Animatable.View style={styles.filtersContainersuasJobs} animation="fadeIn" duration={300}>
+              {/* Indicador de arraste */}
+              <Animatable.Text
+                animation="bounceInRight"
+                iterationCount={1}
+                duration={1500}
+                style={[styles.dragIndicator, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}
+                >
+                  <Ionicons name="arrow-forward" size={16} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} /> 
+                  Arraste para mais opções
+              </Animatable.Text>
+
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {/* Botão para mostrar/ocultar vagas */}
                 <TouchableOpacity
@@ -1574,6 +1586,7 @@ const App = () => {
                 </TouchableOpacity>
               </ScrollView>
             </Animatable.View>
+
 
 
           </View>
