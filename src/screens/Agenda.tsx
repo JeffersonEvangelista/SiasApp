@@ -6,7 +6,7 @@ import { ScrollView } from "react-native-gesture-handler";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getUserNameAndId, supabase, countSolicitacoes } from "../services/userService";
 import { styles } from "./Styles/stylesAgenda";
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { getDistance } from 'geolib';
 import AppState from '../components/globalVars';
@@ -17,6 +17,8 @@ import NetInfo from '@react-native-community/netinfo';
 import { sendPushNotification } from "../components/Notificacao";
 import { TextInput } from "react-native";
 import { useColorScheme } from 'nativewind';
+import axios from 'axios';
+
 
 export default function Agenda() {
   const [isFocused, setIsFocused] = useState(false);
@@ -33,7 +35,7 @@ export default function Agenda() {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
-
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [markedDates, setMarkedDates] = useState({});
   const [showLegend, setShowLegend] = useState(false);
@@ -56,6 +58,9 @@ export default function Agenda() {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
+
+
+
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
       if (!state.isConnected) {
@@ -69,6 +74,7 @@ export default function Agenda() {
 
     return () => unsubscribe();
   }, []);
+
 
   useEffect(() => {
     const getUserLocation = async () => {
@@ -197,7 +203,7 @@ export default function Agenda() {
           }
 
           const dateString = request.data_entrevista;
-          const dotStyle = getDotStyle(request.status);
+          const dotStyle = getDotStyle(request.status || '');
 
           // Adiciona marcação ao calendário
           marked[dateString] = {
@@ -224,7 +230,7 @@ export default function Agenda() {
             date: request.data_entrevista,
             time: request.horario,
             location: request.local,
-            status: request.status,
+            status: request.status || '',
           });
           console.log(
             'Detalhes da Entrevista do Recrutador Formatados:',
@@ -244,30 +250,27 @@ export default function Agenda() {
     }
   };
 
-
-  // Função para lidar com o perfil do candidato e marcar as datas no calendário
   const handleCandidateProfile = async (candidateId) => {
     try {
-      // Buscar solicitações de entrevista para o candidato
       const { data: interviewRequests, error } = await supabase
         .from('solicitacoes_entrevista')
         .select(`
-        id,
-        data_entrevista,
-        horario,
-        local,
-        status,
-        vagas (
           id,
-          titulo,
-          recrutadores (
+          data_entrevista,
+          horario,
+          local,
+          status,
+          vagas (
             id,
-            nome,
-            email,
-            foto_perfil
+            titulo,
+            recrutadores (
+              id,
+              nome,
+              email,
+              foto_perfil
+            )
           )
-        )
-      `)
+        `)
         .eq('id_candidato', candidateId);
 
       console.log('Dados de solicitações de entrevista:', interviewRequests);
@@ -278,23 +281,22 @@ export default function Agenda() {
 
       const marked = {};
       const details = [];
+      const statuses = ['pendente', 'aceita', 'recusada'];
 
-      if (interviewRequests.length > 0) {
-        console.log('Solicitações de entrevista encontradas:', interviewRequests);
+      // Filtrando entrevistas com status válido
+      const filteredInterviews = Array.isArray(interviewRequests)
+        ? interviewRequests.filter(request =>
+          request.status && statuses.includes((request.status || '').toLowerCase()) // Garantindo que o status é uma string válida
+        )
+        : [];
 
-        const today = new Date();
+      if (filteredInterviews.length > 0) {
+        console.log('Entrevistas encontradas para o recrutador:', filteredInterviews);
 
-        for (const request of interviewRequests) {
-          const interviewDate = new Date(request.data_entrevista);
+        for (const request of filteredInterviews) {
           const dateString = request.data_entrevista;
-          const dotStyle = getDotStyle(request.status);
+          const dotStyle = getDotStyle(request.status || ''); // Use uma string padrão se status for undefined
 
-
-          if (request.status.toLowerCase() === 'pendente' && interviewDate < today) {
-            handleExpiredInterview(request, candidateId);
-          }
-
-          // Adiciona marcação ao calendário
           marked[dateString] = {
             marked: true,
             dotColor: dotStyle.color,
@@ -308,37 +310,42 @@ export default function Agenda() {
             selectedColor: dotStyle.color,
           };
 
-          // Obter coordenadas do local
-          const coordinates = await getCoordinatesFromLocationName(request.local);
-          const recruiterEmail = request.vagas.recrutadores.email;
+          let coordinates;
+          try {
+            coordinates = await getCoordinatesFromLocationName(request.local);
+          } catch (error) {
+            console.error('Erro ao obter coordenadas:', error);
+            coordinates = { latitude: null, longitude: null };
+          }
 
-          // Chama a função para obter o ID do recrutador no Firebase
-          const firebaseRecruiterId = await getRecruiterIdByEmail(recruiterEmail);
-          // Adiciona detalhes da entrevista ao array
+          const recruiter = request.vagas.recrutadores || {};
+          const firebaseRecruiterId = await getRecruiterIdByEmail(recruiter.email);
+
           details.push({
             id: request.id,
             title: request.vagas.titulo,
-            recruiter: request.vagas.recrutadores.nome,
-            recruiterEmail: request.vagas.recrutadores.email,
-            recruiterId: request.vagas.recrutadores.id,
+            recruiter: recruiter.nome || 'Nome não disponível',
+            recruiterEmail: recruiter.email || 'Email não disponível',
+            recruiterId: recruiter.id || 'ID não disponível',
             recruiterFirebaseId: firebaseRecruiterId,
-            profileImg: request.vagas.recrutadores.foto_perfil,
+            profileImg: recruiter.foto_perfil || 'URL não disponível',
             date: request.data_entrevista,
             time: request.horario,
             location: request.local,
-            status: request.status,
+            status: request.status || 'Status não disponível', // Usando string padrão se status for undefined
             coordinates: coordinates,
           });
+
           console.log(
             'Detalhes da Entrevista Formatados:',
             JSON.stringify(details, null, 2)
           );
         }
 
-        setInterviewDetails(details); // Atualiza o estado com os detalhes das entrevistas
+        setInterviewDetails(details);
         setMarkedDates(marked);
       } else {
-        console.log('Nenhuma solicitação de entrevista encontrada para este candidato.');
+        console.log('Nenhuma entrevista encontrada para este recrutador.');
       }
 
     } catch (error) {
@@ -347,6 +354,78 @@ export default function Agenda() {
       setLoading(false); // Finaliza o carregamento
     }
   };
+
+  // Função para decodificar a polyline
+  const decodePolyline = (encoded) => {
+    let len = encoded.length;
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+    const path = [];
+
+    while (index < len) {
+      let b, shift = 0, result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      let dLat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lat += dLat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      let dLng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lng += dLng;
+
+      path.push({ latitude: lat / 1E5, longitude: lng / 1E5 });
+    }
+
+    return path;
+  };
+
+  const getRouteFromOSRM = async (origin, destination) => {
+    const url = `http://router.project-osrm.org/route/v1/car/${origin};${destination}?overview=full&geometries=polyline`;
+
+    try {
+      const response = await axios.get(url);
+      if (response.data.routes && response.data.routes.length > 0) {
+        const route = response.data.routes[0].geometry;
+        const coordinates = decodePolyline(route);
+        return coordinates;
+      } else {
+        console.error('Nenhuma rota encontrada na resposta da API');
+        return null;
+      }
+    } catch (error) {
+      console.error('Erro ao obter a rota do OSRM:', error);
+      return null;
+    }
+  };
+
+
+  // Função para obter a rota do usuário até a entrevista
+  useEffect(() => {
+    if (userLocation && selectedInterview && selectedInterview.coordinates) {
+      const origin = `${userLocation.longitude},${userLocation.latitude}`;  // Corrigido para longitude,latitude
+      const destination = `${selectedInterview.coordinates.longitude},${selectedInterview.coordinates.latitude}`;
+
+      const fetchRoute = async () => {
+        const coordinates = await getRouteFromOSRM(origin, destination);
+        if (coordinates) {
+          setRouteCoordinates(coordinates);
+        }
+      };
+
+      fetchRoute();
+    }
+  }, [userLocation, selectedInterview]);
+
 
 
   const getRecruiterIdByEmail = async (recruiterEmail) => {
@@ -891,13 +970,24 @@ export default function Agenda() {
   }, [userId]);
   const [selectedStatus, setSelectedStatus] = useState('');
   const filteredInterviews = interviewDetails.filter((interview: Interview) => {
-    const matchesSearchTerm = interview.candidate.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus ? interview.status.toLowerCase() === selectedStatus : true;
-    const matchesDate = (!startDate || new Date(interview.date) >= new Date(startDate)) &&
-      (!endDate || new Date(interview.date) <= new Date(endDate));
+    // Verificando se interview.candidate e searchTerm são válidos
+    const matchesSearchTerm = interview.candidate && searchTerm
+      ? interview.candidate.toLowerCase().includes(searchTerm.toLowerCase())
+      : true;
+
+    // Verificando se interview.status e selectedStatus são válidos
+    const matchesStatus = selectedStatus
+      ? interview.status?.toLowerCase() === selectedStatus.toLowerCase()
+      : true;
+
+    // Verificando se as datas são válidas
+    const interviewDate = new Date(interview.date);
+    const matchesDate = (!startDate || interviewDate >= new Date(startDate)) &&
+      (!endDate || interviewDate <= new Date(endDate));
 
     return matchesSearchTerm && matchesStatus && matchesDate;
   });
+
 
   const buttons = [
     { title: 'Todas', status: '', color: '#007BFF' },
@@ -1058,7 +1148,7 @@ export default function Agenda() {
             {showLegend && (
               <View style={[
                 styles.legendContainer,
-                { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' } 
+                { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' }
               ]}>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, { backgroundColor: '#ff8c00' }]} />
@@ -1245,7 +1335,7 @@ export default function Agenda() {
               elevation: 5,
             }}>
               <Calendar
-                style={{ flex: 1 }}
+                style={{ flex: 1, marginTop: '5%' }}
                 theme={{
                   backgroundColor: '#ffffff',
                   calendarBackground: '#ffffff',
@@ -1431,13 +1521,26 @@ export default function Agenda() {
                 onRequestClose={() => setModalVisible(false)}
               >
                 <View style={styles.modalOverlay}>
-                  <View style={styles.modalView}>
+                  <View style={{
+                    width: '80%',
+                    backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff',
+                    borderRadius: 15,
+                    padding: 20,
+                    shadowColor: '#000',
+                    shadowOffset: {
+                      width: 0,
+                      height: 2,
+                    },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 4,
+                    elevation: 5,
+                  }}>
                     <Image
                       source={selectedInterview.profileImg ? { uri: selectedInterview.profileImg } : require('../../assets/perfil.png')}
                       style={styles.profileImage}
                     />
 
-                    <Text style={styles.modalTitle}>Detalhes da Entrevista</Text>
+                    <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]} >Detalhes da Entrevista</Text>
 
                     <TouchableOpacity
                       style={styles.buttonContact}
@@ -1459,22 +1562,24 @@ export default function Agenda() {
 
                     <View style={styles.infoRow}>
                       <Ionicons name="briefcase-outline" size={24} color="#ff8c00" />
-                      <Text style={styles.modalText}>Empresa: {selectedInterview.recruiter}</Text>
+                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
+                        Empresa: {selectedInterview.recruiter}
+                      </Text>
                     </View>
 
                     <View style={styles.infoRow}>
                       <Ionicons name="calendar-outline" size={24} color="#ff8c00" />
-                      <Text style={styles.modalText}>Data: {new Date(selectedInterview.date).toLocaleDateString('pt-BR')}</Text>
+                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Data: {new Date(selectedInterview.date).toLocaleDateString('pt-BR')}</Text>
                     </View>
 
                     <View style={styles.infoRow}>
                       <Ionicons name="time-outline" size={24} color="#ff8c00" />
-                      <Text style={styles.modalText}>Horário: {selectedInterview.time}</Text>
+                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Horário: {selectedInterview.time}</Text>
                     </View>
 
                     <View style={styles.infoRow}>
                       <Ionicons name="checkmark-circle-outline" size={24} color="#ff8c00" />
-                      <Text style={styles.modalText}>Status: {selectedInterview.status}</Text>
+                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Status: {selectedInterview.status}</Text>
                     </View>
 
                     {selectedInterview.coordinates ? (
@@ -1492,15 +1597,24 @@ export default function Agenda() {
                             latitude: selectedInterview.coordinates.latitude,
                             longitude: selectedInterview.coordinates.longitude,
                           }}
-                          title={selectedInterview.recruiter} // Nome da empresa
-                          description={`Entrevista: ${selectedInterview.title}\nDescrição: ${selectedInterview.description || 'Sem descrição disponível.'}`} // Descrição adicional
+                          title={selectedInterview.recruiter}
+                          description={`Entrevista: ${selectedInterview.title}\nDescrição: ${selectedInterview.description || 'Sem descrição disponível.'}`}
                         />
+
+                        {/* Renderizando a rota se existir */}
+                        {routeCoordinates.length > 0 && (
+                          <Polyline
+                            coordinates={routeCoordinates}
+                            strokeColor="#ff8c00"
+                            strokeWidth={5}
+                          />
+                        )}
                       </MapView>
                     ) : (
-                      <Text style={styles.modalText}>Localização não disponível.</Text>
+                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Localização não disponível.</Text>
                     )}
 
-                    <Text style={styles.distanceText}>
+                    <Text style={[styles.distanceText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
                       Distância da vaga: {distance !== undefined ? (distance < 1000 ? `${distance.toFixed(0)} m` : `${(distance / 1000).toFixed(2)} km`) : 'Indisponível'}
                     </Text>
 
@@ -1527,7 +1641,6 @@ export default function Agenda() {
                   style={styles.customButton}
                   onPress={() => {
                     setShowNoConnection(false);
-                    // Você pode adicionar lógica aqui para tentar recarregar os dados
                     fetchProfile(); // Tenta recarregar os dados
                   }}
                 >

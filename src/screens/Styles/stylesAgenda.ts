@@ -3,6 +3,7 @@ import colors from './colors';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
+    
     inputName: {
         width: '100%',
         textAlign: 'center',
@@ -232,26 +233,15 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    modalView: {
-        width: '80%',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
+ 
     profileImage: {
         width: 80,
         height: 80,
         borderRadius: 40,
         alignSelf: 'center',
         marginBottom: 15,
+        borderWidth: 2, 
+        borderColor: '#ff8c00',
     },
     customButton: {
         backgroundColor: '#ffa726',
