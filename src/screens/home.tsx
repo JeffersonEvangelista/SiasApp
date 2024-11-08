@@ -9,7 +9,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { styles } from './Styles/stylesHome';
 import AppState from '../components/globalVars';
 import { getUserIdByEmailFirestore } from '../services/Firebase';
@@ -1781,7 +1781,7 @@ const App = () => {
 
                     {/* Mapa para seleção do local */}
                     <View style={{ height: 300 }}>
-                      <MapView
+                    <MapView
                         ref={mapRef}
                         style={{ flex: 1 }}
                         initialRegion={{
