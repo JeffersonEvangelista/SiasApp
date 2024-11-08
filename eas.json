@@ -14,12 +14,18 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle"  
+        "buildType": "apk"  
       }
     },
     "release": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
+      }
+    },
+    "debug": {  
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
       }
     }
   },
