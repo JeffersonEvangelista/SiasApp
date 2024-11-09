@@ -115,7 +115,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0.0"
+        versionName "2.0.0"
     }
     signingConfigs {
         debug {
@@ -139,7 +139,11 @@ android {
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
         }
     }
-    packagingOptions {
+packagingOptions {
+        pickFirst 'lib/arm64-v8a/libmaplibre.so'
+        pickFirst 'lib/armeabi-v7a/libmaplibre.so'
+        pickFirst 'lib/x86/libmaplibre.so'
+        pickFirst 'lib/x86_64/libmaplibre.so'
         jniLibs {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }

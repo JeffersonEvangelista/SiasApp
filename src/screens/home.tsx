@@ -9,7 +9,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { UrlTile } from 'react-native-maps';
 import { styles } from './Styles/stylesHome';
 import AppState from '../components/globalVars';
 import { getUserIdByEmailFirestore } from '../services/Firebase';
@@ -17,9 +17,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { sendPushNotification } from '../components/Notificacao';
 import { AbstractChartConfig } from 'react-native-chart-kit/dist/AbstractChart';
-
 import { useColorScheme } from 'nativewind';
 import PulsingDots from '../components/PulsingDots';
+import { WebView } from 'react-native-webview';
 
 interface Candidate {
   candidatos: any;
@@ -124,7 +124,6 @@ const App = () => {
   const startDate = `${year}-01-01`;
   const endDate = `${year}-12-31`;
   const [showNoConnection, setShowNoConnection] = useState(false);
-  const [mapLocation, setMapLocation] = useState(null);
   const [locationName, setLocationName] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -137,7 +136,6 @@ const App = () => {
   const [panResponders, setPanResponders] = useState<{ [key: string]: any }>({});
   const [feedbackVisibleByCandidate, setFeedbackVisibleByCandidate] = useState({});
   const [feedbackMessageByCandidate, setFeedbackMessageByCandidate] = useState({});
-  const mapRef = useRef(null);
   const [typingTimeout, setTypingTimeout] = useState(null);
   const [shakeCandidateIndex, setShakeCandidateIndex] = useState(0);
   const isCandidateAcceptedOrRejected = selectedCandidate?.status === 'aceita' || selectedCandidate?.status === 'recusada';
@@ -173,13 +171,17 @@ const App = () => {
   const filteredJobOffers = (jobOffersWithCandidates || []).filter(job => {
     return showOnlyWithCandidates ? job.inscricoes_vagas && job.inscricoes_vagas.length > 0 : true;
   });
-
+  const [isMapLoading, setIsMapLoading] = useState(true);
   const sortedJobOffers = filteredJobOffers.sort((a, b) => {
     const dateA = a.data_criacao ? new Date(a.data_criacao) : new Date(0);
     const dateB = b.data_criacao ? new Date(b.data_criacao) : new Date(0);
 
     return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
   });
+  const [mapLocation, setMapLocation] = useState(null);
+  const mapRef = useRef(null);
+  const [mapUrl, setMapUrl] = useState(null);
+
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -946,6 +948,7 @@ const App = () => {
   const closeModal = () => {
     setModalVisible(false);
     setUserId(null);
+    setMapUrl('');  
   };
 
   // Função para exibir o seletor de data
@@ -976,8 +979,14 @@ const App = () => {
     console.log('ID da vaga:', jobId);
     setSelectedCandidate(candidate);
     setSelectedJobId(jobId);
-
     try {
+      await generateMapUrl();
+      console.log('Primeira chamada para gerar URL do mapa concluída.');
+  
+      // Chama a função novamente para gerar a URL do mapa pela segunda vez
+      await generateMapUrl();
+      console.log('Segunda chamada para gerar URL do mapa concluída.');
+
       // Buscar a solicitação de entrevista existente para o candidato e a vaga
       const { data: existingRequest, error } = await supabase
         .from('solicitacoes_entrevista')
@@ -1034,10 +1043,10 @@ const App = () => {
       setLocation('Local não encontrado');
     }
   };
-
   // Função para obter coordenadas a partir do nome do local
-  const getCoordinatesFromLocationName = async (locationName: any) => {
+  const getCoordinatesFromLocationName = async (locationName) => {
     try {
+      console.log(`Buscando coordenadas para o local: ${locationName}`);
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`, {
         method: 'GET',
         headers: {
@@ -1051,20 +1060,52 @@ const App = () => {
       }
 
       const data = await response.json();
+      console.log('Resposta da API:', data);
       if (data.length > 0) {
+        console.log('Coordenadas encontradas:', data[0].lat, data[0].lon);
         return {
           latitude: parseFloat(data[0].lat),
           longitude: parseFloat(data[0].lon),
         };
+      } else {
+        console.log('Nenhuma coordenada encontrada para o local.');
       }
     } catch (error) {
       console.error('Erro ao obter as coordenadas:', error);
     }
-    return null; // Retorna nulo se não encontrar as coordenadas
+    return null;
   };
 
+  // Função para obter as coordenadas e gerar a URL
+  const generateMapUrl = async () => {
+    console.log(`Gerando URL para o local: ${location}`);
+
+    if (!location) {
+      console.log('Nenhuma localização definida, URL do mapa não gerada.');
+      return ''; // Retorna vazio se o nome do local não for fornecido
+    }
+
+    const zoom = 17; // Nível de zoom fixo para o mapa
+    const coordinates = await getCoordinatesFromLocationName(location);
+
+    if (!coordinates) {
+      console.log('Não foi possível obter as coordenadas para o local.');
+      return '';
+    }
+
+    // URL do OpenStreetMap, passando as coordenadas diretamente
+    const url = `https://www.openstreetmap.org/?mlat=${coordinates.latitude}&mlon=${coordinates.longitude}&zoom=${zoom}&layers=mapnik`;
+
+    console.log(`URL gerada: ${url}`);
+    setMapUrl(url); 
+    return url;
+  };
+
+
+
   // Função para lidar com a mudança de texto no input de endereço
-  const handleInputChange = async (text: any) => {
+  const handleInputChange = (text) => {
+    console.log(`Entrada do usuário: ${text}`);
     setLocation(text);
 
     // Limpar o timeout anterior, se houver
@@ -1072,41 +1113,18 @@ const App = () => {
       clearTimeout(typingTimeout);
     }
 
-    // Definir um novo timeout
-    const newTimeout = setTimeout(async () => {
+    // Definir um novo timeout para "debouncing"
+    const newTimeout = setTimeout(() => {
       if (text) {
-
-        // Obter coordenadas a partir do nome do local
-        const coords = await getCoordinatesFromLocationName(text);
-
-        if (coords) {
-          setMapLocation(coords);
-          console.log('Coordenadas obtidas:', coords);
-
-          // Centraliza o mapa nas coordenadas encontradas
-          mapRef.current?.animateToRegion({
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          }, 2000);
-        } else {
-          setMapLocation(null);
-        }
-
+        console.log('Gerando URL com o nome do local...');
+        // Chama a função para gerar a URL com o nome do local
+      } else {
+        console.log('Nenhum texto inserido');
       }
-    }, 700); // Timeout de 600ms para debouncing
+    }, 700);
 
-    // Atualiza o estado do timeout
     setTypingTimeout(newTimeout);
   };
-
-  // pensando se vou ultilizar ou nao, ate o momento nao sei
-  const handleSuggestionSelect = (suggestion: any) => {
-    setLocation(suggestion);
-    setSuggestions([]);
-  };
-
 
   // Função para lidar com o toque no mapa
   const handleMapPress = async (event: any) => {
@@ -1553,9 +1571,9 @@ const App = () => {
                 iterationCount={1}
                 duration={1500}
                 style={[styles.dragIndicator, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}
-                >
-                  <Ionicons name="arrow-forward" size={16} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} /> 
-                  Arraste para mais opções
+              >
+                <Ionicons name="arrow-forward" size={16} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+                Arraste para mais opções
               </Animatable.Text>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -1686,9 +1704,6 @@ const App = () => {
           )}
         </View>
 
-
-
-
         <View>
           {/* Animação de Conexão (Modal) */}
           <Modal transparent={true} visible={showNoConnection}>
@@ -1779,27 +1794,18 @@ const App = () => {
                       underlineColorAndroid="transparent"
                     />
 
-                    {/* Mapa para seleção do local */}
                     <View style={{ height: 300 }}>
-                    <MapView
-                        ref={mapRef}
-                        style={{ flex: 1 }}
-                        initialRegion={{
-                          latitude: -23.5505,
-                          longitude: -46.6333,
-                          latitudeDelta: 0.0922,
-                          longitudeDelta: 0.0421,
-                        }}
-                        onPress={handleMapPress}
-                      >
-                        {mapLocation && (
-                          <Marker
-                            coordinate={mapLocation}
-                            title={location}
-                          />
-                        )}
-                      </MapView>
+                      {isMapLoading && <ActivityIndicator size="large" color="#FF8C00" />}
+                      {mapUrl ? (
+                        <WebView
+                          source={{ uri: mapUrl }}
+                          style={{ flex: 1 }}
+                          onLoadStart={() => setIsMapLoading(true)}
+                          onLoadEnd={() => setIsMapLoading(false)}
+                        />
+                      ) : null}
                     </View>
+
 
                     {/* Input para selecionar Data */}
                     <TouchableOpacity onPress={showDatePickerDialog} style={styles.inputContainer}>

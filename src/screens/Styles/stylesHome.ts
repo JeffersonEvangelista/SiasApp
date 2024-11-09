@@ -2,6 +2,10 @@ import { StyleSheet, Dimensions } from 'react-native';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
+    webview: {
+        flex: 1,
+        borderRadius: 15,
+    },
     dragIndicator: {
         position: 'absolute',
         top: -20,
