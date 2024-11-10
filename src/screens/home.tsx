@@ -378,39 +378,47 @@ const App = () => {
   };
 
   // Busca de locais frequentes para o user
-  const getMostFrequentLocation = async (userId: any) => {
+  const getMostFrequentLocation = async (userId) => {
     const { data, error } = await supabase
       .from('solicitacoes_entrevista')
-      .select('local')
+      .select('local, local_nome, latitude, longitude')
       .eq('id_recrutador', userId);
 
     if (error) {
       console.error("Erro ao buscar os locais:", error);
-      return null; // Retorna null em caso de erro
+      return null;
     }
 
-    // Verifique se `data` é um array antes de continuar
     if (!Array.isArray(data)) {
       console.warn('Os dados retornados não são um array:', data);
-      return null; // Retorna null se não for um array
+      return null;
     }
 
     if (data.length === 0) {
       console.warn('Nenhum local encontrado para o usuário:', userId);
-      return null; // Retorna null se não houver locais
+      return null;
     }
 
-    // Contar a frequência de cada local
-    const locationCount = data.reduce((acc, { local }) => {
-      acc[local] = (acc[local] || 0) + 1;
+    // Contar a frequência de cada local e armazenar as informações adicionais
+    const locationCount = data.reduce((acc, loc) => {
+      const key = loc.local;
+      if (!acc[key]) {
+        acc[key] = { count: 1, ...loc };
+      } else {
+        acc[key].count += 1;
+      }
       return acc;
     }, {});
 
-    // Obter o local mais frequente
-    const mostFrequentLocation = Object.keys(locationCount).reduce((a, b) => locationCount[a] > locationCount[b] ? a : b);
+    // Encontrar o local mais frequente
+    const mostFrequentLocation = Object.values(locationCount).reduce((a, b) =>
+      a.count > b.count ? a : b
+    );
 
-    return mostFrequentLocation || null;
+    // Retornar o objeto completo com as informações do local
+    return mostFrequentLocation;
   };
+
 
   // Função para determinar o aceito ou recurso do candidato 
   const handleAcceptOrReject = (jobId: any, candidateId: any, isAccepted: any) => {
@@ -502,9 +510,15 @@ const App = () => {
       const dataEntrevista = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
       const dataEntrevistaFormatada = dataEntrevista.toISOString().split('T')[0];
       const horario = '10:00:00';
-      const local = await getMostFrequentLocation(userId) || '';
+      // Obtém o local mais frequente com todos os detalhes
+      const locationDetails = await getMostFrequentLocation(userId);
 
-      console.log(`Data da Entrevista: ${dataEntrevistaFormatada}, Horário: ${horario}, Local: ${local}`);
+      const local = locationDetails?.local || '';
+      const local_nome = locationDetails?.local_nome || '';
+      const latitude = locationDetails?.latitude || null;
+      const longitude = locationDetails?.longitude || null;
+
+      console.log(`Data da Entrevista: ${dataEntrevistaFormatada}, Horário: ${horario}, Local: ${local}, Nome do Local: ${local_nome}, Latitude: ${latitude}, Longitude: ${longitude}`);
 
       // Atualiza o status do candidato e insere a solicitação de entrevista em paralelo
       const [updateResponse, interviewResponse] = await Promise.all([
@@ -522,10 +536,14 @@ const App = () => {
               data_entrevista: dataEntrevistaFormatada,
               horario,
               local,
+              local_nome,
+              latitude,
+              longitude,
               status: 'pendente',
             },
           ])
       ]);
+
 
       const { error: updateError } = updateResponse;
       const { error: interviewError } = interviewResponse;
@@ -580,12 +598,18 @@ const App = () => {
   };
 
   // Função para buscar vagas e candidatos inscritos
-  const fetchJobOffersWithCandidates = async (userId: any) => {
-    try {
-      // Buscar as vagas do recrutador
-      const { data: jobOffers, error } = await supabase
-        .from('vagas')
-        .select(`
+  const fetchJobOffersWithCandidates = async (userId: any, attempts = 5) => {
+    let remainingAttempts = attempts;
+
+    while (remainingAttempts > 0) {
+      try {
+        setJobOffersWithCandidates([]);
+        setError(null);
+
+        // Buscar as vagas do recrutador
+        const { data: jobOffers, error } = await supabase
+          .from('vagas')
+          .select(`
           id,
           titulo,
           descricao,
@@ -599,35 +623,45 @@ const App = () => {
             candidatos (id, nome, email, foto_perfil, cpf)
           )
         `)
-        .eq('id_recrutador', userId);
+          .eq('id_recrutador', userId);
 
-      if (error) {
-        console.error('Erro ao buscar vagas:', error);
-        setJobOffersWithCandidates([]);
-        return;
-      }
+        if (error) {
+          console.error('Erro ao buscar vagas:', error);
+          throw new Error('Erro ao buscar vagas.');
+        }
 
-      console.log('Vagas com candidatos inscritos:', JSON.stringify(jobOffers, null, 2));
+        // Verificação e validação dos dados recebidos
+        if (!jobOffers || !Array.isArray(jobOffers)) {
+          console.warn('Nenhuma vaga encontrada ou formato inválido:', jobOffers);
+          setJobOffersWithCandidates([]);
+          throw new Error('Nenhuma vaga encontrada ou formato inválido.');
+        }
 
-      // Verificação e validação dos dados recebidos
-      if (!jobOffers || !Array.isArray(jobOffers)) {
-        console.warn('Nenhuma vaga encontrada ou formato inválido:', jobOffers);
-        setJobOffersWithCandidates([]);
-        return;
-      }
-      const filteredJobOffers = jobOffers.map((job) => {
-        return {
+        // Filtra as inscrições com status 'pendente'
+        const filteredJobOffers = jobOffers.map((job) => ({
           ...job,
           inscricoes_vagas: job.inscricoes_vagas.filter(inscricao =>
             inscricao.status !== 'recusada' && inscricao.status !== 'aceita'
           )
-        };
-      })
-      setJobOffersWithCandidates(filteredJobOffers);
-      console.log('Estado atualizado com as vagas e candidatos filtrados:', filteredJobOffers);
-    } catch (error) {
-      console.error('Erro ao buscar vagas e candidatos:', error);
-      setError('Erro ao buscar vagas e candidatos.');
+        }));
+
+        // Atualiza o estado com os dados filtrados
+        setJobOffersWithCandidates(filteredJobOffers);
+        console.log('Estado atualizado com as vagas e candidatos filtrados:', filteredJobOffers);
+        return;
+
+      } catch (error) {
+        console.error('Erro ao buscar vagas e candidatos:', error);
+        remainingAttempts -= 1;
+        setError(`Erro ao buscar vagas e candidatos. Tentativas restantes: ${remainingAttempts}`);
+
+        if (remainingAttempts > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } else {
+          console.error('Todas as tentativas falharam.');
+          setJobOffersWithCandidates([]);
+        }
+      }
     }
   };
 
@@ -989,7 +1023,7 @@ const App = () => {
           await generateMapUrl(latitude, longitude);
         }
       }
-      setModalVisible(true);  
+      setModalVisible(true);
     } catch (err) {
       console.error('Erro ao buscar informações da entrevista:', err);
       Alert.alert(
@@ -1137,7 +1171,7 @@ const App = () => {
         local = onlinePlatform;
         latitude = null;
         longitude = null;
-        local_nome = ''; 
+        local_nome = '';
       }
 
       const status = 'pendente';
@@ -1896,7 +1930,7 @@ const App = () => {
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }, 
+          { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' },
         ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -2121,7 +2155,7 @@ const App = () => {
               style={styles.customButton}
               onPress={() => {
                 setShowNoConnection(false);
-                fetchInterviewCounts(userId); 
+                fetchInterviewCounts(userId);
               }}
             >
               <Text style={styles.buttonText}>Tentar novamente</Text>
