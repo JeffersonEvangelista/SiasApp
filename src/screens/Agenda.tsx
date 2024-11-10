@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, Modal, FlatList, Animated, PanResponder, Image, ActivityIndicator } from 'react-native';
+import { View, Text, Linking, Platform, StyleSheet, TouchableOpacity, RefreshControl, Modal, FlatList, Animated, PanResponder, Image, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { ScrollView } from "react-native-gesture-handler";
@@ -18,6 +18,8 @@ import { sendPushNotification } from "../components/Notificacao";
 import { TextInput } from "react-native";
 import { useColorScheme } from 'nativewind';
 import axios from 'axios';
+import { WebView } from 'react-native-webview';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 
 export default function Agenda() {
@@ -60,7 +62,6 @@ export default function Agenda() {
 
 
 
-
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
       if (!state.isConnected) {
@@ -100,20 +101,16 @@ export default function Agenda() {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      setModalVisible(false); // Redefine o modal ao voltar para a tela
+      setModalVisible(false);
     });
-
-    // Limpa o listener ao desmontar
     return unsubscribe;
   }, [navigation]);
 
-  // Função que carrega os dados do usuário
   const fetchProfile = useCallback(async () => {
-    setLoading(true); // Começa o carregamento
+    setLoading(true);
     try {
       const { id: userId } = await getUserNameAndId();
       setUserId(userId);
-
       const { data: recruiterData } = await supabase
         .from('recrutadores')
         .select('id')
@@ -136,7 +133,6 @@ export default function Agenda() {
         }
       }
 
-      // Contar solicitações após determinar o tipo de usuário
       const solicitacoesCount = await countSolicitacoes(userId) || 0;
       AppState.solicitacoesCount = solicitacoesCount;
 
@@ -145,10 +141,8 @@ export default function Agenda() {
     }
   }, []);
 
-  // Função para lidar com o perfil do recrutador e buscar entrevistas relacionadas
   const handleRecruiterProfile = async (recruiterId) => {
     try {
-      // Buscar as entrevistas associadas ao recrutador
       const { data: interviewRequests, error } = await supabase
         .from('solicitacoes_entrevista')
         .select(`
@@ -177,17 +171,15 @@ export default function Agenda() {
         throw error;
       }
 
-      // Certificar que interviewRequests é um array antes de acessar o length
       const marked = {};
       const details = [];
 
-      // Filtrar entrevistas por status
       const statuses = ['pendente', 'aceita', 'recusada'];
       const filteredInterviews = Array.isArray(interviewRequests)
         ? interviewRequests.filter(request => statuses.includes(request.status.toLowerCase()))
         : [];
 
-      const today = new Date(); // Data atual
+      const today = new Date();
 
       if (filteredInterviews.length > 0) {
         console.log('Entrevistas encontradas para o recrutador:', filteredInterviews);
@@ -195,11 +187,9 @@ export default function Agenda() {
         for (const request of filteredInterviews) {
           const interviewDate = new Date(request.data_entrevista);
 
-          // Verifica se a data da entrevista já passou
           if (interviewDate < today) {
-            // Chama a função para lidar com entrevistas expiradas
             await handleExpiredInterview(request, request.id_candidato);
-            continue; // Continua para a próxima entrevista
+            continue; //
           }
 
           const dateString = request.data_entrevista;
@@ -258,6 +248,10 @@ export default function Agenda() {
           id,
           data_entrevista,
           horario,
+          tipo_entrevista,
+          local_nome,
+          latitude,
+          longitude,
           local,
           status,
           vagas (
@@ -283,10 +277,10 @@ export default function Agenda() {
       const details = [];
       const statuses = ['pendente', 'aceita', 'recusada'];
 
-      // Filtrando entrevistas com status válido
+      // Filtra entrevistas com status válido
       const filteredInterviews = Array.isArray(interviewRequests)
         ? interviewRequests.filter(request =>
-          request.status && statuses.includes((request.status || '').toLowerCase()) // Garantindo que o status é uma string válida
+          request.status && statuses.includes((request.status || '').toLowerCase())
         )
         : [];
 
@@ -295,8 +289,9 @@ export default function Agenda() {
 
         for (const request of filteredInterviews) {
           const dateString = request.data_entrevista;
-          const dotStyle = getDotStyle(request.status || ''); // Use uma string padrão se status for undefined
+          const dotStyle = getDotStyle(request.status || '');
 
+          // Marca as datas com status de entrevista
           marked[dateString] = {
             marked: true,
             dotColor: dotStyle.color,
@@ -310,17 +305,23 @@ export default function Agenda() {
             selectedColor: dotStyle.color,
           };
 
-          let coordinates;
-          try {
-            coordinates = await getCoordinatesFromLocationName(request.local);
-          } catch (error) {
-            console.error('Erro ao obter coordenadas:', error);
-            coordinates = { latitude: null, longitude: null };
+          const latitude = parseFloat(request.latitude);
+          const longitude = parseFloat(request.longitude);
+
+          // Verifica se as coordenadas são válidas antes de gerar a URL
+          if (isNaN(latitude) || isNaN(longitude)) {
+            console.log("Latitude ou longitude inválidas.");
+            return;
           }
 
+          // Gera a URL do mapa
+          const mapUrl = await generateMapUrl(latitude, longitude);
+
+          // Obtém o recrutador relacionado
           const recruiter = request.vagas.recrutadores || {};
           const firebaseRecruiterId = await getRecruiterIdByEmail(recruiter.email);
 
+          // Adiciona os detalhes da entrevista formatados
           details.push({
             id: request.id,
             title: request.vagas.titulo,
@@ -332,8 +333,12 @@ export default function Agenda() {
             date: request.data_entrevista,
             time: request.horario,
             location: request.local,
-            status: request.status || 'Status não disponível', // Usando string padrão se status for undefined
-            coordinates: coordinates,
+            status: request.status || 'Status não disponível',
+            latitude: request.latitude || '',
+            longitude: request.longitude || '',
+            interviewType: request.tipo_entrevista || 'Tipo não especificado',
+            locationName: request.local_nome || 'Nome do local não disponível',
+            mapUrl: mapUrl || 'URL não disponível',
           });
 
           console.log(
@@ -342,6 +347,7 @@ export default function Agenda() {
           );
         }
 
+        // Atualiza o estado com os detalhes e datas marcadas
         setInterviewDetails(details);
         setMarkedDates(marked);
       } else {
@@ -351,10 +357,42 @@ export default function Agenda() {
     } catch (error) {
       console.error('Erro ao buscar solicitações de entrevista:', error);
     } finally {
-      setLoading(false); // Finaliza o carregamento
+      setLoading(false);
     }
   };
 
+  // Função para obter as coordenadas e gerar a URL
+  const generateMapUrl = async (latitude, longitude) => {
+    if (isNaN(latitude) || isNaN(longitude)) {
+      console.log('As coordenadas fornecidas não são válidas.');
+      return '';
+    }
+    console.log(`Gerando URL para o local com latitude ${latitude} e longitude ${longitude}`);
+    const zoom = 17;
+    const url = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.0001},${latitude - 0.0001},${longitude + 0.0001},${latitude + 0.0001}&layer=mapnik&marker=${latitude},${longitude}`;
+    console.log(`URL gerada: ${url}`);
+    return url;
+  };
+
+  const handleNavigateToMap = (latitude, longitude) => {
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+  
+    if (isNaN(lat) || isNaN(lon)) {
+      console.log('Coordenadas inválidas');
+      return;
+    }
+    const destination = `${lat},${lon}`;
+
+    const mapUrl = Platform.select({
+      ios: `maps:0,0?q=${destination}&daddr=${destination}`,
+      android: `google.navigation:q=${destination}`, 
+    });
+
+    // Tenta abrir a URL
+    Linking.openURL(mapUrl).catch((err) => console.error('Erro ao abrir o mapa:', err));
+  };
+  
   // Função para decodificar a polyline
   const decodePolyline = (encoded) => {
     let len = encoded.length;
@@ -412,7 +450,7 @@ export default function Agenda() {
   // Função para obter a rota do usuário até a entrevista
   useEffect(() => {
     if (userLocation && selectedInterview && selectedInterview.coordinates) {
-      const origin = `${userLocation.longitude},${userLocation.latitude}`;  // Corrigido para longitude,latitude
+      const origin = `${userLocation.longitude},${userLocation.latitude}`;
       const destination = `${selectedInterview.coordinates.longitude},${selectedInterview.coordinates.latitude}`;
 
       const fetchRoute = async () => {
@@ -430,23 +468,13 @@ export default function Agenda() {
 
   const getRecruiterIdByEmail = async (recruiterEmail) => {
     try {
-      // Log do email que está sendo buscado
       console.log(`Buscando ID do recrutador para o email: ${recruiterEmail}`);
-
-      // Referência à coleção "recruiters" no Firestore
       const usersRef = collection(db, "users");
-
-      // Criação da query para encontrar um documento com o campo "email" igual ao email fornecido
       const q = query(usersRef, where("email", "==", recruiterEmail));
-
-      // Executa a consulta e obtém os documentos
       const querySnapshot = await getDocs(q);
-
-      // Verifica se encontrou algum documento
       if (!querySnapshot.empty) {
         const recruiterDoc = querySnapshot.docs[0];
         const recruiterId = recruiterDoc.id;
-
         console.log(`ID do recrutador encontrado no Firebase: ${recruiterId}`);
         return recruiterId;
       } else {
@@ -499,7 +527,7 @@ export default function Agenda() {
 
   // Função para aceitar a entrevista
   const handleAcceptCandidate = async (interview, userId) => {
-    updateInterviewStatus(interview.id, 'aceita'); // Atualiza o estado localmente
+    updateInterviewStatus(interview.id, 'aceita');
 
     try {
       // Chamada ao banco de dados
@@ -510,7 +538,7 @@ export default function Agenda() {
 
       if (updateError) {
         console.error('Erro ao atualizar status da entrevista:', updateError);
-        updateInterviewStatus(interview.id, 'pendente'); // Reverte a atualização local
+        updateInterviewStatus(interview.id, 'pendente');
         return;
       }
 
@@ -528,9 +556,8 @@ export default function Agenda() {
         return;
       }
 
-      console.log('Resposta existente:', existingResponse); // Log da resposta existente
+      console.log('Resposta existente:', existingResponse);
 
-      // Se não houver resposta existente, insira uma nova
       if (existingResponse.length === 0) {
         const { data, error: insertError } = await supabase
           .from('respostas_candidatos')
@@ -553,9 +580,9 @@ export default function Agenda() {
       // Buscar informações do recrutador responsável pela solicitação
       const { data: recruiterInfo, error: recruiterError } = await supabase
         .from('solicitacoes_entrevista')
-        .select('*, recrutadores(*)') // Seleciona a tabela de recrutadores relacionada
+        .select('*, recrutadores(*)')
         .eq('id', interview.id)
-        .single(); // Usa .single() para obter apenas um registro
+        .single();
 
       if (recruiterError) {
         console.error('Erro ao buscar informações do recrutador:', recruiterError);
@@ -563,11 +590,11 @@ export default function Agenda() {
       }
 
       if (recruiterInfo) {
-        console.log('Informações do recrutador:', recruiterInfo.recrutadores); // Log das informações do recrutador
+        console.log('Informações do recrutador:', recruiterInfo.recrutadores);
 
         // Obter o ID do recrutador
         const recruiterId = recruiterInfo.id_recrutador;
-        console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
+        console.log('ID do recrutador:', recruiterId);
 
         // 1. Buscar o token do recrutador
         const { data: recrutadorTokenData, error: tokenError } = await supabase
@@ -582,7 +609,7 @@ export default function Agenda() {
         }
 
         const recrutadorToken = recrutadorTokenData.token;
-        console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
+        console.log('Token do recrutador:', recrutadorToken);
 
         // 2. Enviar a notificação apenas se o token existir
         if (recrutadorToken) {
@@ -603,7 +630,7 @@ export default function Agenda() {
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
-      updateInterviewStatus(interview.id, 'pendente'); // Reverte a atualização local em caso de erro
+      updateInterviewStatus(interview.id, 'pendente');
     }
   };
 
@@ -611,7 +638,7 @@ export default function Agenda() {
   // Função para recusar a entrevista
   const handleRecusar = async (interview, userId) => {
     console.log('Candidate ID:', userId);
-    console.log('Entrevista recebida:', interview); // Log dos dados da entrevista
+    console.log('Entrevista recebida:', interview);
 
     try {
       console.log(`Candidato recursado:`, interview);
@@ -641,7 +668,7 @@ export default function Agenda() {
         return;
       }
 
-      console.log('Resposta existente:', existingResponse); // Log da resposta existente
+      console.log('Resposta existente:', existingResponse);
 
       // Se não houver resposta existente, insira uma nova
       if (existingResponse.length === 0) {
@@ -666,9 +693,9 @@ export default function Agenda() {
       // Buscar informações do recrutador responsável pela solicitação
       const { data: recruiterInfo, error: recruiterError } = await supabase
         .from('solicitacoes_entrevista')
-        .select('*, recrutadores(*)') // Seleciona a tabela de recrutadores relacionada
+        .select('*, recrutadores(*)')
         .eq('id', interview.id)
-        .single(); // Usa .single() para obter apenas um registro
+        .single();
 
       if (recruiterError) {
         console.error('Erro ao buscar informações do recrutador:', recruiterError);
@@ -676,11 +703,11 @@ export default function Agenda() {
       }
 
       if (recruiterInfo) {
-        console.log('Informações do recrutador:', recruiterInfo.recrutadores); // Log das informações do recrutador
+        console.log('Informações do recrutador:', recruiterInfo.recrutadores);
 
         // Obter o ID do recrutador
         const recruiterId = recruiterInfo.id_recrutador;
-        console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
+        console.log('ID do recrutador:', recruiterId);
 
         // 1. Buscar o token do recrutador
         const { data: recrutadorTokenData, error: tokenError } = await supabase
@@ -691,11 +718,11 @@ export default function Agenda() {
 
         if (tokenError || !recrutadorTokenData) {
           console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
-          return; // Se não houver token, não envia notificação
+          return;
         }
 
         const recrutadorToken = recrutadorTokenData.token;
-        console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
+        console.log('Token do recrutador:', recrutadorToken);
 
         // 2. Enviar a notificação apenas se o token existir
         if (recrutadorToken) {
@@ -754,7 +781,7 @@ export default function Agenda() {
           .from('respostas_candidatos')
           .insert({
             id_solicitacao: interview.id,
-            id_candidato: candidateId, // Usa o ID do candidato passado
+            id_candidato: candidateId,
             resposta: 'recusada',
           });
 
@@ -768,8 +795,8 @@ export default function Agenda() {
       }
 
       // Obter o ID do recrutador
-      const recruiterId = interview.id_recrutador; // Assume que o ID do recrutador está na entrevista
-      console.log('ID do recrutador:', recruiterId); // Log do ID do recrutador
+      const recruiterId = interview.id_recrutador;
+      console.log('ID do recrutador:', recruiterId);
 
       // 1. Buscar o token do recrutador
       const { data: recrutadorTokenData, error: tokenError } = await supabase
@@ -780,11 +807,11 @@ export default function Agenda() {
 
       if (tokenError || !recrutadorTokenData) {
         console.warn('Token do recrutador não encontrado ou erro ao buscar:', tokenError);
-        return; // Se não houver token, não envia notificação
+        return;
       }
 
       const recrutadorToken = recrutadorTokenData.token;
-      console.log('Token do recrutador:', recrutadorToken); // Log do token do recrutador
+      console.log('Token do recrutador:', recrutadorToken);
 
       // 2. Enviar a notificação apenas se o token existir
       if (recrutadorToken) {
@@ -865,28 +892,6 @@ export default function Agenda() {
   };
 
 
-  // Função que retorna o componente Calendar
-  const renderCalendar = () => {
-    return (
-      <Calendar
-        style={{ flex: 1 }}
-        theme={{
-          backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
-          calendarBackground: colorScheme === 'dark' ? '#000000' : '#ffffff',
-          textSectionTitleColor: colorScheme === 'dark' ? '#e0e0e0' : '#b6c1cd',
-          selectedDayTextColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
-          todayTextColor: colorScheme === 'dark' ? '#f57c00' : '#00adf5', // Laranja no dark mode
-          dayTextColor: colorScheme === 'dark' ? '#ffffff' : '#2d4150',
-          textDisabledColor: colorScheme === 'dark' ? '#555555' : '#d77906',
-          arrowColor: colorScheme === 'dark' ? '#f57c00' : '#d77906', // Setas laranjas no dark mode
-        }}
-        markedDates={markedDates}
-        onDayPress={(day) => {
-          console.log('Selected day', day);
-        }}
-      />
-    );
-  };
 
   const openModal = (interview) => {
     setSelectedInterview(interview);
@@ -895,7 +900,7 @@ export default function Agenda() {
         { latitude: userLocation.latitude, longitude: userLocation.longitude },
         { latitude: interview.coordinates.latitude, longitude: interview.coordinates.longitude }
       );
-      setDistance(distance); // Distância em metros
+      setDistance(distance);
     }
     setModalVisible(true);
   };
@@ -904,7 +909,6 @@ export default function Agenda() {
     setShowLegend(!showLegend);
   };
 
-  // Função para atualizar o estado local
   const updateInterviewStatus = (interviewId, newStatus) => {
     setInterviewDetails(prevDetails =>
       prevDetails.map(interview =>
@@ -1415,15 +1419,20 @@ export default function Agenda() {
                               </View>
                             </View>
                             <View style={styles.detailsContainer}>
-                              <Text style={styles.interviewTitle}>
-                                {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
-                              </Text>
+                              <View style={styles.rowContainer}>
+                                <Icon name="touch-app" size={24} color="#F07A26" style={styles.icon} />
+                                <Text style={styles.interviewTitle}>
+                                  {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
+                                </Text>
+                              </View>
+
                               <Text style={styles.interviewRecruiter}>
                                 Empresa: {truncateText(item.recruiter, 20)}
                               </Text>
                               <Text style={styles.interviewLocation}>
                                 Local: {truncateText(item.location, 20)}
                               </Text>
+
                             </View>
                           </Animated.View>
                         </TouchableOpacity>
@@ -1456,9 +1465,12 @@ export default function Agenda() {
                           </View>
                         </View>
                         <View style={styles.detailsContainer}>
-                          <Text style={styles.interviewTitleAceita}>
-                            {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
-                          </Text>
+                          <View style={styles.rowContainer}>
+                            <Icon name="touch-app" size={24} color="#F07A26" style={styles.icon} />
+                            <Text style={styles.interviewTitle}>
+                              {truncateText(item.title, 20)}  {/* Limite de 20 caracteres */}
+                            </Text>
+                          </View>
                           <Text style={styles.interviewRecruiter}>
                             Empresa: {truncateText(item.recruiter, 20)}
                           </Text>
@@ -1540,7 +1552,7 @@ export default function Agenda() {
                       style={styles.profileImage}
                     />
 
-                    <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]} >Detalhes da Entrevista</Text>
+                    <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Detalhes da Entrevista</Text>
 
                     <TouchableOpacity
                       style={styles.buttonContact}
@@ -1569,55 +1581,62 @@ export default function Agenda() {
 
                     <View style={styles.infoRow}>
                       <Ionicons name="calendar-outline" size={24} color="#ff8c00" />
-                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Data: {new Date(selectedInterview.date).toLocaleDateString('pt-BR')}</Text>
+                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
+                        Data: {selectedInterview.date ? new Date(selectedInterview.date).toLocaleDateString('pt-BR') : 'Data não disponível'}
+                      </Text>
                     </View>
 
                     <View style={styles.infoRow}>
                       <Ionicons name="time-outline" size={24} color="#ff8c00" />
-                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Horário: {selectedInterview.time}</Text>
+                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
+                        Horário: {selectedInterview.time}
+                      </Text>
                     </View>
 
                     <View style={styles.infoRow}>
                       <Ionicons name="checkmark-circle-outline" size={24} color="#ff8c00" />
-                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Status: {selectedInterview.status}</Text>
+                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
+                        Status: {selectedInterview.status || 'Status não disponível'}
+                      </Text>
                     </View>
+                    {
+                      selectedInterview.interviewType === 'presencial' && (
+                        <>
+                          <View style={styles.infoRow}>
+                            <Ionicons name="location" size={24} color="#ff8c00" />
+                            <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
+                              Local: {selectedInterview.locationName || 'Não especificado'}
+                            </Text>
+                          </View>
+                          {/* Botão "Como Chegar" */}
+                          <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => handleNavigateToMap(selectedInterview.latitude, selectedInterview.longitude)}
+                          >
+                            <Text style={styles.buttonTextMapa}>Como Chegar</Text>
+                          </TouchableOpacity>
+                          <View style={{ height: 300 }}>
+                            {selectedInterview.mapUrl ? (
+                              <WebView
+                                source={{ uri: selectedInterview.mapUrl }}
+                                style={{ flex: 1 }}
+                                scrollEnabled={false}
+                              />
+                            ) : (
+                              <Text style={styles.modalText}>Mapa não disponível</Text>
+                            )}
+                          </View>
+                        </>
+                      )}
 
-                    {selectedInterview.coordinates ? (
-                      <MapView
-                        style={styles.map}
-                        initialRegion={{
-                          latitude: selectedInterview.coordinates.latitude,
-                          longitude: selectedInterview.coordinates.longitude,
-                          latitudeDelta: 0.01,
-                          longitudeDelta: 0.01,
-                        }}
-                      >
-                        <Marker
-                          coordinate={{
-                            latitude: selectedInterview.coordinates.latitude,
-                            longitude: selectedInterview.coordinates.longitude,
-                          }}
-                          title={selectedInterview.recruiter}
-                          description={`Entrevista: ${selectedInterview.title}\nDescrição: ${selectedInterview.description || 'Sem descrição disponível.'}`}
-                        />
-
-                        {/* Renderizando a rota se existir */}
-                        {routeCoordinates.length > 0 && (
-                          <Polyline
-                            coordinates={routeCoordinates}
-                            strokeColor="#ff8c00"
-                            strokeWidth={5}
-                          />
-                        )}
-                      </MapView>
-                    ) : (
-                      <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>Localização não disponível.</Text>
-                    )}
-
-                    <Text style={[styles.distanceText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
-                      Distância da vaga: {distance !== undefined ? (distance < 1000 ? `${distance.toFixed(0)} m` : `${(distance / 1000).toFixed(2)} km`) : 'Indisponível'}
+                    {selectedInterview.interviewType === 'online' && (
+                    <View style={styles.infoRow}>
+                    <Ionicons name="location" size={24} color="#ff8c00" />
+                    <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
+                      Plataforma: {selectedInterview.platform || 'Não especificado'}
                     </Text>
-
+                  </View>
+                    )}
                     <TouchableOpacity
                       style={styles.buttonClose}
                       onPress={() => setModalVisible(false)}
@@ -1627,6 +1646,7 @@ export default function Agenda() {
                   </View>
                 </View>
               </Modal>
+
             )}
             {/* Animação de Conexão (Modal) */}
             <Modal transparent={true} visible={showNoConnection}>

@@ -3,7 +3,25 @@ import colors from './colors';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
-    
+    button: {
+        backgroundColor: '#FF8C00',
+        padding: 10,
+        marginTop: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginBottom: 13,
+    },
+    buttonTextMapa: {
+        color: '#fff',
+        fontSize: 20,
+    },
+    rowContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    icon: {
+        marginBottom: '10%'
+    },
     inputName: {
         width: '100%',
         textAlign: 'center',
@@ -233,14 +251,14 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
- 
+
     profileImage: {
         width: 80,
         height: 80,
         borderRadius: 40,
         alignSelf: 'center',
         marginBottom: 15,
-        borderWidth: 2, 
+        borderWidth: 2,
         borderColor: '#ff8c00',
     },
     customButton: {
