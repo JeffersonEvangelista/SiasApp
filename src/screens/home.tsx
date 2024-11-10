@@ -167,7 +167,6 @@ const App = () => {
   };
   const [showOnlyWithCandidates, setShowOnlyWithCandidates] = useState(false);
   const [sortOrder, setSortOrder] = useState('desc');
-  // Garante que jobOffersWithCandidates é um array, evitando erros se estiver indefinido
   const filteredJobOffers = (jobOffersWithCandidates || []).filter(job => {
     return showOnlyWithCandidates ? job.inscricoes_vagas && job.inscricoes_vagas.length > 0 : true;
   });
@@ -181,6 +180,8 @@ const App = () => {
   const [mapLocation, setMapLocation] = useState(null);
   const mapRef = useRef(null);
   const [mapUrl, setMapUrl] = useState(null);
+  const [interviewType, setInterviewType] = useState('presencial');
+  const [onlinePlatform, setOnlinePlatform] = useState('');
 
 
   useEffect(() => {
@@ -411,21 +412,17 @@ const App = () => {
     return mostFrequentLocation || null;
   };
 
-
+  // Função para determinar o aceito ou recurso do candidato 
   const handleAcceptOrReject = (jobId: any, candidateId: any, isAccepted: any) => {
     setFeedbackMessageByCandidate((prev) => ({
       ...prev,
       [candidateId]: isAccepted ? 'Aceito' : 'Recusado',
     }));
-
-    // Aqui, você pode chamar a função de aceitação ou recusa
     if (isAccepted) {
       handleAcceptCandidate(jobId, candidateId, userId);
     } else {
       handleRecusar(jobId, candidateId);
     }
-
-    // Reseta o feedback message após a animação de deslizamento.
     setTimeout(() => {
       setFeedbackMessageByCandidate((prev) => ({
         ...prev,
@@ -440,7 +437,6 @@ const App = () => {
     console.log("Vaga recusada:", jobId);
     console.log("Candidato recusado:", candidateId);
 
-    // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
       console.error("ID da vaga ou do candidato não estão definidos.");
       return;
@@ -487,8 +483,6 @@ const App = () => {
         console.warn('Candidato optou por não receber notificações.');
       }
       console.log("Vaga atualizada com sucesso:", data);
-
-
       fetchJobOffersWithCandidates(userId);
     } catch (err) {
       console.error("Erro ao tentar recusar candidato:", err);
@@ -496,7 +490,6 @@ const App = () => {
   };
 
   const handleAcceptCandidate = async (jobId: any, candidateId: any, userId: any) => {
-    // Verifique se o ID da vaga e do candidato estão definidos
     if (!jobId || !candidateId) {
       console.error("ID da vaga ou do candidato não estão definidos.");
       return;
@@ -507,7 +500,7 @@ const App = () => {
 
       // Defina os detalhes da entrevista
       const dataEntrevista = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
-      const dataEntrevistaFormatada = dataEntrevista.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      const dataEntrevistaFormatada = dataEntrevista.toISOString().split('T')[0];
       const horario = '10:00:00';
       const local = await getMostFrequentLocation(userId) || '';
 
@@ -622,8 +615,6 @@ const App = () => {
         setJobOffersWithCandidates([]);
         return;
       }
-
-      // Filtrar as inscrições recusadas
       const filteredJobOffers = jobOffers.map((job) => {
         return {
           ...job,
@@ -632,11 +623,8 @@ const App = () => {
           )
         };
       })
-
-      // Salvar as vagas e candidatos no estado
       setJobOffersWithCandidates(filteredJobOffers);
       console.log('Estado atualizado com as vagas e candidatos filtrados:', filteredJobOffers);
-
     } catch (error) {
       console.error('Erro ao buscar vagas e candidatos:', error);
       setError('Erro ao buscar vagas e candidatos.');
@@ -751,12 +739,7 @@ const App = () => {
           countsByDay[day] = (countsByDay[day] || 0) + 1;
         }
       });
-
-      // Armazenar os dados em cache para  evitar requisições desnecessárias e uma puta demora na troca de modos
-
       setInterviewCounts({ days: countsByDay, months: countsByMonth });
-
-      // Renderizar gráfico com base no modo atual
       if (viewMode === 'months') {
         renderMonthlyChart(countsByMonth);
       } else {
@@ -792,7 +775,6 @@ const App = () => {
         ],
       });
     } else {
-      // Cria os dados do gráfico com os nomes dos meses e suas contagens
       setChartData({
         labels: labels,
         datasets: [
@@ -809,12 +791,9 @@ const App = () => {
     }
   };
 
-  //  Rederizacao do modo diario, ocorreu a separacao dos modos para uma facil manuntencao
   const renderDailyChart = (countsByDay: any) => {
     const labels = Object.keys(countsByDay);
     const dataCounts = Object.values(countsByDay);
-
-    // Se não houver dados, inicializa o gráfico com zero
     if (labels.length === 0) {
       setChartData({
         labels: [],
@@ -830,9 +809,8 @@ const App = () => {
         ],
       });
     } else {
-      // Cria os dados do gráfico com os dias e suas contagens
       setChartData({
-        labels: labels.map((day) => day.toString()), // Converte os dias para strings
+        labels: labels.map((day) => day.toString()),
         datasets: [
           {
             label: 'Contagem de Solicitações',
@@ -852,16 +830,13 @@ const App = () => {
     const newViewMode = viewMode === 'days' ? 'months' : 'days';
     setViewMode(newViewMode);
 
-    // Verifica se os dados já foram buscados para o novo modo
     if (interviewCounts[newViewMode]) {
-      // Atualiza o gráfico com os dados já buscados
       if (newViewMode === 'months') {
         renderMonthlyChart(interviewCounts[newViewMode]);
       } else {
         renderDailyChart(interviewCounts[newViewMode]);
       }
     } else {
-      // Busca os dados novamente para o novo modo
       fetchInterviewCounts(userId);
     }
   };
@@ -887,7 +862,7 @@ const App = () => {
       setChangingMonth(true);
       const newDate = new Date(currentDate);
       newDate.setMonth(currentDate.getMonth() + direction);
-      console.log('Nova Data após mudança de mês:', newDate); // Log para verificar a nova data
+      console.log('Nova Data após mudança de mês:', newDate);
       setCurrentDate(newDate);
       fetchInterviewCounts(userId);
       setTimeout(() => {
@@ -928,7 +903,6 @@ const App = () => {
 
   // Função para alternar a expansão das vagas
   const toggleExpand = (jobId: string) => {
-    // Toggle individual do estado de expansão
     setExpandedJobs(prev => ({
       ...prev,
       [jobId]: !prev[jobId],
@@ -948,18 +922,18 @@ const App = () => {
   const closeModal = () => {
     setModalVisible(false);
     setUserId(null);
-    setMapUrl('');  
+    setMapUrl(null);
   };
 
   // Função para exibir o seletor de data
-  const onChangeDate = (selectedDate: any) => {
+  const onChangeDate = (event, selectedDate) => {
     const currentDate = selectedDate || date;
     setShowDatePicker(false);
-    setDate(currentDate);
+    setDate(new Date(currentDate));
   };
 
   // Função para exibir o seletor de hora
-  const onChangeTime = (selectedTime: any) => {
+  const onChangeTime = (event, selectedTime) => {
     const currentTime = selectedTime || time;
     setShowTimePicker(false);
     setTime(currentTime);
@@ -974,23 +948,16 @@ const App = () => {
   };
 
   // Função para abrir o modal
-  const openModal = async (candidate: any, jobId: any) => {
+  const openModal = async (candidate, jobId) => {
     console.log('Candidato selecionado para o modal:', candidate);
     console.log('ID da vaga:', jobId);
     setSelectedCandidate(candidate);
     setSelectedJobId(jobId);
-    try {
-      await generateMapUrl();
-      console.log('Primeira chamada para gerar URL do mapa concluída.');
-  
-      // Chama a função novamente para gerar a URL do mapa pela segunda vez
-      await generateMapUrl();
-      console.log('Segunda chamada para gerar URL do mapa concluída.');
 
-      // Buscar a solicitação de entrevista existente para o candidato e a vaga
+    try {
       const { data: existingRequest, error } = await supabase
         .from('solicitacoes_entrevista')
-        .select('local')
+        .select('local,local_nome, tipo_entrevista, latitude, longitude')
         .eq('id_candidato', candidate.candidatos.id)
         .eq('id_vaga', jobId)
         .single();
@@ -1001,24 +968,39 @@ const App = () => {
       if (error) {
         console.error('Erro ao buscar solicitação de entrevista:', error);
       } else if (existingRequest) {
-        setLocation(existingRequest.local);
-      } else {
-        setLocation('Endereço padrão');
-      }
+        setLocation(existingRequest.local_nome);
 
-      setModalVisible(true);
+        // Se a entrevista for online, definimos o tipo de entrevista como 'online'
+        if (existingRequest.tipo_entrevista === 'online') {
+          setInterviewType('online');
+          setOnlinePlatform(existingRequest.local || '');
+        } else {
+          setInterviewType('presencial');
+        }
+        if (existingRequest.tipo_entrevista === 'presencial') {
+          const latitude = parseFloat(existingRequest.latitude);
+          const longitude = parseFloat(existingRequest.longitude);
+
+          // Verifica se as coordenadas são válidas
+          if (isNaN(latitude) || isNaN(longitude)) {
+            console.error('Coordenadas inválidas:', existingRequest.latitude, existingRequest.longitude);
+            return;
+          }
+          await generateMapUrl(latitude, longitude);
+        }
+      }
+      setModalVisible(true);  
     } catch (err) {
       console.error('Erro ao buscar informações da entrevista:', err);
       Alert.alert(
-        'Algo deu errrado', // Título do alerta personalizado
-        'Erro ao buscar informações da entrevista, lamentamos por isso', // Mensagem do alerta
-        [
-          { text: 'OK', onPress: () => console.log('OK Pressionado') },
-        ],
-        { cancelable: true } // Impede que o alerta seja fechado ao tocar fora dele
+        'Algo deu errado',
+        'Erro ao buscar informações da entrevista, lamentamos por isso',
+        [{ text: 'OK', onPress: () => console.log('OK Pressionado') }],
+        { cancelable: true }
       );
     }
   };
+
 
   // Função para obter o nome do local a partir das coordenadas
   const getLocationName = async (latitude: any, longitude: any) => {
@@ -1030,94 +1012,84 @@ const App = () => {
           'Accept-Language': 'pt-BR'
         },
       });
-
       if (!response.ok) {
         throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
       }
-
       const data = await response.json();
-      setLocation(data.display_name); // Atualiza o campo de input com o nome do local
-      setLocationName(data.display_name); // Para o marcador no mapa
+      setLocation(data.display_name);
+      setLocationName(data.display_name);
     } catch (error) {
       console.error('Erro ao obter o nome do local:', error);
       setLocation('Local não encontrado');
     }
   };
-  // Função para obter coordenadas a partir do nome do local
+
   const getCoordinatesFromLocationName = async (locationName) => {
     try {
-      console.log(`Buscando coordenadas para o local: ${locationName}`);
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`, {
+      const normalizedLocationName = locationName.trim().replace(/\s+/g, ' ');
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(normalizedLocationName)}&format=json&addressdetails=1&limit=1`, {
         method: 'GET',
         headers: {
           'User-Agent': 'siasapp/1.0',
-          'Accept-Language': 'pt-BR',
+          'Accept-Language': 'pt-BR'
         },
       });
-
       if (!response.ok) {
         throw new Error(`Erro na resposta: ${response.status} ${response.statusText}`);
       }
-
       const data = await response.json();
-      console.log('Resposta da API:', data);
+      console.log('Dados do local:', data);
       if (data.length > 0) {
-        console.log('Coordenadas encontradas:', data[0].lat, data[0].lon);
+        const { lat, lon } = data[0];
+        console.log('Coordenadas encontradas:', lat, lon);
         return {
-          latitude: parseFloat(data[0].lat),
-          longitude: parseFloat(data[0].lon),
+          latitude: parseFloat(lat),
+          longitude: parseFloat(lon),
         };
       } else {
         console.log('Nenhuma coordenada encontrada para o local.');
+        return null;
       }
     } catch (error) {
       console.error('Erro ao obter as coordenadas:', error);
+      return null;
     }
-    return null;
   };
 
   // Função para obter as coordenadas e gerar a URL
-  const generateMapUrl = async () => {
-    console.log(`Gerando URL para o local: ${location}`);
-
-    if (!location) {
-      console.log('Nenhuma localização definida, URL do mapa não gerada.');
-      return ''; // Retorna vazio se o nome do local não for fornecido
-    }
-
-    const zoom = 17; // Nível de zoom fixo para o mapa
-    const coordinates = await getCoordinatesFromLocationName(location);
-
-    if (!coordinates) {
-      console.log('Não foi possível obter as coordenadas para o local.');
+  const generateMapUrl = async (latitude, longitude) => {
+    if (isNaN(latitude) || isNaN(longitude)) {
+      console.log('As coordenadas fornecidas não são válidas.');
       return '';
     }
-
-    // URL do OpenStreetMap, passando as coordenadas diretamente
-    const url = `https://www.openstreetmap.org/?mlat=${coordinates.latitude}&mlon=${coordinates.longitude}&zoom=${zoom}&layers=mapnik`;
-
+    console.log(`Gerando URL para o local com latitude ${latitude} e longitude ${longitude}`);
+    const zoom = 17;
+    const url = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.0001},${latitude - 0.0001},${longitude + 0.0001},${latitude + 0.0001}&layer=mapnik&marker=${latitude},${longitude}`;
     console.log(`URL gerada: ${url}`);
-    setMapUrl(url); 
+    setMapUrl(url);
     return url;
   };
-
-
 
   // Função para lidar com a mudança de texto no input de endereço
   const handleInputChange = (text) => {
     console.log(`Entrada do usuário: ${text}`);
     setLocation(text);
 
-    // Limpar o timeout anterior, se houver
     if (typingTimeout) {
       clearTimeout(typingTimeout);
     }
 
-    // Definir um novo timeout para "debouncing"
-    const newTimeout = setTimeout(() => {
+    const newTimeout = setTimeout(async () => {
       if (text) {
-        console.log('Gerando URL com o nome do local...');
-        // Chama a função para gerar a URL com o nome do local
+        console.log('Gerando coordenadas e URL com o nome do local...');
+        const coordinates = await getCoordinatesFromLocationName(text);
+
+        if (coordinates) {
+          console.log('Coordenadas retornadas:', coordinates);
+          await generateMapUrl(coordinates.latitude, coordinates.longitude);
+        } else {
+          console.log('Nenhuma coordenada encontrada para o local.');
+        }
       } else {
         console.log('Nenhum texto inserido');
       }
@@ -1126,45 +1098,53 @@ const App = () => {
     setTypingTimeout(newTimeout);
   };
 
-  // Função para lidar com o toque no mapa
-  const handleMapPress = async (event: any) => {
-    const { coordinate } = event.nativeEvent;
-    setMapLocation(coordinate);
-    await getLocationName(coordinate.latitude, coordinate.longitude);
-
-  };
-
   // Função para salvar as informações do modal no banco de dados
   const handleSave = async () => {
     try {
       const { id: userId } = await getUserNameAndId();
       const id_recrutador = userId;
-
-      // Logs para depuração
       console.log('Candidato selecionado:', selectedCandidate);
       console.log('Candidatos:', selectedCandidate ? selectedCandidate.candidatos : null);
       console.log('ID da vaga:', selectedJobId);
+      console.log("Tipo de Entrevista:", interviewType);
+      console.log("Plataforma Online:", onlinePlatform);
+      console.log("Local:", location);
 
-      // Verifica se selectedCandidate e informações relevantes estão definidos
       if (!selectedCandidate || !selectedCandidate.candidatos || !selectedJobId) {
         alert('Selecione um candidato e uma vaga válidos.');
         return;
       }
-
-      //  Verifica se o candidato já foi selecionado para a vaga
       const id_candidato = selectedCandidate.candidatos.id;
       const id_vaga = selectedJobId;
       const data_entrevista = date.toISOString().split('T')[0];
       const horario = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const local = location;
-      const status = 'pendente';
+      let local = location;
+      let latitude = null;
+      let longitude = null;
+      let local_nome = location;
 
-      // Adicione logs para depuração
+      if (interviewType === 'presencial' && location) {
+        const coordinates = await getCoordinatesFromLocationName(location);
+        if (coordinates) {
+          latitude = coordinates.latitude;
+          longitude = coordinates.longitude;
+          console.log('Coordenadas:', latitude, longitude);
+        } else {
+          alert('Não foi possível obter as coordenadas para o local.');
+          return;
+        }
+      } else if (interviewType === 'online') {
+        local = onlinePlatform;
+        latitude = null;
+        longitude = null;
+        local_nome = ''; 
+      }
+
+      const status = 'pendente';
       console.log('userId:', userId);
       console.log('id_candidato:', id_candidato);
       console.log('id_vaga:', id_vaga);
 
-      // Verificar se já existe uma solicitação para este candidato e vaga
       const existingRequestResponse = await supabase
         .from('solicitacoes_entrevista')
         .select('*')
@@ -1174,27 +1154,26 @@ const App = () => {
       if (existingRequestResponse.error) {
         console.error('Erro ao buscar solicitação existente:', existingRequestResponse.error);
         Alert.alert(
-          'Algo deu errrado', // Título do alerta personalizado
-          'Erro ao buscar informações da entrevista, lamentamos por isso', // Mensagem do alerta
-          [
-            { text: 'OK', onPress: () => console.log('OK Pressionado') },
-          ],
-          { cancelable: true } // Impede que o alerta seja fechado ao tocar fora dele
+          'Algo deu errado',
+          'Erro ao buscar informações da entrevista, lamentamos por isso',
+          [{ text: 'OK', onPress: () => console.log('OK Pressionado') }],
+          { cancelable: true }
         );
         return;
       }
-
       if (existingRequestResponse.data && existingRequestResponse.data.length > 0) {
-        // Se a solicitação já existe, verificar o status
         const existingRequest = existingRequestResponse.data[0];
         if (existingRequest.status === 'pendente') {
-          // Atualizar a solicitação existente
           const updateResponse = await supabase
             .from('solicitacoes_entrevista')
             .update({
               data_entrevista,
               horario,
               local,
+              tipo_entrevista: interviewType,
+              local_nome: local_nome,
+              latitude,
+              longitude,
               status,
             })
             .eq('id_candidato', id_candidato)
@@ -1209,31 +1188,29 @@ const App = () => {
             closeModal();
           }
         } else {
-          // Se o status não é 'pendente', não permitir nova solicitação
           Alert.alert(
-            'Candidato ja aceitou ou recursou', // Título do alerta personalizado
-            'Não é possível enviar uma nova solicitação, pois já existe uma solicitação com status diferente', // Mensagem do alerta
-            [
-              { text: 'OK', onPress: () => console.log('OK Pressionado') },
-            ],
-            { cancelable: true } // Impede que o alerta seja fechado ao tocar fora dele
+            'Candidato já aceitou ou recusou',
+            'Não é possível enviar uma nova solicitação, pois já existe uma solicitação com status diferente',
+            [{ text: 'OK', onPress: () => console.log('OK Pressionado') }],
+            { cancelable: true }
           );
         }
       } else {
-        // Caso não exista uma solicitação, criar uma nova
         const insertResponse = await supabase
           .from('solicitacoes_entrevista')
-          .insert([
-            {
-              id_recrutador,
-              id_candidato,
-              id_vaga,
-              data_entrevista,
-              horario,
-              local,
-              status,
-            },
-          ]);
+          .insert([{
+            id_recrutador,
+            id_candidato,
+            id_vaga,
+            data_entrevista,
+            horario,
+            local,
+            tipo_entrevista: interviewType,
+            local_nome: local_nome,
+            latitude,
+            longitude,
+            status,
+          }]);
 
         if (insertResponse.error) {
           console.error('Erro ao salvar solicitação de entrevista:', insertResponse.error);
@@ -1241,13 +1218,12 @@ const App = () => {
         } else {
           console.log('Solicitação de entrevista salva com sucesso!');
           Alert.alert(
-            'Atualizado com sucesso', // Título do alerta personalizado
-            'Os detralhes da entrevista forem alterados com sucesso', // Mensagem do alerta
-            [
-              { text: 'OK', onPress: () => console.log('OK Pressionado') },
-            ],
-            { cancelable: false } // Impede que o alerta seja fechado ao tocar fora dele
-          ); closeModal();
+            'Atualizado com sucesso',
+            'Os detalhes da entrevista foram alterados com sucesso',
+            [{ text: 'OK', onPress: () => console.log('OK Pressionado') }],
+            { cancelable: false }
+          );
+          closeModal();
         }
       }
     } catch (error) {
@@ -1256,11 +1232,13 @@ const App = () => {
     }
   };
 
+
+
   const handleSuccess = () => {
     Alert.alert(
-      'Sucesso', // Título do alerta
-      'Solicitação de entrevista atualizada com sucesso!', // Mensagem do alerta
-      [{ text: 'OK' }] // Botões do alerta
+      'Sucesso',
+      'Solicitação de entrevista atualizada com sucesso!',
+      [{ text: 'OK' }]
     );
   };
 
@@ -1295,13 +1273,12 @@ const App = () => {
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }, // Altera a cor de fundo
+          { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' },
         ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-
         <View style={styles.top}>
           <Image
             source={profileImage ? { uri: profileImage } : require('../../assets/perfil.png')}
@@ -1405,7 +1382,6 @@ const App = () => {
           )}
         </View>
 
-
         <Text style={[styles.text1, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
           Entrevistas Agendadas
         </Text>
@@ -1433,8 +1409,7 @@ const App = () => {
                   </Text>
                   <Ionicons name={filtersVisible ? 'chevron-up' : 'chevron-down'} size={20} color="#fff" />
                 </TouchableOpacity>
-
-                {filtersVisible && ( // Renderiza os filtros apenas se estiver visível
+                {filtersVisible && (
                   <>
                     <TextInput
                       style={[styles.inputtitulo, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#FFFFFF', color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}
@@ -1490,7 +1465,6 @@ const App = () => {
               {/* Filtrando e exibindo as ofertas de emprego */}
               {jobOffers.filter(job => {
                 const inscritosCount = candidates.filter(candidate => candidate.vagas.id === job.id).length;
-
                 return (
                   inscritosCount >= minInscritos &&
                   (selectedStatus ? candidates.some(candidate => candidate.vagas.id === job.id && candidate.status === selectedStatus) : true) &&
@@ -1500,7 +1474,6 @@ const App = () => {
                 jobOffers
                   .filter(job => {
                     const inscritosCount = candidates.filter(candidate => candidate.vagas.id === job.id).length;
-
                     return (
                       inscritosCount >= minInscritos &&
                       (selectedStatus ? candidates.some(candidate => candidate.vagas.id === job.id && candidate.status === selectedStatus) : true) &&
@@ -1521,13 +1494,14 @@ const App = () => {
                         <Text style={[styles.jobTitle, { color: '#FFFFFF' }]}>{job.titulo}</Text>
                         <Text style={[styles.arrow, { color: '#FFFFFF' }]}>{expandedJobs[job.id] ? '▼' : '▲'}</Text>
                       </TouchableOpacity>
-
                       {expandedJobs[job.id] && (
                         candidates
                           .filter(candidate => candidate.vagas.id === job.id && (selectedStatus ? candidate.status === selectedStatus : true)) // Filtra os candidatos com base no status selecionado ou não
                           .map(candidate => (
                             <View key={candidate.id} style={styles.candidateContainer}>
-                              <TouchableOpacity onPress={() => openModal(candidate, job.id)}>
+                              <TouchableOpacity onPress={() => openModal(candidate, job.id)}
+                                activeOpacity={0.7}
+                                style={styles.candidateTouchable}>
                                 <View style={styles.candidateDetails}>
                                   {candidate.candidatos.foto_perfil ? (
                                     <Image source={{ uri: candidate.candidatos.foto_perfil }} style={styles.photo} />
@@ -1542,6 +1516,8 @@ const App = () => {
                                     <Text style={styles.email}>{candidate.candidatos.email}</Text>
                                     <Text style={styles.cpf}>CPF: {candidate.candidatos.cpf.replace(/.(?=.{4})/g, '*')}</Text>
                                   </View>
+                                  {/* Ícone de informação indicando que é clicável */}
+                                  <Icon name="touch-app" size={24} color="#F07A26" style={styles.icon} />
                                 </View>
                               </TouchableOpacity>
                             </View>
@@ -1560,9 +1536,6 @@ const App = () => {
         <View style={[styles.containeragenda, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#FFFFFF' }]}>
           {/* Botão para mostrar/ocultar filtros */}
           <View style={styles.filtersContainer}>
-
-
-
 
             <Animatable.View style={styles.filtersContainersuasJobs} animation="fadeIn" duration={300}>
               {/* Indicador de arraste */}
@@ -1604,8 +1577,6 @@ const App = () => {
                 </TouchableOpacity>
               </ScrollView>
             </Animatable.View>
-
-
 
           </View>
           {sortedJobOffers.length > 0 ? (
@@ -1726,6 +1697,10 @@ const App = () => {
             </View>
           </Modal>
 
+
+
+
+
           {/* Modal para informações do candidato */}
           <Modal
             animationType="slide"
@@ -1750,12 +1725,11 @@ const App = () => {
                       style={styles.buttonContact}
                       onPress={async () => {
                         const userId = await getUserIdByEmailFirestore(selectedCandidate.candidatos.email);
-
                         navigation.navigate('chatRoom', {
                           item: {
                             userId: userId,
                             username: selectedCandidate.candidatos.nome,
-                            profileImg: selectedCandidate.candidatos.foto_perfil
+                            profileImg: selectedCandidate.candidatos.foto_perfil,
                           }
                         });
                       }}
@@ -1764,7 +1738,6 @@ const App = () => {
                         <Ionicons name="chatbubble-outline" size={20} color="#FF8D02FF" />
                         <Text style={styles.buttonTexnavegacao}>Conversar com o Candidato</Text>
                       </View>
-
                     </TouchableOpacity>
                     <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
                       <Text style={styles.modalLabel}>Nome: </Text>
@@ -1774,44 +1747,84 @@ const App = () => {
                       <Text style={styles.modalLabel}>Email: </Text>
                       {selectedCandidate.candidatos.email || 'Email não disponível'}
                     </Text>
-
-                    {/* Campo de input para digitar o local */}
-                    <TextInput
-                      style={[
-                        {
-                          color: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-                          borderColor: '#FF8C00',
-                          borderWidth: 1,
-                          height: 40,
-                          padding: 10,
-                          marginBottom: 30
-                        }
-                      ]} placeholder="Digite o local"
-                      value={location}
-                      onChangeText={handleInputChange}
-                      placeholderTextColor={colorScheme === 'dark' ? '#FFFFFF' : '#888'}
-                      selectionColor="#FF8C00"
-                      underlineColorAndroid="transparent"
-                    />
-
-                    <View style={{ height: 300 }}>
-                      {isMapLoading && <ActivityIndicator size="large" color="#FF8C00" />}
-                      {mapUrl ? (
-                        <WebView
-                          source={{ uri: mapUrl }}
-                          style={{ flex: 1 }}
-                          onLoadStart={() => setIsMapLoading(true)}
-                          onLoadEnd={() => setIsMapLoading(false)}
-                        />
-                      ) : null}
+                    <View style={styles.radioGroup}>
+                      <TouchableOpacity
+                        onPress={() => setInterviewType('presencial')}
+                        style={[styles.radioOption, interviewType === 'presencial' && styles.selectedOption]}
+                      >
+                        <Text style={[styles.radioText, interviewType === 'presencial' && styles.selectedText]}>Presencial</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setInterviewType('online')}
+                        style={[styles.radioOption, interviewType === 'online' && styles.selectedOption]}
+                      >
+                        <Text style={[styles.radioText, interviewType === 'online' && styles.selectedText]}>Online</Text>
+                      </TouchableOpacity>
                     </View>
-
+                    {/* Campo de input para digitar o local, somente se a entrevista for presencial */}
+                    {interviewType === 'presencial' && (
+                      < TextInput
+                        style={[
+                          {
+                            color: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+                            borderColor: '#FF8C00',
+                            borderWidth: 1,
+                            height: 40,
+                            padding: 10,
+                            marginBottom: 30
+                          }
+                        ]} placeholder="Digite o local"
+                        value={location}
+                        onChangeText={handleInputChange}
+                        placeholderTextColor={colorScheme === 'dark' ? '#FFFFFF' : '#888'}
+                        selectionColor="#FF8C00"
+                        underlineColorAndroid="transparent"
+                      />
+                    )}
+                    {/* Se o tipo da entrevista for online, exibe o campo para colocar o link da plataforma */}
+                    {interviewType === 'online' && (
+                      <>
+                        <TextInput
+                          style={[
+                            {
+                              color: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+                              borderColor: '#FF8C00',
+                              borderWidth: 1,
+                              height: 40,
+                              padding: 10,
+                              marginBottom: 30
+                            }
+                          ]}
+                          placeholder="Digite o link ou plataforma (e.g., Zoom, WhatsApp)"
+                          value={onlinePlatform}
+                          onChangeText={setOnlinePlatform}
+                          placeholderTextColor={colorScheme === 'dark' ? '#FFFFFF' : '#888'}
+                          selectionColor="#FF8C00"
+                          underlineColorAndroid="transparent"
+                        />
+                      </>
+                    )}
+                    {/* Renderizar o mapa somente se o tipo de entrevista não for 'online' */}
+                    {interviewType !== 'online' && (
+                      <View style={{ height: 300 }}>
+                        {isMapLoading && <ActivityIndicator size="large" color="#FF8C00" />}
+                        {mapUrl ? (
+                          <WebView
+                            source={{ uri: mapUrl }}
+                            style={{ flex: 1 }}
+                            scrollEnabled={false}
+                            onLoadStart={() => setIsMapLoading(true)}
+                            onLoadEnd={() => setIsMapLoading(false)}
+                          />
+                        ) : null}
+                      </View>
+                    )}
 
                     {/* Input para selecionar Data */}
                     <TouchableOpacity onPress={showDatePickerDialog} style={styles.inputContainer}>
                       <TextInput
                         style={[styles.input, { color: '#000' }]}
-                        value={date ? date.toLocaleDateString() : ''}
+                        value={date ? new Date(date).toLocaleDateString() : ''}
                         placeholder="Selecionar Data"
                         editable={false}
                         placeholderTextColor="#000"
@@ -1823,7 +1836,7 @@ const App = () => {
                     <TouchableOpacity onPress={showTimePickerDialog} style={styles.inputContainer}>
                       <TextInput
                         style={[styles.input, { color: '#000' }]}
-                        value={time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        value={time ? new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         placeholder="Selecionar Hora"
                         editable={false}
                         placeholderTextColor="#000"
@@ -1879,12 +1892,11 @@ const App = () => {
 
     );
   } else {
-    // Se o usario for do tipo Candidato
     return (
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }, // Altera a cor de fundo
+          { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff' }, 
         ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -1926,7 +1938,7 @@ const App = () => {
           ) : chartData.labels.length > 0 ? (
             <GestureHandlerRootView>
               <View style={{ padding: 16 }}>
-                <Text style={{ fontSize: 16, marginBottom: 10, fontWeight: 'bold' }}>
+                <Text style={{ fontSize: 16, marginBottom: 10, fontWeight: 'bold', color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>
                   Solicitações de Entrevista - {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
                 </Text>
                 <TouchableOpacity
@@ -2091,7 +2103,7 @@ const App = () => {
             );
           })
         ) : (
-          <Text style={styles.noInscriptionText}>Nenhuma inscrição encontrada.</Text>
+          <Text style={{ color: colorScheme === 'dark' ? '#ffffff' : '#000000' }}>Nenhuma inscrição encontrada.</Text>
         )}
 
 
@@ -2109,8 +2121,7 @@ const App = () => {
               style={styles.customButton}
               onPress={() => {
                 setShowNoConnection(false);
-                // Você pode adicionar lógica aqui para tentar recarregar os dados
-                fetchInterviewCounts(userId); // Tenta recarregar os dados
+                fetchInterviewCounts(userId); 
               }}
             >
               <Text style={styles.buttonText}>Tentar novamente</Text>
@@ -2121,6 +2132,4 @@ const App = () => {
     );
   }
 }
-
-
 export default App;

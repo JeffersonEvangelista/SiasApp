@@ -2,6 +2,28 @@ import { StyleSheet, Dimensions } from 'react-native';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
+    radioGroup: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginBottom: 20,
+    },
+    radioOption: {
+        padding: 10,
+        borderWidth: 1,
+        borderColor: '#FF8C00',
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    selectedOption: {
+        backgroundColor: '#FF8C00',
+    },
+    selectedText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+    },
+    radioText: {
+        color: '#FF8C00',
+    },
     webview: {
         flex: 1,
         borderRadius: 15,
@@ -185,33 +207,6 @@ export const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    photo: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        marginRight: 10,
-    },
-    infoContainer: {
-        flex: 1,
-    },
-    statusText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    name: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    email: {
-        fontSize: 14,
-        color: '#666',
-    },
-    cpf: {
-        fontSize: 14,
-        color: '#666',
-    },
     noJobOffersText: {
         fontSize: 18,
         color: '#ffffff',
@@ -271,6 +266,8 @@ export const styles = StyleSheet.create({
         height: 60,
         borderRadius: 25,
         marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#FF8C00', 
     },
 
     textContainer: {
@@ -420,6 +417,7 @@ export const styles = StyleSheet.create({
     },
     infoContainer: {
         flex: 1,
+        height: '120%'
     },
     name: {
         fontSize: 16,
@@ -438,7 +436,8 @@ export const styles = StyleSheet.create({
         fontWeight: 'bold',
         position: 'absolute',
         marginTop: '-10%',
-        marginLeft: '65%'
+        marginLeft: '60%',
+        zIndex: 7
 
     },
     noCandidatesText: {
