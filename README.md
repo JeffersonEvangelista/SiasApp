@@ -124,6 +124,14 @@ Para fazer essa mudança:
 | ![Tela de Configuração](/img/Configuração.jpg) |       |
 
 
+## Download
+
+Aqui você pode encontrar as instruções para baixar o aplicativo.
+
+[Ir para a seção de download](https://www.terabox.com/portuguese/sharing/link?surl=CCUoYOM3GXzF_FMQuaNGkw)
+
+ou escaneá o QR Code abaixo:
+![QR Code](/img/qrcode.png)
 
 ## Ferramentas Utilizadas
 
