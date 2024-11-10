@@ -120,17 +120,33 @@ export default function ChatRoom({route, navigation}) {
               <MessagesList scrollViewRef={scrollViewRef} messages={messages} currentUser={user}/>
             </View>
               <View style={{flexDirection:'row', alignItems:'center', margin:10}}>
-                <View style={{flex: 1, flexDirection:"row", alignItems:"center", height:46, marginRight:10, paddingHorizontal:12, borderRadius:10, borderColor: "#ccc", borderWidth: 1}}>
+              <View
+                style={{
+                  flex: 1,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  height: 46,
+                  marginRight: 10,
+                  paddingHorizontal: 12,
+                  borderRadius: 10,
+                  borderColor: colorScheme === 'dark' ? '#555' : '#ccc', // Borda mais escura no Dark Mode
+                  borderWidth: 1,
+                  backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff', // Fundo escuro no Dark Mode e claro no modo claro
+                }}
+              >
                   <TextInput
-                  ref={inputRef}
-                  onChangeText={value=> textRef.current = value}
-                  style={{fontSize: 18}}
-                  placeholder='Digite sua mensagem'
-                  placeholderTextColor={'#C0C0C0'}
+                    ref={inputRef}
+                    onChangeText={(value) => (textRef.current = value)}
+                    style={{
+                      fontSize: 18,
+                      color: colorScheme === 'dark' ? '#FFFFFF' : '#000000', // Texto branco no Dark Mode
+                    }}
+                    placeholder="Digite sua mensagem"
+                    placeholderTextColor={colorScheme === 'dark' ? '#888888' : '#C0C0C0'} // Cinza escuro no Dark Mode
                   />
                 </View>
-                <TouchableOpacity 
-                  onPress={handleSendMessage} 
+                <TouchableOpacity
+                  onPress={handleSendMessage}
                   style={{
                     backgroundColor:"#F07A26",
                     padding:12,

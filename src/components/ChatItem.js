@@ -72,7 +72,9 @@ export default function ChatItem({item, currentUser}) {
                     <Text style={{fontSize:14, ...(colorScheme === 'dark' ? { color: '#fff' } : {})}}>{renderLastMessage()}</Text>
                 </View>
                 <View>
-                    <Text>{renderTime()}</Text>
+                <Text style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}>
+                    {renderTime()}
+                </Text>
                 </View>
             </View>
         </View>
