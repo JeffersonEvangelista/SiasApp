@@ -1,8 +1,7 @@
 import { StatusBar } from "expo-status-bar";
-import { View, Text, Linking, Platform, StyleSheet, TouchableOpacity, RefreshControl, Modal, FlatList, Animated, PanResponder, Image, ActivityIndicator } from 'react-native';
+import { View, Text, Linking, Platform, RefreshControl, TouchableOpacity, ScrollView, Modal, FlatList, Animated, PanResponder, Image, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
-import { ScrollView } from "react-native-gesture-handler";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getUserNameAndId, supabase, countSolicitacoes } from "../services/userService";
 import { styles } from "./Styles/stylesAgenda";
@@ -146,23 +145,23 @@ export default function Agenda() {
       const { data: interviewRequests, error } = await supabase
         .from('solicitacoes_entrevista')
         .select(`
-      id,
-      id_candidato,
-      data_entrevista,
-      horario,
-      local,
-      status,
-      candidatos (
-        id,
-        nome,
-        email,
-        foto_perfil
-      ),
-      vagas (
-        id,
-        titulo
-      )
-    `)
+          id,
+          id_candidato,
+          data_entrevista,
+          horario,
+          local,
+          status,
+          candidatos (
+            id,
+            nome,
+            email,
+            foto_perfil
+          ),
+          vagas (
+            id,
+            titulo
+          )
+        `)
         .eq('id_recrutador', recruiterId);
 
       console.log('Dados de entrevistas do recrutador:', interviewRequests);
@@ -185,14 +184,16 @@ export default function Agenda() {
         console.log('Entrevistas encontradas para o recrutador:', filteredInterviews);
 
         for (const request of filteredInterviews) {
-          const interviewDate = new Date(request.data_entrevista);
+          // Cria a data da entrevista diretamente usando o formato salvo no banco (YYYY-MM-DD)
+          const interviewDate = new Date(`${request.data_entrevista}T00:00:00`);
 
+          // Verifica se a entrevista está expirada
           if (interviewDate < today) {
             await handleExpiredInterview(request, request.id_candidato);
-            continue; //
+            continue;
           }
 
-          const dateString = request.data_entrevista;
+          const dateString = request.data_entrevista; 
           const dotStyle = getDotStyle(request.status || '');
 
           // Adiciona marcação ao calendário
@@ -217,11 +218,12 @@ export default function Agenda() {
             candidateEmail: request.candidatos.email,
             candidateId: request.candidatos.id,
             profileImg: request.candidatos.foto_perfil,
-            date: request.data_entrevista,
+            date: dateString, 
             time: request.horario,
             location: request.local,
             status: request.status || '',
           });
+
           console.log(
             'Detalhes da Entrevista do Recrutador Formatados:',
             JSON.stringify(details, null, 2)
@@ -239,6 +241,8 @@ export default function Agenda() {
       setLoading(false);
     }
   };
+
+
 
   const handleCandidateProfile = async (candidateId) => {
     try {
@@ -266,31 +270,34 @@ export default function Agenda() {
           )
         `)
         .eq('id_candidato', candidateId);
-
+  
       console.log('Dados de solicitações de entrevista:', interviewRequests);
-
+  
       if (error) {
         throw error;
       }
-
+  
       const marked = {};
       const details = [];
       const statuses = ['pendente', 'aceita', 'recusada'];
-
+  
       // Filtra entrevistas com status válido
       const filteredInterviews = Array.isArray(interviewRequests)
         ? interviewRequests.filter(request =>
           request.status && statuses.includes((request.status || '').toLowerCase())
         )
         : [];
-
+  
       if (filteredInterviews.length > 0) {
         console.log('Entrevistas encontradas para o recrutador:', filteredInterviews);
-
+  
         for (const request of filteredInterviews) {
-          const dateString = request.data_entrevista;
+          // Criação da data a partir da string usando a data salva no banco (YYYY-MM-DD)
+          const interviewDate = new Date(`${request.data_entrevista}T00:00:00`); // Usando 00:00:00 para garantir que a data seja válida
+          const dateString = request.data_entrevista; // A data no formato YYYY-MM-DD direto do banco
+  
           const dotStyle = getDotStyle(request.status || '');
-
+  
           // Marca as datas com status de entrevista
           marked[dateString] = {
             marked: true,
@@ -304,23 +311,23 @@ export default function Agenda() {
             selected: true,
             selectedColor: dotStyle.color,
           };
-
+  
           const latitude = parseFloat(request.latitude);
           const longitude = parseFloat(request.longitude);
-
+  
           // Verifica se as coordenadas são válidas antes de gerar a URL
           if (isNaN(latitude) || isNaN(longitude)) {
             console.log("Latitude ou longitude inválidas.");
-            return;
+            continue;
           }
-
+  
           // Gera a URL do mapa
           const mapUrl = await generateMapUrl(latitude, longitude);
-
+  
           // Obtém o recrutador relacionado
           const recruiter = request.vagas.recrutadores || {};
           const firebaseRecruiterId = await getRecruiterIdByEmail(recruiter.email);
-
+  
           // Adiciona os detalhes da entrevista formatados
           details.push({
             id: request.id,
@@ -330,7 +337,7 @@ export default function Agenda() {
             recruiterId: recruiter.id || 'ID não disponível',
             recruiterFirebaseId: firebaseRecruiterId,
             profileImg: recruiter.foto_perfil || 'URL não disponível',
-            date: request.data_entrevista,
+            date: dateString, 
             time: request.horario,
             location: request.local,
             status: request.status || 'Status não disponível',
@@ -340,26 +347,26 @@ export default function Agenda() {
             locationName: request.local_nome || 'Nome do local não disponível',
             mapUrl: mapUrl || 'URL não disponível',
           });
-
+  
           console.log(
             'Detalhes da Entrevista Formatados:',
             JSON.stringify(details, null, 2)
           );
         }
-
-        // Atualiza o estado com os detalhes e datas marcadas
+  
         setInterviewDetails(details);
         setMarkedDates(marked);
       } else {
         console.log('Nenhuma entrevista encontrada para este recrutador.');
       }
-
+  
     } catch (error) {
       console.error('Erro ao buscar solicitações de entrevista:', error);
     } finally {
       setLoading(false);
     }
   };
+  
 
   // Função para obter as coordenadas e gerar a URL
   const generateMapUrl = async (latitude, longitude) => {
@@ -377,7 +384,7 @@ export default function Agenda() {
   const handleNavigateToMap = (latitude, longitude) => {
     const lat = parseFloat(latitude);
     const lon = parseFloat(longitude);
-  
+
     if (isNaN(lat) || isNaN(lon)) {
       console.log('Coordenadas inválidas');
       return;
@@ -386,13 +393,13 @@ export default function Agenda() {
 
     const mapUrl = Platform.select({
       ios: `maps:0,0?q=${destination}&daddr=${destination}`,
-      android: `google.navigation:q=${destination}`, 
+      android: `google.navigation:q=${destination}`,
     });
 
     // Tenta abrir a URL
     Linking.openURL(mapUrl).catch((err) => console.error('Erro ao abrir o mapa:', err));
   };
-  
+
   // Função para decodificar a polyline
   const decodePolyline = (encoded) => {
     let len = encoded.length;
@@ -885,6 +892,7 @@ export default function Agenda() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+
     console.log('Atualizando dados...');
 
     await fetchProfile();
@@ -1181,10 +1189,10 @@ export default function Agenda() {
                         <View style={styles.dateBar} />
                         <View style={styles.dateTextContainer}>
                           <Text style={styles.interviewDateDay}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                            {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit' })}
                           </Text>
                           <Text style={styles.interviewDateMonth}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                            {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                           </Text>
                         </View>
                       </View>
@@ -1218,10 +1226,10 @@ export default function Agenda() {
                         <View style={styles.dateBarAceita} />
                         <View style={styles.dateTextContainer}>
                           <Text style={styles.interviewDateDayAceita}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                            {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit' })}
                           </Text>
                           <Text style={styles.interviewDateMonthAceita}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                            {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                           </Text>
                         </View>
                       </View>
@@ -1255,10 +1263,10 @@ export default function Agenda() {
                         <View style={styles.dateBarRecursada} />
                         <View style={styles.dateTextContainer}>
                           <Text style={styles.interviewDateDayRecursada}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                            {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit' })}
                           </Text>
                           <Text style={styles.interviewDateMonthRecursada}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                            {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                           </Text>
                         </View>
                       </View>
@@ -1411,10 +1419,10 @@ export default function Agenda() {
                               <View style={styles.dateBar} />
                               <View style={styles.dateTextContainer}>
                                 <Text style={styles.interviewDateDay}>
-                                  {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                                  {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit' })}
                                 </Text>
                                 <Text style={styles.interviewDateMonth}>
-                                  {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                  {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                                 </Text>
                               </View>
                             </View>
@@ -1457,10 +1465,10 @@ export default function Agenda() {
                           <View style={styles.dateBarAceita} />
                           <View style={styles.dateTextAceita}>
                             <Text style={styles.interviewDateDayAceita}>
-                              {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                              {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit' })}
                             </Text>
                             <Text style={styles.interviewDateMonthAceita}>
-                              {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                              {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                             </Text>
                           </View>
                         </View>
@@ -1498,10 +1506,10 @@ export default function Agenda() {
                         <View style={styles.dateBarRecursada} />
                         <View style={styles.dateTextContainer}>
                           <Text style={styles.interviewDateDayRecursada}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit' })}
+                            {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit' })}
                           </Text>
                           <Text style={styles.interviewDateMonthRecursada}>
-                            {new Date(item.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                            {new Date(`${item.date}T00:00:00`).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                           </Text>
                         </View>
                       </View>
@@ -1630,12 +1638,12 @@ export default function Agenda() {
                       )}
 
                     {selectedInterview.interviewType === 'online' && (
-                    <View style={styles.infoRow}>
-                    <Ionicons name="location" size={24} color="#ff8c00" />
-                    <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
-                      Plataforma: {selectedInterview.platform || 'Não especificado'}
-                    </Text>
-                  </View>
+                      <View style={styles.infoRow}>
+                        <Ionicons name="location" size={24} color="#ff8c00" />
+                        <Text style={[styles.modalText, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
+                          Plataforma: {selectedInterview.platform || 'Não especificado'}
+                        </Text>
+                      </View>
                     )}
                     <TouchableOpacity
                       style={styles.buttonClose}
