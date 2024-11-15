@@ -128,7 +128,7 @@ Para fazer essa mudança:
 
 Aqui você pode encontrar as instruções para baixar o aplicativo.
 
-[Ir para a seção de download](https://terabox.com/s/1TLYYjwC9IsVTw4w1W2xyMg)
+[Ir para a seção de download](https://terabox.com/s/1CpJpI5gVVfV15tY7kixH3A)
 
 ou escaneá o QR Code abaixo:
 ![QR Code](/img/qrcode.png)

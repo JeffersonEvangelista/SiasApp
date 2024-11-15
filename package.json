@@ -1,6 +1,6 @@
 {
   "name": "siasapp",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start --tunnel",

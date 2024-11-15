@@ -3,14 +3,60 @@ import colors from './colors';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
+    modalContent: {
+        padding: 20,
+        backgroundColor: '#fff',
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    subtitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#555',
+        marginBottom: 5,
+    },
+    paragraph: {
+        fontSize: 16,
+        color: '#666',
+        lineHeight: 24,
+        marginBottom: 10,
+    },
+    bold: {
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    link: {
+        color: '#007BFF',
+        textDecorationLine: 'underline',
+    },
+    bullet: {
+        fontSize: 16,
+        color: '#666',
+        marginLeft: 15,
+        lineHeight: 24,
+    },
+    section: {
+        marginBottom: 20,
+    },
+    footer: {
+        fontSize: 14,
+        color: '#aaa',
+        textAlign: 'center',
+        marginTop: 20,
+    },
     scrollViewContent: {
         flexGrow: 1,
     },
     errorText: {
         color: 'red',
         fontSize: 12,
-        zIndex:2,
-    
+        zIndex: 2,
+
     },
     container: {
         flex: 1,
@@ -121,10 +167,10 @@ export const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.8,
         shadowRadius: 2,
-        elevation: 5, 
+        elevation: 5,
     },
     buttonText: {
-        color: '#FFF', 
+        color: '#FFF',
         fontSize: 16,
         fontWeight: 'bold',
         textAlign: 'center',
@@ -277,8 +323,8 @@ export const stylesAssistente = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        zIndex:4,
-        marginTop:'4%',
+        zIndex: 4,
+        marginTop: '4%',
     },
     chatIdText: {
         fontSize: 16,

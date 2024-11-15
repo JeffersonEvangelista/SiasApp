@@ -1714,8 +1714,8 @@ const App = () => {
           <Modal transparent={true} visible={showNoConnection}>
             <View style={styles.modalBackground}>
               <LottieView
-                source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
-                autoPlay
+                  source={require('./../../assets/Animation - 1728042992312.json')}
+                  autoPlay
                 loop
                 style={styles.lottieAnimation}
               />
@@ -2146,8 +2146,8 @@ const App = () => {
         <Modal transparent={true} visible={showNoConnection}>
           <View style={styles.modalBackground}>
             <LottieView
-              source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
-              autoPlay
+                  source={require('./../../assets/Animation - 1728042992312.json')}
+                  autoPlay
               loop
               style={styles.lottieAnimation}
             />

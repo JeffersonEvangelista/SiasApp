@@ -13,7 +13,7 @@ import NetInfo from '@react-native-community/netinfo';
 import LottieView from 'lottie-react-native';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../services/Firebase';
-import { supabase  } from '../../services/userService';
+import { supabase } from '../../services/userService';
 import { getAuth } from 'firebase/auth';
 
 const logo = require('./../../../assets/logo.png');
@@ -206,11 +206,11 @@ const CadastroScreen = () => {
     try {
       const auth = getAuth();
       const user = auth.currentUser;
-  
+
       // Deletar o documento do usuário no Firestore
       await deleteDoc(doc(db, 'users', userId));
       console.log(`Usuário com ID ${userId} excluído do Firestore.`);
-  
+
       // Verificar se o usuário está autenticado antes de tentar excluí-lo
       if (user) {
         await user.delete();
@@ -413,7 +413,7 @@ const CadastroScreen = () => {
       <Modal transparent={true} visible={showNoConnection}>
         <View style={styles.modalBackground}>
           <LottieView
-            source={{ uri: 'https://lottie.host/d563187e-e622-429e-9b48-7e5115da94aa/2ggDhkaD52.json' }}
+            source={require('./../../../assets/Animation - 1728042992312.json')}
             autoPlay
             loop
             style={styles.lottieAnimation}
@@ -433,10 +433,74 @@ const CadastroScreen = () => {
       >
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Termos e Condições</Text>
+            <Text style={styles.modalTitle}>Termos e Permissões de Uso do Aplicativo</Text>
             <ScrollView style={styles.modalContent}>
-              <Text style={styles.modalText}>
-                Lorem ipsum dolor, sit amet consectetur adipisicing elit. Nam ipsum molestiae impedit sequi explicabo accusamus hic dolorum ullam illum dignissimos, assumenda expedita repellat tempore perspiciatis quo officiis odio, laudantium suscipit!
+              <Text style={styles.title}>Termos e Permissões</Text>
+              <Text style={styles.paragraph}>
+                Bem-vindo ao <Text style={styles.bold}>Sias</Text>. Ao utilizar nosso aplicativo, você concorda com os seguintes termos e condições relacionados às permissões que solicitamos. Nosso compromisso é respeitar sua privacidade e garantir que seus dados sejam usados de forma segura e responsável.
+              </Text>
+
+              <View style={styles.section}>
+                <Text style={styles.subtitle}>1. Coleta e Uso de Localização</Text>
+                <Text style={styles.paragraph}>
+                  O aplicativo pode solicitar acesso à sua localização para fornecer funcionalidades como:
+                </Text>
+                <Text style={styles.bullet}>- Sugestões de locais próximos;</Text>
+                <Text style={styles.bullet}>- Otimização de rotas.</Text>
+                <Text style={styles.paragraph}>
+                  <Text style={styles.bold}>Como usamos:</Text> A localização será coletada apenas quando necessária e usada exclusivamente para fins relacionados à funcionalidade do aplicativo. Não compartilhamos sua localização com terceiros sem sua autorização explícita.
+                </Text>
+                <Text style={styles.paragraph}>
+                  <Text style={styles.bold}>Configuração:</Text> Você pode habilitar ou desabilitar o acesso à localização nas configurações do seu dispositivo a qualquer momento.
+                </Text>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.subtitle}>2. Acesso à Galeria</Text>
+                <Text style={styles.paragraph}>
+                  Solicitamos acesso à galeria do seu dispositivo para:
+                </Text>
+                <Text style={styles.bullet}>- Permitir upload de fotos;</Text>
+                <Text style={styles.bullet}>- Personalização de perfil.</Text>
+                <Text style={styles.paragraph}>
+                  <Text style={styles.bold}>Como usamos:</Text> O acesso é utilizado exclusivamente para selecionar ou visualizar imagens escolhidas por você. Não acessamos ou armazenamos outras imagens sem sua permissão explícita.
+                </Text>
+                <Text style={styles.paragraph}>
+                  <Text style={styles.bold}>Configuração:</Text> Você pode gerenciar o acesso à galeria através das configurações do seu dispositivo.
+                </Text>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.subtitle}>3. Permissão para Notificações</Text>
+                <Text style={styles.paragraph}>
+                  Solicitamos permissão para enviar notificações para:
+                </Text>
+                <Text style={styles.bullet}>- Informar sobre atualizações importantes;</Text>
+                <Text style={styles.bullet}>- Lembrá-lo de compromissos ou eventos.</Text>
+                <Text style={styles.paragraph}>
+                  <Text style={styles.bold}>Como usamos:</Text> As notificações serão enviadas apenas para mantê-lo informado sobre funcionalidades ou eventos importantes. Você pode ajustar a frequência ou desativar as notificações nas configurações do aplicativo ou do dispositivo.
+                </Text>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.subtitle}>4. Segurança dos Dados</Text>
+                <Text style={styles.paragraph}>
+                  Nosso compromisso é proteger suas informações. Os dados coletados por meio das permissões solicitadas são armazenados e processados com alto padrão de segurança. Nunca venderemos ou compartilharemos suas informações com terceiros sem sua permissão.
+                </Text>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.subtitle}>5. Alterações e Revogação de Permissões</Text>
+                <Text style={styles.paragraph}>
+                  Você pode alterar ou revogar qualquer uma das permissões concedidas diretamente nas configurações do seu dispositivo. No entanto, observe que algumas funcionalidades podem ser limitadas sem as permissões necessárias.
+                </Text>
+              </View>
+
+              <Text style={styles.paragraph}>
+                Ao continuar a usar o <Text style={styles.bold}>Sias</Text>, você concorda com os termos acima e autoriza o uso das permissões descritas de acordo com nossa <Text style={styles.link}>Política de Privacidade</Text>.
+              </Text>
+              <Text style={styles.footer}>
+                Última atualização: 15 de novembro de 2024
               </Text>
             </ScrollView>
             <TouchableOpacity

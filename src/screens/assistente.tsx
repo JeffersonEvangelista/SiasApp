@@ -52,7 +52,8 @@ export default function App() {
   const [email, setEmail] = useState<string>('');
   const [userName, setUserName] = useState('');
   const [chatbotCount, setChatbotCount] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(false);
+
   const currentHour = new Date().getHours();
   let greeting = '';
   const [userType, setUserType] = useState('');
@@ -434,36 +435,45 @@ export default function App() {
 
     return trainVariations.some(variation => message.toLowerCase().includes(variation));
   };
-  // Função para gerar a pergunta de entrevista baseada no perfil do entrevistado
-  const generateInterviewQuestionPrompt = (interviewState: any) => {
-    console.log("Gerando prompt de pergunta de entrevista Candidato...");
 
-    // Variável para armazenar o prompt de maneira condicional
+  const [askedQuestions, setAskedQuestions] = useState([]);
+
+  const generateInterviewQuestionPrompt = (interviewState, askedQuestions) => {
+    console.log("Gerando prompt de pergunta de entrevista...");
+
     let prompt = '';
+
+    // Verifica o tipo de usuário (candidato ou recrutador)
     if (interviewState.userType === "candidato") {
       prompt = `
-    Você é um entrevistador experiente que está conduzindo uma entrevista para a posição de ${interviewState.userPosition}.
-    O candidato tem ${interviewState.userExperienceLevel} anos de experiência e formação em ${interviewState.userEducation}.
-    Me gere apenas uma pergunta de cada vez, sem a necessidade de explicar o motivo, mas leve em consideração os elementos anteriores para que a pergunta esteja alinhada com o nível do candidato e a vaga desejada.
-    `;
+        Você é um entrevistador experiente que está conduzindo uma entrevista para a posição de ${interviewState.userPosition}.
+        O candidato tem ${interviewState.userExperienceLevel} anos de experiência e formação em ${interviewState.userEducation}.
+        Me gere apenas uma pergunta de cada vez, sem a necessidade de explicar o motivo. 
+        Evite repetir as perguntas já feitas: ${askedQuestions.join(", ")}.
+        As perguntas devem estar alinhadas com o nível do candidato e a vaga desejada.
+      `;
     } else {
       console.log("Gerando prompt de pergunta de entrevista RH...");
-
-      let prompt = '';
       prompt = `
-      Você deve atuar como um entrevistador de RH para uma posição de recrutador ${interviewState.userExperienceLevel} com foco em  ${interviewState.userPosition}.
-      Gere uma pergunta que avalie a capacidade do candidato em ${interviewState.userExperienceLevel} e que esteja alinhada com os valores da empresa, que são: inovação, colaboração e resultado.
-      Porém, não precisa de título, e nem da explicação da pergunta, apenas a pergunta em si.
+        Você deve atuar como um entrevistador de RH para uma posição de recrutador ${interviewState.userExperienceLevel} com foco em ${interviewState.userPosition}.
+        Gere uma pergunta que avalie a capacidade do candidato em ${interviewState.userExperienceLevel} e que esteja alinhada com os valores da empresa, que são: inovação, colaboração e resultado.
+        Evite repetir as perguntas já feitas: ${askedQuestions.join(", ")}.
+        Porém, não precisa de título, e nem da explicação da pergunta, apenas a pergunta em si.
       `;
     }
+
     console.log("Prompt de pergunta de entrevista gerado:", prompt);
+
     return prompt;
   };
 
 
-
   // Função para gerar o prompt de feedback com base no desempenho
   const generateFeedbackPrompt = (interviewState: any) => {
+    setLoading(true);
+    // Ativa a animação de digitação
+    startTypingAnimation();
+
     console.log("Gerando prompt de feedback...");
 
     // Formatação das perguntas e respostas
@@ -506,25 +516,32 @@ export default function App() {
     Use um tom construtivo e, por fim, informe se você contrataria esse candidato ou não.
     `;
     }
+    try {
+      console.log("Prompt de feedback gerado:", feedbackPrompt);
+      return feedbackPrompt;
 
-    console.log("Prompt de feedback gerado:", feedbackPrompt);
-    return feedbackPrompt;
+    } catch (error) {
+      console.error("Erro durante o treinamento:", error);
+    } finally {
+      setIsBotTyping(false);
+      setLoading(false);
+
+    }
   };
+
+  // Função para processar as mensagens e avançar nas etapas
   const handleTrainRequest = async (message: string) => {
     console.log("Iniciando treinamento...");
     setIsTrainingMode(true);
+    setLoading(true);
 
-    // Ativa a animação de digitação
     startTypingAnimation();
 
     try {
-
-
       // Inicializa a instância do GoogleGenerativeAI
       const API_KEY = 'AIzaSyAipfv2TKBNwxjDyCbW8iol0PgBFYB9LYY';
       const genAI = new GoogleGenerativeAI(API_KEY);
 
-      // Verifica se a palavra-chave "Encerrar" foi digitada
       if (message.toLowerCase().includes("encerrar") || message.toLowerCase().includes("terminar")) {
         await handleInterviewEnd(genAI, messages);
         setIsTrainingMode(false);
@@ -551,7 +568,7 @@ export default function App() {
 
         // Gera perguntas de entrevista se todas as informações forem coletadas
         if (interviewState.informationCollected) {
-          const prompt = generateInterviewQuestionPrompt(interviewState);
+          const prompt = generateInterviewQuestionPrompt(interviewState, askedQuestions);
           const result = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }).generateContent(prompt);
           const questionText = result?.response?.text?.();
           const questionMessage = {
@@ -560,23 +577,30 @@ export default function App() {
             sender: 'bot',
           };
           setMessages((prevMessages) => [...prevMessages, questionMessage]);
-          // Adiciona a pergunta e a resposta ao estado para o feedback final
+
+          // Atualiza o estado com a pergunta gerada e a resposta do usuário
           setInterviewState((prev) => ({
             ...prev,
-            questionsAndAnswers: [...prev.questionsAndAnswers, { question: questionText, answer: message }],
+            questionsAndAnswers: [
+              ...prev.questionsAndAnswers,
+              { question: questionText, answer: message },
+            ],
           }));
+          setAskedQuestions((prev) => [...prev, questionText]);
         }
       }
     } catch (error) {
       console.error("Erro durante o treinamento:", error);
     } finally {
       setIsBotTyping(false);
+      setLoading(false);
     }
   };
 
 
   // Função para gerar uma introdução amigável
   const generateIntroduction = async (genAI: any) => {
+    setLoading(true);
     const introPrompt = `
     Crie uma mensagem de boas-vindas para iniciar uma entrevista de emprego.
         O tom deve ser amigável e profissional.
@@ -586,13 +610,18 @@ export default function App() {
         3. Uma expressão de entusiasmo para conhecer o candidato, porém não precisa falar o nome dele.
         A mensagem deve ser acolhedora e incentivar o candidato a se sentir à vontade durante a entrevista.
     `;
+    try {
+      const introResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }).generateContent(introPrompt);
+      const introText = introResult?.response?.text?.();
 
-    const introResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }).generateContent(introPrompt);
-    const introText = introResult?.response?.text?.();
+      const trainingMessage = "Lembre-se, isso é apenas um treino.\nNão significa nada.\nQuando quiser terminar o treino, basta escrever 'Encerrar'.";
 
-    const trainingMessage = "Lembre-se, isso é apenas um treino.\nNão significa nada.\nQuando quiser terminar o treino, basta escrever 'Encerrar'.";
-
-    return `${introText}\n\n${trainingMessage}`;
+      return `${introText}\n\n${trainingMessage}`;
+    } catch (error) {
+      console.error('Erro ao gerar introdução:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -601,11 +630,13 @@ export default function App() {
   const getCollectInfoMessage = (message: string) => {
     console.log('Função getCollectInfoMessage chamada com a mensagem:', message);
 
+    // Utilizar a lógica baseada na etapa atual
     if (interviewState.step === 0) {
       console.log('Definindo tipo de usuário e passo 1');
-      setInterviewState((prev) => ({ ...prev, userType: message.toLowerCase() === "recrutador" ? "recrutador" : "candidato", step: 1 }));
+      const userType = message.toLowerCase() === "recrutador" ? "recrutador" : "candidato";
+      setInterviewState((prev) => ({ ...prev, userType, step: 1 }));
       console.log('Retornando mensagem para o passo 1');
-      if (interviewState.userType === "recrutador") {
+      if (userType === "recrutador") {
         return {
           id: uuidv4(),
           text: "A empresa cujo você quer se candidatar tem qual temática?",
@@ -637,7 +668,6 @@ export default function App() {
     console.log('Retornando null');
     return null;
   };
-
 
 
   const handleInterviewEnd = async (genAI: any, prevMessages: any) => {
@@ -1150,6 +1180,7 @@ export default function App() {
                 }
               }}
               returnKeyType="send"
+              editable={!loading}
             />
             <TouchableOpacity
               onPress={() => {
@@ -1157,7 +1188,11 @@ export default function App() {
                   sendMessage(input);
                 }
               }}
-              style={stylesAssistente.sendButton}
+              style={[
+                stylesAssistente.sendButton,
+                loading && { backgroundColor: '#aaa' },
+              ]}
+              disabled={loading}
             >
               <Icon name="send" size={24} color="#fff" />
             </TouchableOpacity>

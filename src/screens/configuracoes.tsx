@@ -112,6 +112,7 @@ const Configuracoes: React.FC = () => {
   const [actionType, setActionType] = useState<"updateEmail" | "deleteAccount">("updateEmail");
 
 
+
   /*
     const toggleNotificationsSwitch = async () => {
       try {
@@ -172,24 +173,24 @@ const Configuracoes: React.FC = () => {
     try {
       const { id: userId } = await getUserNameAndId(); // Obtém o ID do usuário
       console.log('User ID:', userId);
-  
+
       // Primeiro, tenta buscar os dados do usuário na tabela de candidatos
       const { data: profileData, error: candidateError } = await supabase
         .from('candidatos')
         .select('foto_perfil, nome, email') // Buscando nome, foto de perfil e email
         .eq('id', userId)
         .single();
-  
+
       if (candidateError || !profileData) {
         // Se ocorrer erro ou não encontrar candidato, tenta na tabela recrutadores
         console.log('Usuário não encontrado como candidato. Buscando na tabela de recrutadores...');
-  
+
         const { data: recruiterData, error: recruiterError } = await supabase
           .from('recrutadores')
           .select('foto_perfil, nome, email') // Buscando nome, foto de perfil e email
           .eq('id', userId)
           .single();
-  
+
         if (recruiterError || !recruiterData) {
           console.error('Erro ao buscar dados do recrutador:', recruiterError || 'Nenhum recrutador encontrado');
         } else {
@@ -208,20 +209,20 @@ const Configuracoes: React.FC = () => {
         setEmail(profileData.email);
         console.log('Dados do candidato carregados:', profileData);
       }
-  
+
       // Agora, verifica se existe um token salvo no banco de dados
       const { data: tokenData, error: tokenError } = await supabase
         .from('device_tokens')
         .select('token')
         .eq('user_id', userId)
         .single();
-  
+
       if (tokenError) {
         console.error('Erro ao buscar token:', tokenError.message);
       } else if (tokenData) {
         // Se o token existir, ativa as notificações
         setIsNotificationsEnabled(true);
-        setExpoPushToken(tokenData.token); 
+        setExpoPushToken(tokenData.token);
       } else {
         // Se não houver token, as notificações permanecem desativadas
         setIsNotificationsEnabled(false);
@@ -230,7 +231,7 @@ const Configuracoes: React.FC = () => {
       console.error('Erro ao carregar dados do usuário:', err);
     }
   };
-  
+
 
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -818,7 +819,7 @@ const Configuracoes: React.FC = () => {
     const { error } = await supabase
       .from('device_tokens')
       .delete()
-      .eq('user_id', userId); 
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Erro ao remover o token:', error.message);
@@ -1196,14 +1197,401 @@ const Configuracoes: React.FC = () => {
                   {modalContent === 'Sobre nós' && (
                     <View>
                       <Text style={[styles.modalText, colorScheme === 'dark' && { color: '#fff' }]}>Sobre Nós</Text>
-                      <Text style={[styles.modalInfo, colorScheme === 'dark' && { color: '#fff' }]}>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Omnis, temporibus. Repudiandae ipsam unde dolor tenetur. Dolorem ab cupiditate aliquid velit. Quas fuga dicta similique! Ducimus culpa nam similique. Rerum, aliquam.</Text>
+                      <ScrollView style={styles.modalContent}>
+                        <Text
+                          style={[
+                            styles.modalTitle,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >Sobre Nós</Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          O<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Sias App</Text> é um aplicativo dedicado a transformar e otimizar a gestão de entrevistas no setor de Recursos Humanos. Criado com uma abordagem colaborativa e inovadora, nosso objetivo é oferecer uma solução eficiente e prática para candidatos e equipes de RH, melhorando a comunicação e a experiência em cada etapa do processo.
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.sectionTitle,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >Nossa Estrutura e Metodologia</Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          Para garantir uma base sólida e bem-organizada, utilizamos a metodologia de arquitetura<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >C4</Text> (Context, Containers, Components, and Code). Essa abordagem permite projetar e gerenciar o sistema com clareza, oferecendo uma estrutura robusta e fácil de evoluir.
+                        </Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          Este aplicativo é uma extensão da versão web do SIAS, focado em simplificar processos de entrevistas e agendamentos.
+                        </Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Importante:</Text> Algumas funcionalidades, como a criação de vagas e inscrições, não estão disponíveis no app. Além disso, contas recentes podem não ter acesso a todas as funcionalidades disponíveis em contas mais antigas.
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.sectionTitle,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >O Que Fazemos</Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          O<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Sias App</Text> foi projetado para atender às necessidades específicas de<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >equipes de RH</Text> e<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >candidatos</Text>, promovendo eficiência e agilidade em todos os aspectos do gerenciamento de entrevistas.
+                        </Text>
+
+                        <Text style={styles.subSectionTitle}>Para o RH:</Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          •<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Envio de Solicitações:</Text> Permite enviar solicitações detalhadas diretamente para os candidatos qualificados.{"\n"}
+                          •<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Detalhes das Solicitações:</Text> Inclui informações como data, horário e local da entrevista, assegurando clareza e organização.
+                        </Text>
+
+                        <Text style={styles.subSectionTitle}>Para os Candidatos:</Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          •<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Gerenciamento de Solicitações:</Text> Visualize e acompanhe as solicitações recebidas de forma prática em uma aba dedicada.{"\n"}
+                          •<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Respostas às Solicitações:</Text> Aceite ou recuse solicitações facilmente, mantendo o controle total sobre as interações com as empresas.
+                        </Text>
+
+                        <Text style={styles.subSectionTitle}>Funcionalidades Comuns:</Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          •<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Chatbot de Suporte:</Text> Responde dúvidas frequentes sobre contas e funcionalidades, oferecendo suporte imediato.{"\n"}
+                          •<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Modo de Treinamento para Entrevistas:</Text> Simula entrevistas com perguntas práticas e orientações úteis, ajudando candidatos a se preparar melhor.
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.sectionTitle,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >Benefícios do Sias App</Text>
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Facilidade e Agilidade:</Text> Simplifica o processo de agendamento e comunicação, tornando as interações mais eficientes para candidatos e RH.{"\n"}
+                          <Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Suporte Prático e Contínuo:</Text> O app oferece orientação e apoio em tempo real, melhorando a experiência de todos os usuários.
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.modalText,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          Com o<Text
+                            style={[
+                              styles.boldText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >Sias App</Text>, o futuro da gestão de entrevistas está ao seu alcance! 🚀
+                        </Text>
+                      </ScrollView>
                     </View>
                   )}
 
                   {modalContent === 'Política de Privacidade' && (
                     <View>
                       <Text style={[styles.modalText, colorScheme === 'dark' && { color: '#fff' }]}>Política de Privacidade</Text>
-                      <Text style={[styles.modalInfo, colorScheme === 'dark' && { color: '#fff' }]}>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Numquam, autem esse obcaecati atque quos officiis culpa soluta fuga! In sunt animi officiis distinctio possimus ad omnis sit natus pariatur fuga?</Text>
+                      <ScrollView style={[styles.modalContent, { backgroundColor: colorScheme === 'dark' ? '#1C1C1CFF' : '#fff' }]}>
+                        <Text
+                          style={[
+                            styles.title,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >Termos e Permissões</Text>
+
+                        <Text
+                          style={[
+                            styles.paragraph,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          Bem-vindo ao <Text style={styles.bold}
+                          >Sias</Text>. Ao utilizar nosso aplicativo, você concorda com os seguintes termos e condições relacionados às permissões que solicitamos. Nosso compromisso é respeitar sua privacidade e garantir que seus dados sejam usados de forma segura e responsável.
+                        </Text>
+
+                        <View style={styles.section}>
+                          <Text
+                            style={[
+                              styles.subtitle,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            1. Coleta e Uso de Localização</Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            O aplicativo pode solicitar acesso à sua localização para fornecer funcionalidades como:
+                          </Text>
+                          <Text
+                            style={[
+                              styles.bullet,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            - Sugestões de locais próximos;</Text>
+                          <Text
+                            style={[
+                              styles.bullet,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >- Otimização de rotas.</Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            <Text style={styles.bold}>Como usamos:</Text> A localização será coletada apenas quando necessária e usada exclusivamente para fins relacionados à funcionalidade do aplicativo. Não compartilhamos sua localização com terceiros sem sua autorização explícita.
+                          </Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            <Text style={styles.bold}>Configuração:</Text> Você pode habilitar ou desabilitar o acesso à localização nas configurações do seu dispositivo a qualquer momento.
+                          </Text>
+                        </View>
+
+                        <View style={styles.section}>
+                          <Text
+                            style={[
+                              styles.subtitle,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >2. Acesso à Galeria</Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            Solicitamos acesso à galeria do seu dispositivo para:
+                          </Text>
+                          <Text
+                            style={[
+                              styles.bullet,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >- Permitir upload de fotos;</Text>
+                          <Text
+                            style={[
+                              styles.bullet,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >- Personalização de perfil.</Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            <Text style={styles.bold}>Como usamos:</Text> O acesso é utilizado exclusivamente para selecionar ou visualizar imagens escolhidas por você. Não acessamos ou armazenamos outras imagens sem sua permissão explícita.
+                          </Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            <Text style={styles.bold}>Configuração:</Text> Você pode gerenciar o acesso à galeria através das configurações do seu dispositivo.
+                          </Text>
+                        </View>
+
+                        <View style={styles.section}>
+                          <Text
+                            style={[
+                              styles.subtitle,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >3. Permissão para Notificações</Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            Solicitamos permissão para enviar notificações para:
+                          </Text>
+                          <Text
+                            style={[
+                              styles.bullet,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >- Informar sobre atualizações importantes;</Text>
+                          <Text
+                            style={[
+                              styles.bullet,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >- Lembrá-lo de compromissos ou eventos.</Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            <Text style={styles.bold}>Como usamos:</Text> As notificações serão enviadas apenas para mantê-lo informado sobre funcionalidades ou eventos importantes. Você pode ajustar a frequência ou desativar as notificações nas configurações do aplicativo ou do dispositivo.
+                          </Text>
+                        </View>
+
+                        <View style={styles.section}>
+                          <Text
+                            style={[
+                              styles.subtitle,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >4. Segurança dos Dados</Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            Nosso compromisso é proteger suas informações. Os dados coletados por meio das permissões solicitadas são armazenados e processados com alto padrão de segurança. Nunca venderemos ou compartilharemos suas informações com terceiros sem sua permissão.
+                          </Text>
+                        </View>
+
+                        <View style={styles.section}>
+                          <Text
+                            style={[
+                              styles.subtitle,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            5. Alterações e Revogação de Permissões</Text>
+                          <Text
+                            style={[
+                              styles.paragraph,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                            ]}
+                          >
+                            Você pode alterar ou revogar qualquer uma das permissões concedidas diretamente nas configurações do seu dispositivo. No entanto, observe que algumas funcionalidades podem ser limitadas sem as permissões necessárias.
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={[
+                            styles.paragraph,
+                            { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                          ]}
+                        >
+                          Ao continuar a usar o <Text style={styles.bold}>Sias</Text>, você concorda com os termos acima e autoriza o uso das permissões descritas de acordo com nossa <Text style={styles.link}>Política de Privacidade</Text>.
+                        </Text>
+                        <Text style={styles.footer}>
+                          Última atualização: 15/11/2024
+                        </Text>
+                      </ScrollView>
                     </View>
                   )}
 
@@ -1564,6 +1952,78 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
+  modalContent: {
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: 5,
+  },
+  paragraph: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 24,
+    marginBottom: 10,
+  },
+  bold: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  link: {
+    color: '#007BFF',
+    textDecorationLine: 'underline',
+  },
+  bullet: {
+    fontSize: 16,
+    color: '#666',
+    marginLeft: 15,
+    lineHeight: 24,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  footer: {
+    fontSize: 14,
+    color: '#aaa',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
+    textAlign: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    color: '#555',
+  },
+  subSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 12,
+    marginBottom: 4,
+    color: '#666',
+  },
+
+  boldText: {
+  fontWeight: 'bold',
+  color: '#000',
+},
 });
 
 export default Configuracoes;
