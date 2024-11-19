@@ -128,7 +128,7 @@ Para fazer essa mudança:
 
 Aqui você pode encontrar as instruções para baixar o aplicativo.
 
-[Ir para a seção de download](https://terabox.com/s/1CpJpI5gVVfV15tY7kixH3A)
+[Ir para a seção de download](https://www.mediafire.com/file/05w5t8gj6jr5e7s/Sias_V2.3.3.apk/file)
 
 ou escaneá o QR Code abaixo:
 ![QR Code](/img/qrcode.png)

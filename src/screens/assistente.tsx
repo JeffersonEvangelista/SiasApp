@@ -71,13 +71,28 @@ export default function App() {
   const [buttonsVisible, setButtonsVisible] = useState(false);
   const [isDescriptionRequired, setIsDescriptionRequired] = useState(false);
   const [isReadyToSend, setIsReadyToSend] = useState(false);
+ 
   const trainVariations = [
-    'treinar', 'quero treinar', 'vamos treinar', 'preciso de treino',
-    'me ajude a treinar', 'treino',
-    'quero começar a treinar', 'quero continuar o treinamento', 'quero um treino mais avançado',
-    'quero treinar esta habilidade', 'quero fazer um exercício', 'quero um tutorial',
-    'quero treinar todos os dias', 'quero treinar por 30 minutos', 'quero um treino rápido'
-  ];
+    'treinar', 'Treinar', 'quero treinar', 'Quero treinar', 'vamos treinar', 'Vamos treinar',
+    'preciso de treino', 'Preciso de treino', 'me ajude a treinar', 'Me ajude a treinar', 
+    'treino', 'Treino', 'quero começar a treinar', 'Quero começar a treinar', 
+    'quero continuar o treinamento', 'Quero continuar o treinamento', 
+    'quero um treino mais avançado', 'Quero um treino mais avançado', 
+    'quero treinar esta habilidade', 'Quero treinar esta habilidade', 
+    'quero fazer um exercício', 'Quero fazer um exercício', 
+    'quero um tutorial', 'Quero um tutorial', 
+    'quero treinar todos os dias', 'Quero treinar todos os dias', 
+    'quero treinar por 30 minutos', 'Quero treinar por 30 minutos', 
+    'quero um treino rápido', 'Quero um treino rápido', 
+    'vamos começar o treino', 'Vamos começar o treino', 
+    'como treinar', 'Como treinar', 'gostaria de treinar', 'Gostaria de treinar', 
+    'pode me ajudar a treinar', 'Pode me ajudar a treinar', 
+    'exercício de treino', 'Exercício de treino', 'quero melhorar meu treino', 
+    'Quero melhorar meu treino', 'preciso de ajuda para treinar', 
+    'Preciso de ajuda para treinar', 'dicas de treino', 'Dicas de treino', 
+    'pronto para treinar', 'Pronto para treinar', 'vou treinar', 'Vou treinar'
+];
+
   const [isTrainingMode, setIsTrainingMode] = useState(false);
   // Mapeamento das subopções
   const subOptionsMapping = {
@@ -426,13 +441,26 @@ export default function App() {
   const isTrainRequest = (message: string) => {
     // Verifica se a mensagem do usuário contém uma palavra-chave para treinamento
     const trainVariations = [
-      'treinar', 'quero treinar', 'vamos treinar', 'preciso de treino',
-      'me ajude a treinar', 'treino',
-      'quero começar a treinar', 'quero continuar o treinamento', 'quero um treino mais avançado',
-      'quero treinar esta habilidade', 'quero fazer um exercício', 'quero um tutorial',
-      'quero treinar todos os dias', 'quero treinar por 30 minutos', 'quero um treino rápido'
-    ];
-
+      'treinar', 'Treinar', 'quero treinar', 'Quero treinar', 'vamos treinar', 'Vamos treinar',
+      'preciso de treino', 'Preciso de treino', 'me ajude a treinar', 'Me ajude a treinar', 
+      'treino', 'Treino', 'quero começar a treinar', 'Quero começar a treinar', 
+      'quero continuar o treinamento', 'Quero continuar o treinamento', 
+      'quero um treino mais avançado', 'Quero um treino mais avançado', 
+      'quero treinar esta habilidade', 'Quero treinar esta habilidade', 
+      'quero fazer um exercício', 'Quero fazer um exercício', 
+      'quero um tutorial', 'Quero um tutorial', 
+      'quero treinar todos os dias', 'Quero treinar todos os dias', 
+      'quero treinar por 30 minutos', 'Quero treinar por 30 minutos', 
+      'quero um treino rápido', 'Quero um treino rápido', 
+      'vamos começar o treino', 'Vamos começar o treino', 
+      'como treinar', 'Como treinar', 'gostaria de treinar', 'Gostaria de treinar', 
+      'pode me ajudar a treinar', 'Pode me ajudar a treinar', 
+      'exercício de treino', 'Exercício de treino', 'quero melhorar meu treino', 
+      'Quero melhorar meu treino', 'preciso de ajuda para treinar', 
+      'Preciso de ajuda para treinar', 'dicas de treino', 'Dicas de treino', 
+      'pronto para treinar', 'Pronto para treinar', 'vou treinar', 'Vou treinar'
+  ];
+  
     return trainVariations.some(variation => message.toLowerCase().includes(variation));
   };
 
@@ -672,7 +700,6 @@ export default function App() {
 
   const handleInterviewEnd = async (genAI: any, prevMessages: any) => {
     console.log("Entrou na função handleInterviewEnd");
-
     try {
       console.log("Gerando prompt de feedback...");
       const feedbackPrompt = generateFeedbackPrompt(interviewState);
