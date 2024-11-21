@@ -71,27 +71,28 @@ export default function App() {
   const [buttonsVisible, setButtonsVisible] = useState(false);
   const [isDescriptionRequired, setIsDescriptionRequired] = useState(false);
   const [isReadyToSend, setIsReadyToSend] = useState(false);
- 
+
   const trainVariations = [
     'treinar', 'Treinar', 'quero treinar', 'Quero treinar', 'vamos treinar', 'Vamos treinar',
-    'preciso de treino', 'Preciso de treino', 'me ajude a treinar', 'Me ajude a treinar', 
-    'treino', 'Treino', 'quero começar a treinar', 'Quero começar a treinar', 
-    'quero continuar o treinamento', 'Quero continuar o treinamento', 
-    'quero um treino mais avançado', 'Quero um treino mais avançado', 
-    'quero treinar esta habilidade', 'Quero treinar esta habilidade', 
-    'quero fazer um exercício', 'Quero fazer um exercício', 
-    'quero um tutorial', 'Quero um tutorial', 
-    'quero treinar todos os dias', 'Quero treinar todos os dias', 
-    'quero treinar por 30 minutos', 'Quero treinar por 30 minutos', 
-    'quero um treino rápido', 'Quero um treino rápido', 
-    'vamos começar o treino', 'Vamos começar o treino', 
-    'como treinar', 'Como treinar', 'gostaria de treinar', 'Gostaria de treinar', 
-    'pode me ajudar a treinar', 'Pode me ajudar a treinar', 
-    'exercício de treino', 'Exercício de treino', 'quero melhorar meu treino', 
-    'Quero melhorar meu treino', 'preciso de ajuda para treinar', 
-    'Preciso de ajuda para treinar', 'dicas de treino', 'Dicas de treino', 
+    'preciso de treino', 'Preciso de treino', 'me ajude a treinar', 'Me ajude a treinar',
+    'treino', 'Treino', 'quero começar a treinar', 'Quero começar a treinar',
+    'quero continuar o treinamento', 'Quero continuar o treinamento',
+    'quero um treino mais avançado', 'Quero um treino mais avançado',
+    'quero treinar esta habilidade', 'Quero treinar esta habilidade',
+    'quero fazer um exercício', 'Quero fazer um exercício',
+    'quero um tutorial', 'Quero um tutorial',
+    'quero treinar todos os dias', 'Quero treinar todos os dias',
+    'quero treinar por 30 minutos', 'Quero treinar por 30 minutos',
+    'quero um treino rápido', 'Quero um treino rápido',
+    'vamos começar o treino', 'Vamos começar o treino',
+    'como treinar', 'Como treinar', 'gostaria de treinar', 'Gostaria de treinar',
+    'pode me ajudar a treinar', 'Pode me ajudar a treinar',
+    'exercício de treino', 'Exercício de treino', 'quero melhorar meu treino',
+    'Quero melhorar meu treino', 'preciso de ajuda para treinar',
+    'Preciso de ajuda para treinar', 'dicas de treino', 'Dicas de treino',
     'pronto para treinar', 'Pronto para treinar', 'vou treinar', 'Vou treinar'
-];
+  ];
+  const [lastMessageSent, setLastMessageSent] = useState(null);
 
   const [isTrainingMode, setIsTrainingMode] = useState(false);
   // Mapeamento das subopções
@@ -207,49 +208,39 @@ export default function App() {
 
   // Tipo para as opções disponíveis
   const sendMessage = async (text: any, imageUri = null) => {
-    // Registra a mensagem do usuário
-    let userMessage = {
+    if (!text.trim()) return; // Evitar enviar mensagem vazia
+  
+    const userMessage = {
       id: Date.now().toString(),
       text: text,
       sender: 'user',
     };
-
+  
     if (imageUri) {
-      userMessage = {
-        id: Date.now().toString(),
-        text: '',
-        imageUri: imageUri,
-        sender: 'user',
-      };
+      userMessage.imageUri = imageUri;
+      userMessage.text = ''; // Se houver imagem, a mensagem fica vazia
     }
-    // Adicionar a mensagem do usuário ao array de mensagens
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-
-    if (imageUri) {
-      setIsDescriptionRequired(true); // Seta um estado para solicitar a descrição
+  
+    // Verificar se a mensagem já foi adicionada antes de adicionar novamente
+    if (!messages.find(msg => msg.text === text)) {
+      setMessages((prevMessages) => [...prevMessages, userMessage]);
     }
-
+  
     console.log(`Mensagem enviada: ${text}`);
-
-    // Adicionar a mensagem às mensagens mostradas para evitar duplicação
-    if (text.trim()) {
-      setMensagensMostradas((prevMensagens) => [...prevMensagens, text.trim()]);
-    }
-
-    // Chama as funções para lidar com a primeira mensagem do usuário e a resposta do bot
+  
     if (isReportingBug) {
       handleFirstMessage();
     } else {
       handleUserMessage();
       setShowAnimation(false);
     }
-
-    // Limpar o campo de entrada após o envio
+  
     setInput('');
     setTimeout(() => {
       setIsBotSendingMessage(false);
     }, 1000);
   };
+
 
   // Função para iniciar a animação de digitação
   const startTypingAnimation = () => {
@@ -364,15 +355,37 @@ export default function App() {
     sendBotMessages(botMessages);
   };
 
-  // Função para enviar as mensagens do bot
-  const sendBotMessages = (botMessages: string) => {
-    // Enviar as mensagens do bot uma a uma
+  const sendBotMessages = (botMessages: string[]) => {
     botMessages.forEach((msg, index) => {
-      setTimeout(() => {
-        setMessages((prevMessages) => [...prevMessages, msg]);
-      }, 100 * (index + 1));
+      if (typeof msg === 'string') {
+        // Verifica se msg é uma string
+        setTimeout(() => {
+          if (msg.includes("https://github.com/")) {
+            const username = msg.split('/').pop(); // Pega o nome de usuário do link
+            const imageUrl = `https://avatars.githubusercontent.com/${username}`;
+
+            setMessages((prevMessages) => [
+              ...prevMessages,
+              {
+                id: uuidv4(),
+                text: msg, // Link
+                imageUri: imageUrl, // URL da foto do GitHub
+                sender: 'bot',
+              },
+            ]);
+          } else {
+            setMessages((prevMessages) => [
+              ...prevMessages,
+              { id: uuidv4(), text: msg, sender: 'bot' },
+            ]);
+          }
+        }, 100 * (index + 1));
+      } else {
+        console.error("Mensagem do bot não é uma string", msg);
+      }
     });
   };
+
 
   // Função para verificar se o usuário pediu opções
   const isOptionsRequest = (message: string) => {
@@ -442,25 +455,25 @@ export default function App() {
     // Verifica se a mensagem do usuário contém uma palavra-chave para treinamento
     const trainVariations = [
       'treinar', 'Treinar', 'quero treinar', 'Quero treinar', 'vamos treinar', 'Vamos treinar',
-      'preciso de treino', 'Preciso de treino', 'me ajude a treinar', 'Me ajude a treinar', 
-      'treino', 'Treino', 'quero começar a treinar', 'Quero começar a treinar', 
-      'quero continuar o treinamento', 'Quero continuar o treinamento', 
-      'quero um treino mais avançado', 'Quero um treino mais avançado', 
-      'quero treinar esta habilidade', 'Quero treinar esta habilidade', 
-      'quero fazer um exercício', 'Quero fazer um exercício', 
-      'quero um tutorial', 'Quero um tutorial', 
-      'quero treinar todos os dias', 'Quero treinar todos os dias', 
-      'quero treinar por 30 minutos', 'Quero treinar por 30 minutos', 
-      'quero um treino rápido', 'Quero um treino rápido', 
-      'vamos começar o treino', 'Vamos começar o treino', 
-      'como treinar', 'Como treinar', 'gostaria de treinar', 'Gostaria de treinar', 
-      'pode me ajudar a treinar', 'Pode me ajudar a treinar', 
-      'exercício de treino', 'Exercício de treino', 'quero melhorar meu treino', 
-      'Quero melhorar meu treino', 'preciso de ajuda para treinar', 
-      'Preciso de ajuda para treinar', 'dicas de treino', 'Dicas de treino', 
+      'preciso de treino', 'Preciso de treino', 'me ajude a treinar', 'Me ajude a treinar',
+      'treino', 'Treino', 'quero começar a treinar', 'Quero começar a treinar',
+      'quero continuar o treinamento', 'Quero continuar o treinamento',
+      'quero um treino mais avançado', 'Quero um treino mais avançado',
+      'quero treinar esta habilidade', 'Quero treinar esta habilidade',
+      'quero fazer um exercício', 'Quero fazer um exercício',
+      'quero um tutorial', 'Quero um tutorial',
+      'quero treinar todos os dias', 'Quero treinar todos os dias',
+      'quero treinar por 30 minutos', 'Quero treinar por 30 minutos',
+      'quero um treino rápido', 'Quero um treino rápido',
+      'vamos começar o treino', 'Vamos começar o treino',
+      'como treinar', 'Como treinar', 'gostaria de treinar', 'Gostaria de treinar',
+      'pode me ajudar a treinar', 'Pode me ajudar a treinar',
+      'exercício de treino', 'Exercício de treino', 'quero melhorar meu treino',
+      'Quero melhorar meu treino', 'preciso de ajuda para treinar',
+      'Preciso de ajuda para treinar', 'dicas de treino', 'Dicas de treino',
       'pronto para treinar', 'Pronto para treinar', 'vou treinar', 'Vou treinar'
-  ];
-  
+    ];
+
     return trainVariations.some(variation => message.toLowerCase().includes(variation));
   };
 
@@ -567,7 +580,7 @@ export default function App() {
 
     try {
       // Inicializa a instância do GoogleGenerativeAI
-      const API_KEY = 'AIzaSyAipfv2TKBNwxjDyCbW8iol0PgBFYB9LYY';
+      const API_KEY = 'AIzaSyBd6MO899XNHEBx_72KPot0g84BFAUCo';
       const genAI = new GoogleGenerativeAI(API_KEY);
 
       if (message.toLowerCase().includes("encerrar") || message.toLowerCase().includes("terminar")) {
@@ -626,27 +639,40 @@ export default function App() {
   };
 
 
-  // Função para gerar uma introdução amigável
   const generateIntroduction = async (genAI: any) => {
     setLoading(true);
-    const introPrompt = `
-    Crie uma mensagem de boas-vindas para iniciar uma entrevista de emprego.
-        O tom deve ser amigável e profissional.
-        A mensagem deve incluir os seguintes elementos:
-        1. Um nome fictício para o entrevistador, seguido de uma breve apresentação. Sendo do cargo de RH da empresa.
-        2. Me gere um nome para essa empresa também, caso não tenha nenhuma ideia use a empresa "Sias".
-        3. Uma expressão de entusiasmo para conhecer o candidato, porém não precisa falar o nome dele.
-        A mensagem deve ser acolhedora e incentivar o candidato a se sentir à vontade durante a entrevista.
-    `;
-    try {
-      const introResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }).generateContent(introPrompt);
-      const introText = introResult?.response?.text?.();
 
-      const trainingMessage = "Lembre-se, isso é apenas um treino.\nNão significa nada.\nQuando quiser terminar o treino, basta escrever 'Encerrar'.";
+    const introPrompt = `
+      Crie uma mensagem de boas-vindas para iniciar uma entrevista de emprego.
+      O tom deve ser amigável e profissional.
+      A mensagem deve incluir os seguintes elementos:
+      1. Um nome fictício para o entrevistador, seguido de uma breve apresentação, sendo do cargo de RH da empresa.
+      2. Me gere um nome para essa empresa também, caso não tenha nenhuma ideia, use a empresa "Sias".
+      3. Uma expressão de entusiasmo para conhecer o candidato, porém não precisa falar o nome dele.
+      A mensagem deve ser acolhedora e incentivar o candidato a se sentir à vontade durante a entrevista.
+    `;
+
+    try {
+      const introResult = await genAI
+        .getGenerativeModel({ model: 'gemini-1.5-flash' })
+        .generateContent(introPrompt);
+
+      const introText = introResult?.response?.text?.() ?? 'Erro ao processar resposta do modelo.';
+
+      const trainingMessage =
+        "Lembre-se, isso é apenas um treino.\nNão significa nada.\nQuando quiser terminar o treino, basta escrever 'Encerrar'.";
 
       return `${introText}\n\n${trainingMessage}`;
     } catch (error) {
       console.error('Erro ao gerar introdução:', error);
+
+      // Mensagem de erro com aviso amigável
+      const errorMessage = ` O modo treino está passando por dificuldades no momento e pode não funcionar corretamente.
+        Caso isso continue acontecendo, tente novamente mais tarde.
+      `;
+
+
+      return `${errorMessage}`;
     } finally {
       setLoading(false);
     }
@@ -905,39 +931,31 @@ export default function App() {
     setMessages(prevMessages => [...prevMessages, userMessage]);
     selectImage();
     setIsImageUploadEnabled(true);
+    setIsBotTyping(false);
   };
 
 
   const sendBugReport = (imageUri, description) => {
-    console.log('userId:', userId);
     if (!userId) {
       console.error('User id não está definido! Verifique a inicialização do usuário.');
       return;
     }
-
+  
     console.log('Imagem URI:', imageUri);
     console.log('Descrição:', description);
-
+  
     processAndSaveBugReport(userId, userType, description, imageUri)
       .then((success) => {
-        if (success) {
-          const userMessage = {
-            id: Date.now().toString(),
-            text: 'Obrigado  por nos ajudar a melhorar!',
-            sender: 'bot',
-          };
-
-          setMessages((prevMessages) => [...prevMessages, userMessage]);
-          setIsImageUploadEnabled(false);
-        } else {
-          const userMessage = {
-            id: Date.now().toString(),
-            text: 'Poxa, alguma coisa deu errado tente novamente',
-            sender: 'bot',
-          };
-
-          setMessages((prevMessages) => [...prevMessages, userMessage]);
-        }
+        const messageText = success ? 'Obrigado por nos ajudar a melhorar!' : 'Poxa, algo deu errado. Tente novamente.';
+        const userMessage = {
+          id: Date.now().toString(),
+          text: messageText,
+          sender: 'bot',
+        };
+  
+        setMessages((prevMessages) => [...prevMessages, userMessage]);
+        setIsImageUploadEnabled(false);
+        setIsBotTyping(false);  // Evitar duplicação de mensagens
       })
       .catch((error) => {
         console.error('Erro ao enviar bug report:', error);
@@ -946,11 +964,12 @@ export default function App() {
           text: 'Erro ao enviar bug report. Tente novamente!',
           sender: 'bot',
         };
-
+  
         setMessages((prevMessages) => [...prevMessages, userMessage]);
       });
   };
 
+  
   const selectImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -977,27 +996,28 @@ export default function App() {
         imageUri: imageUri,
         sender: 'user',
       };
-
+  
       setMessages((prevMessages) => [...prevMessages, userMessage]);
-
+  
       console.log(`Mensagem enviada: ${description}`);
-
+  
       setIsImageUploadEnabled(false);
-
+  
       if (isReportingBug) {
         handleFirstMessage();
       } else {
         handleFirstMessage();
         handleUserMessage();
       }
-      sendBugReport(imageUri, description);
-
-      setDescription('');
-      setImageUri(null);
-      setInput('');
-      setIsDescriptionRequired(false);
+      sendBugReport(imageUri, description); // Chama o envio de bug report
+  
+      setDescription('');  // Limpar o estado de descrição
+      setImageUri(null);  // Limpar a URI da imagem
+      setInput('');  // Limpar o campo de entrada
+      setIsDescriptionRequired(false);  // Resetar descrição
     }
   };
+  
 
 
   const setImageModalVisible = (visible, uri) => {
@@ -1045,10 +1065,7 @@ export default function App() {
 
         <FlatList
           ref={flatListRef}
-          data={[
-            ...messages,
-            isBotTyping ? { id: 'typing', text: '...', sender: 'bot' } : null
-          ].filter(Boolean)}
+          data={[...messages, isBotTyping ? { id: 'typing', text: '...', sender: 'bot' } : null].filter(Boolean)}
           renderItem={({ item }) => (
             <View
               style={[
@@ -1066,13 +1083,18 @@ export default function App() {
                     <Animated.Text style={[stylesAssistente.botText, { transform: [{ translateY: typingTranslateY(dot3Animation) }] }]}>.</Animated.Text>
                   </View>
                 ) : item.imageUri ? (
-                  <TouchableOpacity onPress={() => setImageModalVisible(true, item.imageUri)}>
+                  // Quando a mensagem contém uma imagem de perfil
+                  <TouchableOpacity onPress={() => Linking.openURL(item.text)}>
                     <View>
-                      <Image source={{ uri: item.imageUri }} style={{ width: 100, height: 100 }} />
+                      <Image
+                        source={{ uri: item.imageUri }}
+                        style={{ width: 50, height: 50, borderRadius: 25 }}
+                      />
                       <Text style={stylesAssistente.imageDescription}>{item.text}</Text>
                     </View>
                   </TouchableOpacity>
                 ) : (
+                  // Quando a mensagem é texto
                   item.sender === 'bot' && item.text.includes("##") ? (
                     <Markdown style={markdownStyles}>{item.text}</Markdown>
                   ) : (

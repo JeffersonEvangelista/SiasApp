@@ -128,10 +128,8 @@ Para fazer essa mudança:
 
 Aqui você pode encontrar as instruções para baixar o aplicativo.
 
-[Ir para a seção de download](https://www.mediafire.com/file/05w5t8gj6jr5e7s/Sias_V2.3.3.apk/file)
+[Ir para a seção de download](https://www.mediafire.com/file/qvk6u2h5wvkff8u/Sias_V.2.3.4.apk/file)
 
-ou escaneá o QR Code abaixo:
-![QR Code](/img/qrcode.png)
 
 ## Ferramentas Utilizadas
 

@@ -316,54 +316,54 @@ const Configuracoes: React.FC = () => {
 
   const getUserIdFromSupabase = async (): Promise<string | null> => {
     try {
-      // Forçar a recarga dos dados do usuário do Firebase para garantir que o email esteja atualizado
-      if (auth.currentUser) {
-        await auth.currentUser.reload();
-      }
-
-      const userEmail = auth.currentUser?.email;
-      console.log('Usuário autenticado:', auth.currentUser); // Log para depuração
-
-      if (!userEmail) {
-        console.error('Email do usuário não encontrado no Firebase');
-        return null;
-      }
-
-      // Primeiro, buscar o ID do usuário na tabela de candidatos
-      let userId = null;
-
-      const { data: candidateData, error: candidateError } = await supabase
-        .from('candidatos')
-        .select('id')
-        .eq('email', userEmail?.toLowerCase()) // Comparação insensível a maiúsculas e minúsculas
-        .single();
-
-      if (candidateError || !candidateData) {
-        console.log('Usuário não encontrado na tabela de candidatos. Buscando na tabela de recrutadores...');
-
-        // Se o usuário não for encontrado como candidato, buscar na tabela de recrutadores
-        const { data: recruiterData, error: recruiterError } = await supabase
-          .from('recrutadores')
-          .select('id')
-          .eq('email', userEmail?.toLowerCase()) // Comparação insensível a maiúsculas e minúsculas
-          .single();
-
-        if (recruiterError || !recruiterData) {
-          console.error('Erro ao buscar o ID no Supabase:', recruiterError || candidateError);
-          return null;
-        } else {
-          userId = recruiterData.id; // Se for recrutador, definir o ID
+        if (auth.currentUser) {
+            await auth.currentUser.reload();
         }
-      } else {
-        userId = candidateData.id; // Se for candidato, definir o ID
-      }
 
-      return userId;
+        const userEmail = auth.currentUser?.email;
+        console.log('Usuário autenticado:', auth.currentUser);
+        console.log('E-mail do usuário sendo buscado:', userEmail);
+
+        if (!userEmail) {
+            console.error('Email do usuário não encontrado no Firebase');
+            return null;
+        }
+
+        const { data: candidateData, error: candidateError } = await supabase
+            .from('candidatos')
+            .select('id')
+            .ilike('email', userEmail)
+            .maybeSingle();
+
+        if (candidateError) {
+            console.log('Usuário não encontrado na tabela de candidatos. Buscando na tabela de recrutadores...');
+
+            const { data: recruiterData, error: recruiterError } = await supabase
+                .from('recrutadores')
+                .select('id')
+            .ilike('email', userEmail)
+            .maybeSingle();
+
+            if (recruiterError) {
+                console.error('Erro ao buscar o ID no Supabase:', recruiterError);
+                return null;
+            } else if (recruiterData) {
+                return recruiterData.id;
+            } else {
+                console.error('Usuário não encontrado na tabela de recrutadores.');
+                return null;
+            }
+        } else if (candidateData) {
+            return candidateData.id;
+        } else {
+            console.error('Usuário não encontrado nem como candidato nem como recrutador.');
+            return null;
+        }
     } catch (error) {
-      console.error('Erro na função getUserIdFromSupabase:', error);
-      return null;
+        console.error('Erro na função getUserIdFromSupabase:', error);
+        return null;
     }
-  };
+};
 
   const handleUpdateProfile = async () => {
     try {

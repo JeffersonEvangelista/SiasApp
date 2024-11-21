@@ -991,7 +991,7 @@ const App = () => {
     try {
       const { data: existingRequest, error } = await supabase
         .from('solicitacoes_entrevista')
-        .select('local,local_nome, tipo_entrevista, latitude, longitude')
+        .select('local, local_nome, tipo_entrevista, latitude, longitude')
         .eq('id_candidato', candidate.candidatos.id)
         .eq('id_vaga', jobId)
         .single();
@@ -1008,21 +1008,24 @@ const App = () => {
         if (existingRequest.tipo_entrevista === 'online') {
           setInterviewType('online');
           setOnlinePlatform(existingRequest.local || '');
-        } else {
+        } else if (existingRequest.tipo_entrevista === 'presencial') {
           setInterviewType('presencial');
-        }
-        if (existingRequest.tipo_entrevista === 'presencial') {
+
           const latitude = parseFloat(existingRequest.latitude);
           const longitude = parseFloat(existingRequest.longitude);
 
           // Verifica se as coordenadas são válidas
-          if (isNaN(latitude) || isNaN(longitude)) {
-            console.error('Coordenadas inválidas:', existingRequest.latitude, existingRequest.longitude);
+          if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
+            console.warn('Coordenadas ausentes ou inválidas. Nenhum mapa será gerado.');
+            setModalVisible(true); // Abre o modal mesmo sem coordenadas
             return;
           }
+
+          // Gera o mapa se as coordenadas forem válidas
           await generateMapUrl(latitude, longitude);
         }
       }
+
       setModalVisible(true);
     } catch (err) {
       console.error('Erro ao buscar informações da entrevista:', err);
@@ -1714,8 +1717,8 @@ const App = () => {
           <Modal transparent={true} visible={showNoConnection}>
             <View style={styles.modalBackground}>
               <LottieView
-                  source={require('./../../assets/Animation - 1728042992312.json')}
-                  autoPlay
+                source={require('./../../assets/Animation - 1728042992312.json')}
+                autoPlay
                 loop
                 style={styles.lottieAnimation}
               />
@@ -2146,8 +2149,8 @@ const App = () => {
         <Modal transparent={true} visible={showNoConnection}>
           <View style={styles.modalBackground}>
             <LottieView
-                  source={require('./../../assets/Animation - 1728042992312.json')}
-                  autoPlay
+              source={require('./../../assets/Animation - 1728042992312.json')}
+              autoPlay
               loop
               style={styles.lottieAnimation}
             />

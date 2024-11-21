@@ -164,75 +164,56 @@ export default function Agenda() {
         `)
         .eq('id_recrutador', recruiterId);
 
-      console.log('Dados de entrevistas do recrutador:', interviewRequests);
-
       if (error) {
-        throw error;
+        console.error('Erro ao buscar entrevistas do recrutador:', error);
+        return;
       }
 
       const marked = {};
       const details = [];
-
       const statuses = ['pendente', 'aceita', 'recusada'];
-      const filteredInterviews = Array.isArray(interviewRequests)
-        ? interviewRequests.filter(request => statuses.includes(request.status.toLowerCase()))
-        : [];
-
       const today = new Date();
 
-      if (filteredInterviews.length > 0) {
-        console.log('Entrevistas encontradas para o recrutador:', filteredInterviews);
+      const filteredInterviews = (interviewRequests || []).filter(request =>
+        statuses.includes(request.status?.toLowerCase())
+      );
 
-        for (const request of filteredInterviews) {
-          // Cria a data da entrevista diretamente usando o formato salvo no banco (YYYY-MM-DD)
-          const interviewDate = new Date(`${request.data_entrevista}T00:00:00`);
+      for (const request of filteredInterviews) {
+        const interviewDate = new Date(`${request.data_entrevista}T00:00:00`);
 
-          // Verifica se a entrevista está expirada
-          if (interviewDate < today) {
-            await handleExpiredInterview(request, request.id_candidato);
-            continue;
-          }
-
-          const dateString = request.data_entrevista; 
-          const dotStyle = getDotStyle(request.status || '');
-
-          // Adiciona marcação ao calendário
-          marked[dateString] = {
-            marked: true,
-            dotColor: dotStyle.color,
-            dotStyle: {
-              borderColor: dotStyle.borderColor,
-              borderWidth: dotStyle.borderWidth,
-              width: dotStyle.width,
-              height: dotStyle.height,
-            },
-            selected: true,
-            selectedColor: dotStyle.color,
-          };
-
-          // Adiciona detalhes da entrevista ao array
-          details.push({
-            id: request.id,
-            title: request.vagas.titulo,
-            candidate: request.candidatos.nome,
-            candidateEmail: request.candidatos.email,
-            candidateId: request.candidatos.id,
-            profileImg: request.candidatos.foto_perfil,
-            date: dateString, 
-            time: request.horario,
-            location: request.local,
-            status: request.status || '',
-          });
-
-          console.log(
-            'Detalhes da Entrevista do Recrutador Formatados:',
-            JSON.stringify(details, null, 2)
-          );
+        if (interviewDate < today) {
+          await handleExpiredInterview(request, request.id_candidato);
+          continue;
         }
 
-        setInterviewDetails(details);
-        setMarkedDates(marked);
-      } else {
+        const dotStyle = getDotStyle(request.status || '');
+
+        marked[request.data_entrevista] = {
+          marked: true,
+          dotColor: dotStyle.color,
+          dotStyle: dotStyle,
+          selected: true,
+          selectedColor: dotStyle.color,
+        };
+
+        details.push({
+          id: request.id,
+          title: request.vagas.titulo,
+          candidate: request.candidatos.nome,
+          candidateEmail: request.candidatos.email,
+          candidateId: request.candidatos.id,
+          profileImg: request.candidatos.foto_perfil,
+          date: request.data_entrevista,
+          time: request.horario,
+          location: request.local,
+          status: request.status || '',
+        });
+      }
+
+      setInterviewDetails(details);
+      setMarkedDates(marked);
+
+      if (filteredInterviews.length === 0) {
         console.log('Nenhuma entrevista encontrada para este recrutador.');
       }
     } catch (error) {
@@ -241,8 +222,6 @@ export default function Agenda() {
       setLoading(false);
     }
   };
-
-
 
   const handleCandidateProfile = async (candidateId) => {
     try {
@@ -270,115 +249,97 @@ export default function Agenda() {
           )
         `)
         .eq('id_candidato', candidateId);
-  
-      console.log('Dados de solicitações de entrevista:', interviewRequests);
-  
+
       if (error) {
-        throw error;
+        console.error('Erro ao buscar solicitações de entrevista:', error);
+        return;
       }
-  
+
       const marked = {};
       const details = [];
       const statuses = ['pendente', 'aceita', 'recusada'];
-  
-      // Filtra entrevistas com status válido
-      const filteredInterviews = Array.isArray(interviewRequests)
-        ? interviewRequests.filter(request =>
-          request.status && statuses.includes((request.status || '').toLowerCase())
-        )
-        : [];
-  
-      if (filteredInterviews.length > 0) {
-        console.log('Entrevistas encontradas para o recrutador:', filteredInterviews);
-  
-        for (const request of filteredInterviews) {
-          // Criação da data a partir da string usando a data salva no banco (YYYY-MM-DD)
-          const interviewDate = new Date(`${request.data_entrevista}T00:00:00`); // Usando 00:00:00 para garantir que a data seja válida
-          const dateString = request.data_entrevista; // A data no formato YYYY-MM-DD direto do banco
-  
-          const dotStyle = getDotStyle(request.status || '');
-  
-          // Marca as datas com status de entrevista
-          marked[dateString] = {
-            marked: true,
-            dotColor: dotStyle.color,
-            dotStyle: {
-              borderColor: dotStyle.borderColor,
-              borderWidth: dotStyle.borderWidth,
-              width: dotStyle.width,
-              height: dotStyle.height,
-            },
-            selected: true,
-            selectedColor: dotStyle.color,
-          };
-  
-          const latitude = parseFloat(request.latitude);
-          const longitude = parseFloat(request.longitude);
-  
-          // Verifica se as coordenadas são válidas antes de gerar a URL
-          if (isNaN(latitude) || isNaN(longitude)) {
-            console.log("Latitude ou longitude inválidas.");
-            continue;
-          }
-  
-          // Gera a URL do mapa
-          const mapUrl = await generateMapUrl(latitude, longitude);
-  
-          // Obtém o recrutador relacionado
-          const recruiter = request.vagas.recrutadores || {};
-          const firebaseRecruiterId = await getRecruiterIdByEmail(recruiter.email);
-  
-          // Adiciona os detalhes da entrevista formatados
-          details.push({
-            id: request.id,
-            title: request.vagas.titulo,
-            recruiter: recruiter.nome || 'Nome não disponível',
-            recruiterEmail: recruiter.email || 'Email não disponível',
-            recruiterId: recruiter.id || 'ID não disponível',
-            recruiterFirebaseId: firebaseRecruiterId,
-            profileImg: recruiter.foto_perfil || 'URL não disponível',
-            date: dateString, 
-            time: request.horario,
-            location: request.local,
-            status: request.status || 'Status não disponível',
-            latitude: request.latitude || '',
-            longitude: request.longitude || '',
-            interviewType: request.tipo_entrevista || 'Tipo não especificado',
-            locationName: request.local_nome || 'Nome do local não disponível',
-            mapUrl: mapUrl || 'URL não disponível',
-          });
-  
-          console.log(
-            'Detalhes da Entrevista Formatados:',
-            JSON.stringify(details, null, 2)
-          );
-        }
-  
-        setInterviewDetails(details);
-        setMarkedDates(marked);
-      } else {
-        console.log('Nenhuma entrevista encontrada para este recrutador.');
+
+      const filteredInterviews = (interviewRequests || []).filter(request =>
+        statuses.includes(request.status?.toLowerCase())
+      );
+
+      for (const request of filteredInterviews) {
+        const dateString = request.data_entrevista;
+        const dotStyle = getDotStyle(request.status || '');
+
+        marked[dateString] = {
+          marked: true,
+          dotColor: dotStyle.color,
+          dotStyle: dotStyle,
+          selected: true,
+          selectedColor: dotStyle.color,
+        };
+
+        const latitude = parseFloat(request.latitude);
+        const longitude = parseFloat(request.longitude);
+
+        const mapUrl = (!isNaN(latitude) && !isNaN(longitude))
+          ? await generateMapUrl(latitude, longitude)
+          : 'URL não disponível';
+
+        const recruiter = request.vagas.recrutadores || {};
+        const firebaseRecruiterId = await getRecruiterIdByEmail(recruiter.email);
+
+        details.push({
+          id: request.id,
+          title: request.vagas.titulo,
+          recruiter: recruiter.nome || 'Nome não disponível',
+          recruiterEmail: recruiter.email || 'Email não disponível',
+          recruiterId: recruiter.id || 'ID não disponível',
+          recruiterFirebaseId: firebaseRecruiterId,
+          profileImg: recruiter.foto_perfil || 'URL não disponível',
+          date: dateString,
+          time: request.horario,
+          location: request.local,
+          status: request.status || 'Status não disponível',
+          latitude: request.latitude || '',
+          longitude: request.longitude || '',
+          interviewType: request.tipo_entrevista || 'Tipo não especificado',
+          locationName: request.local_nome || 'Nome do local não disponível',
+          mapUrl: mapUrl,
+        });
       }
-  
+
+      setInterviewDetails(details);
+      setMarkedDates(marked);
+
+      if (filteredInterviews.length === 0) {
+        console.log('Nenhuma entrevista encontrada para este candidato.');
+      }
     } catch (error) {
       console.error('Erro ao buscar solicitações de entrevista:', error);
     } finally {
       setLoading(false);
     }
   };
-  
+
 
   // Função para obter as coordenadas e gerar a URL
   const generateMapUrl = async (latitude, longitude) => {
-    if (isNaN(latitude) || isNaN(longitude)) {
-      console.log('As coordenadas fornecidas não são válidas.');
-      return '';
+    try {
+      // Valida as coordenadas
+      if (isNaN(latitude) || isNaN(longitude)) {
+        console.log('As coordenadas fornecidas não são válidas.');
+        return 'Erro: Coordenadas inválidas';
+      }
+
+      console.log(`Gerando URL para o local com latitude ${latitude} e longitude ${longitude}`);
+
+      const zoom = 17;
+      const url = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.0001},${latitude - 0.0001},${longitude + 0.0001},${latitude + 0.0001}&layer=mapnik&marker=${latitude},${longitude}`;
+
+      console.log(`URL gerada: ${url}`);
+      return url;
+
+    } catch (error) {
+      console.error('Erro ao gerar a URL do mapa:', error);
+      return 'Erro: Não foi possível gerar a URL do mapa';
     }
-    console.log(`Gerando URL para o local com latitude ${latitude} e longitude ${longitude}`);
-    const zoom = 17;
-    const url = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.0001},${latitude - 0.0001},${longitude + 0.0001},${latitude + 0.0001}&layer=mapnik&marker=${latitude},${longitude}`;
-    console.log(`URL gerada: ${url}`);
-    return url;
   };
 
   const handleNavigateToMap = (latitude, longitude) => {
@@ -392,12 +353,14 @@ export default function Agenda() {
     const destination = `${lat},${lon}`;
 
     const mapUrl = Platform.select({
-      ios: `maps:0,0?q=${destination}&daddr=${destination}`,
-      android: `google.navigation:q=${destination}`,
+      ios: `http://maps.apple.com/?daddr=${destination}&dirflg=r`, // 'r' para transporte público
+      android: `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=transit`,
     });
 
     // Tenta abrir a URL
-    Linking.openURL(mapUrl).catch((err) => console.error('Erro ao abrir o mapa:', err));
+    Linking.openURL(mapUrl).catch((err) =>
+      console.error('Erro ao abrir o mapa:', err)
+    );
   };
 
   // Função para decodificar a polyline
@@ -1617,11 +1580,28 @@ export default function Agenda() {
                             </Text>
                           </View>
                           {/* Botão "Como Chegar" */}
+                          {/* Botão "Como Chegar" */}
                           <TouchableOpacity
-                            style={styles.button}
-                            onPress={() => handleNavigateToMap(selectedInterview.latitude, selectedInterview.longitude)}
+                            style={[
+                              styles.button,
+                              {
+                                backgroundColor: selectedInterview.latitude && selectedInterview.longitude
+                                  ? '#ff8c00'
+                                  : '#ccc', // Desabilitado se coordenadas forem inválidas
+                              },
+                            ]}
+                            onPress={() => {
+                              if (selectedInterview.latitude && selectedInterview.longitude) {
+                                handleNavigateToMap(selectedInterview.latitude, selectedInterview.longitude);
+                              } else {
+                                console.log('Erro: Coordenadas não disponíveis.');
+                              }
+                            }}
+                            disabled={!selectedInterview.latitude || !selectedInterview.longitude}
                           >
-                            <Text style={styles.buttonTextMapa}>Como Chegar</Text>
+                            <Text style={[styles.buttonTextMapa, { color: '#fff' }]}>
+                              Como Chegar
+                            </Text>
                           </TouchableOpacity>
                           <View style={{ height: 300 }}>
                             {selectedInterview.mapUrl ? (
@@ -1629,11 +1609,16 @@ export default function Agenda() {
                                 source={{ uri: selectedInterview.mapUrl }}
                                 style={{ flex: 1 }}
                                 scrollEnabled={false}
+                                onError={() => console.log('Erro ao carregar o mapa.')}
                               />
                             ) : (
-                              <Text style={styles.modalText}>Mapa não disponível</Text>
+                              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                                <Ionicons name="map-outline" size={50} color="#ff8c00" />
+                                <Text style={styles.modalText}>Mapa não disponível para esta entrevista.</Text>
+                              </View>
                             )}
                           </View>
+
                         </>
                       )}
 

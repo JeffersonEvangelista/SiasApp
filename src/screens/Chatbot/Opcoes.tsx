@@ -2,6 +2,7 @@ import React from 'react';
 import { Linking, Text, View, Image } from 'react-native';
 import { buscarEntrevistasPorUsuario, buscarEntrevistasPorRecrutador, contarEntrevistasPorUsuario, buscarDataCriacaoUsuario } from '../../services/userService';
 
+
 export const handleCriadoresDoSistema = (setIsBotTyping: (typing: boolean) => void, setMessages: (messages: any[]) => void) => {
     const creators = [
         { name: 'Davi de Brito Junior', role: 'Líder | Desenvolvedor Full', username: 'DaveBrito' },
@@ -17,38 +18,52 @@ export const handleCriadoresDoSistema = (setIsBotTyping: (typing: boolean) => vo
         if (index < creators.length) {
             const member = creators[index];
 
-            const imageUrl = `https://avatars.githubusercontent.com/${member.username}`;
+            // URL para o perfil do GitHub
             const profileUrl = `https://github.com/${member.username}`;
 
+            // URL da imagem do perfil
+            const imageUrl = `https://avatars.githubusercontent.com/${member.username}`;
+
+            // Mensagem textual
+            const textMessage = `${member.name} (${member.role}) - Visite o perfil: ${profileUrl}`;
+
+            // JSX para a visualização do criador com a imagem e link
             const message = (
                 <View style={{ marginBottom: 10, alignItems: 'center' }}>
                     <Image
-                        source={{ uri: imageUrl }}
-                        style={{ width: 50, height: 50, borderRadius: 25 }}
+                        source={{ uri: imageUrl }} // URL da imagem do perfil
+                        style={{ width: 50, height: 50, borderRadius: 25 }} // Estilo da imagem
                     />
                     <Text style={{ fontWeight: 'bold' }}>{member.name}</Text>
                     <Text>{member.role}</Text>
                     <Text
                         style={{ color: 'orange' }}
-                        onPress={() => Linking.openURL(profileUrl)}
+                        onPress={() => Linking.openURL(profileUrl)} // Abre o link do GitHub
                     >
                         {profileUrl}
                     </Text>
                 </View>
             );
 
+            // Log da mensagem que está sendo enviada
+            console.log('Mensagem enviada: ', {
+                text: textMessage,
+                sender: 'bot',
+                content: message,
+            });
+
             setMessages(prevMessages => [
                 ...prevMessages,
-                { id: Date.now().toString(), text: message, sender: 'bot' },
+                { id: Date.now().toString(), text: textMessage, sender: 'bot', content: message },
             ]);
 
             setTimeout(() => sendMessageRecursively(index + 1), 500);
         } else {
-            setIsBotTyping(false);
+            setIsBotTyping(false);  
         }
     };
 
-    sendMessageRecursively(0);
+    sendMessageRecursively(0); 
 };
 
 export const handleProposito = (setIsBotTyping: (typing: boolean) => void, setMessages: (messages: any[]) => void) => {
